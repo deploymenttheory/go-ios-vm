@@ -356,10 +356,11 @@ func newCommand(stdout, stderr io.Writer) *cobra.Command {
 	_ = c.MarkFlagRequired("image")
 	var inspectImage string
 	var identity int
+	var resumeID string
 	c = command(
 		root,
 		"inspect",
-		"Inspect a selected identity and publish evidence atomically",
+		"Inspect a selected identity with durable component checkpoints",
 		func(c *cobra.Command, _ []string) error {
 			return withDB(c.Context(), func(s *postgres.Store) error {
 				release, err := cfg.Cache.Lease(c.Context(), false)
@@ -373,18 +374,29 @@ func newCommand(stdout, stderr io.Writer) *cobra.Command {
 					return imageInput(err)
 				}
 				defer a.Close()
+				if resumeID != "" {
+					prior, err := s.Run(c.Context(), resumeID)
+					if err != nil {
+						return classified("invalid_selection", err)
+					}
+					if prior.InputSHA256 != a.Artifact.SHA256 || prior.InputSize != a.Artifact.Size {
+						return classified("changed_input", workflow.ErrResumeInputMismatch)
+					}
+				}
 				if identity < 0 || identity >= len(a.Targets) {
 					return classified("invalid_selection", errors.New("identity index is outside the BuildManifest"))
 				}
-				run, err := workflow.Inspect(
+				run, err := workflow.InspectBatched(
 					c.Context(),
 					s,
 					a.Artifact,
 					a.Targets,
 					identity,
-					func(ctx context.Context) ([]model.Observation, []model.Coverage, error) {
-						r, err := a.Inspect(ctx, identity)
-						return r.Observations, r.Coverage, err
+					resumeID,
+					inspection.RunPlanVersion,
+					inspection.Components,
+					func(ctx context.Context, done map[string]bool, emit func(string, []model.Observation, model.Coverage) error) error {
+						return a.InspectEach(ctx, identity, done, emit)
 					},
 				)
 				if err != nil {
@@ -402,6 +414,7 @@ func newCommand(stdout, stderr io.Writer) *cobra.Command {
 	)
 	c.Flags().StringVar(&inspectImage, "image", "", "IPSW path")
 	c.Flags().IntVar(&identity, "identity", -1, "Explicit BuildManifest identity index")
+	c.Flags().StringVar(&resumeID, "resume", "", "Resume a run ID against this verified IPSW")
 	_ = c.MarkFlagRequired("image")
 	_ = c.MarkFlagRequired("identity")
 	finding := &cobra.Command{Use: "finding", Short: "Query retained observations and evidence"}

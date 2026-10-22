@@ -49,6 +49,13 @@ var (
 	errStoredEvidenceIntegrityMismatch = errors.New(
 		"stored evidence integrity mismatch",
 	)
+	errConflictingBatch    = errors.New("batch key already has different observations or coverage")
+	errIncompleteBatchPlan = errors.New("run has missing or unexpected component checkpoints")
+	errResumeUnavailable   = errors.New("run is already finalized and cannot be resumed")
+	errResumeIdentity      = errors.New(
+		"resume input, target, extractor or component plan differs from the original run",
+	)
+	errBatchExceedsBound = errors.New("observation batch exceeds the 128-observation limit")
 )
 
 //go:embed migrations/*.sql
@@ -158,12 +165,32 @@ func (s *Store) Register(ctx context.Context, a model.Artifact, targets []model.
 }
 
 func (s *Store) Start(ctx context.Context, r model.Run) error {
-	_, err := s.pool.Exec(
+	var digest string
+	var size int64
+	err := s.pool.QueryRow(ctx, `SELECT a.sha256,a.size FROM firmware_target t
+	 JOIN artifact a ON a.id=t.artifact_id WHERE t.id=$1`, r.TargetID).Scan(&digest, &size)
+	if err != nil {
+		return fmt.Errorf("Start: target: %w", err)
+	}
+	if (r.InputSHA256 != "" && r.InputSHA256 != digest) ||
+		(r.InputSHA256 != "" && r.InputSize != size) {
+		return errResumeIdentity
+	}
+	plan, err := json.Marshal(r.Planned)
+	if err != nil {
+		return fmt.Errorf("Start: plan: %w", err)
+	}
+	_, err = s.pool.Exec(
 		ctx,
-		"INSERT INTO analysis_run(id,target_id,state,started) VALUES($1,$2,'running',$3)",
+		`INSERT INTO analysis_run(id,target_id,state,started,input_sha256,input_size,extractor,planned_components)
+		 VALUES($1,$2,'running',$3,$4,$5,$6,$7)`,
 		r.ID,
 		r.TargetID,
 		r.Started,
+		digest,
+		size,
+		r.Extractor,
+		plan,
 	)
 	if err != nil {
 		return fmt.Errorf("Start: Exec: %w", err)
@@ -238,39 +265,15 @@ func putBlob(ctx context.Context, tx pgx.Tx, data []byte, limit int64) (string, 
 	return id, nil
 }
 
-func (s *Store) Publish(
+func (s *Store) putObservations(
 	ctx context.Context,
+	tx pgx.Tx,
 	run model.Run,
+	artifactID string,
 	observations []model.Observation,
 ) error {
-	tx, err := s.pool.Begin(ctx)
-	if err != nil {
-		return fmt.Errorf("Publish: Begin: %w", err)
-	}
-	defer rollback(ctx, tx)
-	var state, targetID, artifactID string
-	if err = tx.QueryRow(ctx, "SELECT r.state,r.target_id,t.artifact_id FROM analysis_run r JOIN firmware_target t ON t.id=r.target_id WHERE r.id=$1 FOR UPDATE OF r", run.ID).
-		Scan(&state, &targetID, &artifactID); err != nil {
-		return fmt.Errorf("Publish: Scan: %w", err)
-	}
-	if targetID != run.TargetID {
-		return errRunTargetMismatch
-	}
-	if run.State != "complete" && run.State != "partial" {
-		return errInvalidPublicationState
-	}
-	if len(run.Coverage) == 0 {
-		return errCoverageLedgerIsRequired
-	}
-	for _, c := range run.Coverage {
-		if run.State == "complete" && c.State != "complete" {
-			return errCompleteRunHasIncompleteCoverage
-		}
-	}
-	if state != "running" {
-		return fmt.Errorf("%w: %s", errRunIsAlreadyTerminal, state)
-	}
 	verified := map[string][]byte{}
+	var err error
 	for _, o := range observations {
 		if o.Source.ArtifactID != artifactID {
 			return errObservationArtifactMismatch
@@ -321,6 +324,50 @@ func (s *Store) Publish(
 		}
 		if err = publishObservedRevision(ctx, tx, o); err != nil {
 			return fmt.Errorf("Publish: observed revision: %w", err)
+		}
+	}
+	return nil
+}
+
+func (s *Store) Publish(
+	ctx context.Context,
+	run model.Run,
+	observations []model.Observation,
+) error {
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("Publish: Begin: %w", err)
+	}
+	defer rollback(ctx, tx)
+	var state, targetID, artifactID string
+	if err = tx.QueryRow(ctx, "SELECT r.state,r.target_id,t.artifact_id FROM analysis_run r JOIN firmware_target t ON t.id=r.target_id WHERE r.id=$1 FOR UPDATE OF r", run.ID).
+		Scan(&state, &targetID, &artifactID); err != nil {
+		return fmt.Errorf("Publish: Scan: %w", err)
+	}
+	if targetID != run.TargetID {
+		return errRunTargetMismatch
+	}
+	if run.State != "complete" && run.State != "partial" {
+		return errInvalidPublicationState
+	}
+	if len(run.Coverage) == 0 {
+		return errCoverageLedgerIsRequired
+	}
+	for _, c := range run.Coverage {
+		if run.State == "complete" && c.State != "complete" {
+			return errCompleteRunHasIncompleteCoverage
+		}
+	}
+	if state != "running" {
+		return fmt.Errorf("%w: %s", errRunIsAlreadyTerminal, state)
+	}
+	if err := s.putObservations(ctx, tx, run, artifactID, observations); err != nil {
+		return err
+	}
+	for _, c := range run.Coverage {
+		if _, err = tx.Exec(ctx, `INSERT INTO run_coverage(run_id,component,state,reason)
+		 VALUES($1,$2,$3,$4)`, run.ID, c.Component, c.State, c.Reason); err != nil {
+			return fmt.Errorf("Publish: ledger: %w", err)
 		}
 	}
 	b, err := json.Marshal(run.Coverage)
@@ -461,15 +508,53 @@ func (s *Store) Evidence(ctx context.Context, id string) ([]byte, error) {
 
 func (s *Store) Run(ctx context.Context, id string) (model.Run, error) {
 	var r model.Run
-	var b []byte
-	err := s.pool.QueryRow(ctx, "SELECT id,target_id,state,started,coverage FROM analysis_run WHERE id=$1", id).
-		Scan(&r.ID, &r.TargetID, &r.State, &r.Started, &b)
+	var plan []byte
+	err := s.pool.QueryRow(ctx, `SELECT id,target_id,state,started,
+	 input_sha256,input_size,extractor,planned_components FROM analysis_run WHERE id=$1`, id).
+		Scan(&r.ID, &r.TargetID, &r.State, &r.Started,
+			&r.InputSHA256, &r.InputSize, &r.Extractor, &plan)
 	if err != nil {
 		return r, fmt.Errorf("Run: Scan: %w", err)
 	}
-	err = json.Unmarshal(b, &r.Coverage)
+	if err = json.Unmarshal(plan, &r.Planned); err != nil {
+		return r, fmt.Errorf("Run: plan: %w", err)
+	}
+	rows, err := s.pool.Query(ctx,
+		`SELECT component,state,reason FROM run_coverage WHERE run_id=$1 ORDER BY component`, id)
 	if err != nil {
-		return r, fmt.Errorf("Run: json.Unmarshal: %w", err)
+		return r, fmt.Errorf("Run: coverage: %w", err)
+	}
+	ledger := map[string]model.Coverage{}
+	order := []string{}
+	for rows.Next() {
+		var c model.Coverage
+		if err := rows.Scan(&c.Component, &c.State, &c.Reason); err != nil {
+			rows.Close()
+			return r, fmt.Errorf("Run: coverage Scan: %w", err)
+		}
+		ledger[c.Component] = c
+		order = append(order, c.Component)
+	}
+	err = rows.Err()
+	rows.Close()
+	if err != nil {
+		return r, fmt.Errorf("Run: coverage Err: %w", err)
+	}
+	r.Coverage = make([]model.Coverage, 0, len(ledger))
+	if len(r.Planned) > 0 {
+		for _, component := range r.Planned {
+			if c, ok := ledger[component]; ok {
+				r.Coverage = append(r.Coverage, c)
+			}
+		}
+	} else {
+		for _, component := range order {
+			r.Coverage = append(r.Coverage, ledger[component])
+		}
+	}
+	if (r.State == "complete" || r.State == "partial") &&
+		(len(r.Coverage) == 0 || (len(r.Planned) > 0 && len(r.Coverage) != len(r.Planned))) {
+		return r, errCoverageLedgerIsRequired
 	}
 	return r, nil
 }

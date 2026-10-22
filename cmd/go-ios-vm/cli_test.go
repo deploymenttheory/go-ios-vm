@@ -146,6 +146,16 @@ func TestPersistRestartCompareAndRemoveSource(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
+	changedPath := filepath.Join(cache, "changed.ipsw")
+	if err := testfixture.IPSW(changedPath, "14.0", 999); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := invoke("inspect", "--image", changedPath, "--identity", "0", "--resume", runs[0].ID); err == nil || classify(err) != "changed_input" {
+		t.Fatalf("changed archive resume diagnostic: %v", err)
+	}
+	if _, err := invoke("inspect", "--image", filepath.Join(cache, "missing.ipsw"), "--identity", "0", "--resume", runs[0].ID); err == nil || classify(err) != "missing_input" {
+		t.Fatalf("missing archive resume diagnostic: %v", err)
+	}
 	b, err := invoke("finding", "list", "--run", runs[0].ID)
 	if err != nil {
 		t.Fatal(err)

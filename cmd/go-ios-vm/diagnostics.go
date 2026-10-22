@@ -14,6 +14,7 @@ import (
 
 	"github.com/deploymenttheory/go-ios-vm/internal/acquisition"
 	"github.com/deploymenttheory/go-ios-vm/internal/model"
+	"github.com/deploymenttheory/go-ios-vm/internal/workflow"
 )
 
 type diagnostic struct {
@@ -50,6 +51,9 @@ func imageInput(err error) error {
 }
 
 func classify(err error) string {
+	if errors.Is(err, workflow.ErrResumeInputMismatch) {
+		return "changed_input"
+	}
 	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 		return "cancelled"
 	}
