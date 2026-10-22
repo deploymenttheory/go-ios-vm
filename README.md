@@ -88,7 +88,13 @@ Viper accepts `--config FILE`, flags, and `GOIOSVM_` environment variables; pref
 
 ZIP Deflate OS members are staged in a disposable temporary directory for read-only disk inspection. Staging requires the declared expanded size to fit within 8 GiB and available space after a 2 GiB reserve; both size and free space are checked again as bytes are written. Disk observations need replayable source evidence. Because a Deflate member has no direct physical mapping from decoded reads, the full encoded member is retained only when it fits the existing 32 MiB disk source-capture cap. Larger compressed members get explicit partial disk coverage without disk findings. The staging file is removed when inspection finishes or fails; the original IPSW is unaffected.
 
-Structured output uses `--format json` and includes `schema_version`, `state` and `results`. Progress goes to stderr. Exit status: 0 complete, 2 partial, 1 failure, 130 cancellation. The current inspector reports partial coverage because filesystem-content inspection remains unimplemented.
+Structured output uses `--format json` and includes `schema_version`, `state` and `results` for complete or partial results. A failed command emits one JSON object with `schema_version`, `state`, and a `diagnostic` containing a stable `code` and safe `message`; for example:
+
+```json
+{"schema_version":1,"state":"failed","diagnostic":{"code":"missing_input","message":"required flag(s) \"image\" not set"}}
+```
+
+Diagnostic codes include `missing_input`, `invalid_selection`, `unsupported_or_corrupt`, `storage_failure`, `acquisition_failure`, `invalid_invocation`, `operation_failed`, and `cancelled`. Terminal text shows concise summaries and errors; `finding show` still prints retained evidence in base64. Progress goes to stderr and does not enter JSON stdout. Exit status: 0 complete, 2 partial, 1 failure, 130 cancellation. The current inspector reports partial coverage because filesystem-content inspection remains unimplemented.
 
 ## Verify changes
 
