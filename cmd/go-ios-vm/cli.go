@@ -38,9 +38,10 @@ type config struct {
 	EvidenceLimit       int64
 }
 type envelope struct {
-	SchemaVersion int    `json:"schema_version"`
-	State         string `json:"state"`
-	Results       any    `json:"results"`
+	SchemaVersion int         `json:"schema_version"`
+	State         string      `json:"state"`
+	Results       any         `json:"results,omitempty"`
+	Diagnostic    *diagnostic `json:"diagnostic,omitempty"`
 }
 
 func newCommand(stdout, stderr io.Writer) *cobra.Command {
@@ -107,20 +108,21 @@ func newCommand(stdout, stderr io.Writer) *cobra.Command {
 		return nil
 	}
 	emit := func(state string, result any) error {
-		value := envelope{model.SchemaVersion, state, result}
+		value := envelope{SchemaVersion: model.SchemaVersion, State: state, Results: result}
 		enc := json.NewEncoder(stdout)
 		enc.SetEscapeHTML(false)
 		if cfg.Format == "text" {
-			fmt.Fprintf(stdout, "%s\n", strings.ToUpper(state))
-			enc.SetIndent("", "  ")
-			return enc.Encode(result)
+			return printSummary(stdout, state, result)
 		}
 		return enc.Encode(value)
 	}
 	withDB := func(ctx context.Context, fn func(*postgres.Store) error) error {
 		s, err := postgres.Open(ctx, cfg.DatabaseURL)
 		if err != nil {
-			return err
+			if cfg.DatabaseURL == "" {
+				return classified("missing_input", err)
+			}
+			return classified("storage_failure", err)
 		}
 		defer s.Close()
 		s.EvidenceLimit = cfg.EvidenceLimit
@@ -140,7 +142,7 @@ func newCommand(stdout, stderr io.Writer) *cobra.Command {
 		func(c *cobra.Command, _ []string) error {
 			return withDB(c.Context(), func(s *postgres.Store) error {
 				if err := s.Migrate(c.Context()); err != nil {
-					return err
+					return classified("storage_failure", err)
 				}
 				return emit("complete", map[string]string{"database": "schema current"})
 			})
@@ -163,7 +165,7 @@ func newCommand(stdout, stderr io.Writer) *cobra.Command {
 				if err := s.Acquisition(c.Context(), response.Source,
 					map[string]any{"selection": acquisition.Request{Product: listProduct}, "search": listSearch, "diagnostic": response.Error},
 					response.Status, response.Data); err != nil {
-					return err
+					return classified("storage_failure", err)
 				}
 			}
 			if err := c.Context().Err(); err != nil {
@@ -192,6 +194,9 @@ func newCommand(stdout, stderr io.Writer) *cobra.Command {
 			"fetch":    "Download and verify one exact restore IPSW",
 		}[mode]
 		c := command(firmware, mode, short, func(c *cobra.Command, _ []string) error {
+			if mode != "discover" && (req.Product == "" || (req.Version == "" && req.Build == "")) {
+				return classified("missing_input", errors.New("probe and fetch require --product and --version or --build"))
+			}
 			return withDB(c.Context(), func(s *postgres.Store) error {
 				client := acquisition.NewClient()
 				fmt.Fprintln(stderr, "Reading restore catalogs…")
@@ -204,7 +209,7 @@ func newCommand(stdout, stderr io.Writer) *cobra.Command {
 						response.Status,
 						response.Data,
 					); err != nil {
-						return err
+						return classified("storage_failure", err)
 					}
 				}
 				if err := c.Context().Err(); err != nil {
@@ -227,7 +232,7 @@ func newCommand(stdout, stderr io.Writer) *cobra.Command {
 				}
 				selected, err := acquisition.Select(responses, req)
 				if err != nil {
-					return err
+					return classified("invalid_selection", err)
 				}
 				fmt.Fprintln(
 					stderr,
@@ -238,15 +243,15 @@ func newCommand(stdout, stderr io.Writer) *cobra.Command {
 				)
 				remote, err := client.OpenRange(c.Context(), selected.URL)
 				if err != nil {
-					return err
+					return classified("acquisition_failure", err)
 				}
 				if selected.Size > 0 && selected.Size != remote.Size() {
-					return fmt.Errorf(
+					return classified("unsupported_or_corrupt", fmt.Errorf(
 						"%w: index %d, Apple CDN %d",
 						errCandidateSizeMismatch,
 						selected.Size,
 						remote.Size(),
-					)
+					))
 				}
 				probe, err := inspection.ProbeManifest(
 					c.Context(),
@@ -257,7 +262,7 @@ func newCommand(stdout, stderr io.Writer) *cobra.Command {
 					selected.Build,
 				)
 				if err != nil {
-					return err
+					return classified("unsupported_or_corrupt", err)
 				}
 				info := remote.Info()
 				selected.Size = info.Size
@@ -273,7 +278,7 @@ func newCommand(stdout, stderr io.Writer) *cobra.Command {
 					"manifest_probe",
 					probe.RawBuildManifest,
 				); err != nil {
-					return err
+					return classified("storage_failure", err)
 				}
 				if mode == "probe" {
 					return emit("complete", map[string]any{
@@ -294,7 +299,7 @@ func newCommand(stdout, stderr io.Writer) *cobra.Command {
 					},
 				)
 				if err != nil {
-					return err
+					return classified("acquisition_failure", err)
 				}
 				receipt, _ := json.Marshal(
 					map[string]any{"candidate": selected, "artifact": a, "identity_verified": true},
@@ -306,7 +311,7 @@ func newCommand(stdout, stderr io.Writer) *cobra.Command {
 					"verified",
 					receipt,
 				); err != nil {
-					return err
+					return classified("storage_failure", err)
 				}
 				return emit("complete", a)
 			})
@@ -328,16 +333,16 @@ func newCommand(stdout, stderr io.Writer) *cobra.Command {
 			return withDB(c.Context(), func(s *postgres.Store) error {
 				release, err := cfg.Cache.Lease(c.Context(), false)
 				if err != nil {
-					return err
+					return classified("storage_failure", err)
 				}
 				defer release()
 				a, err := inspection.Open(c.Context(), targetImage)
 				if err != nil {
-					return err
+					return imageInput(err)
 				}
 				defer a.Close()
 				if err = s.Register(c.Context(), a.Artifact, a.Targets); err != nil {
-					return err
+					return classified("storage_failure", err)
 				}
 				return emit("complete", a.Targets)
 			})
@@ -355,15 +360,18 @@ func newCommand(stdout, stderr io.Writer) *cobra.Command {
 			return withDB(c.Context(), func(s *postgres.Store) error {
 				release, err := cfg.Cache.Lease(c.Context(), false)
 				if err != nil {
-					return err
+					return classified("storage_failure", err)
 				}
 				defer release()
 				fmt.Fprintln(stderr, "Hashing IPSW and reading BuildManifest…")
 				a, err := inspection.Open(c.Context(), inspectImage)
 				if err != nil {
-					return err
+					return imageInput(err)
 				}
 				defer a.Close()
+				if identity < 0 || identity >= len(a.Targets) {
+					return classified("invalid_selection", errors.New("identity index is outside the BuildManifest"))
+				}
 				run, err := workflow.Inspect(
 					c.Context(),
 					s,
@@ -406,7 +414,7 @@ func newCommand(stdout, stderr io.Writer) *cobra.Command {
 			return withDB(c.Context(), func(s *postgres.Store) error {
 				f, err := s.Findings(c.Context(), targetID, runID)
 				if err != nil {
-					return err
+					return classified("storage_failure", err)
 				}
 				return emit("complete", f)
 			})
@@ -423,7 +431,7 @@ func newCommand(stdout, stderr io.Writer) *cobra.Command {
 			return withDB(c.Context(), func(s *postgres.Store) error {
 				b, err := s.Evidence(c.Context(), evidenceID)
 				if err != nil {
-					return err
+					return classified("storage_failure", err)
 				}
 				return emit(
 					"complete",
@@ -448,11 +456,11 @@ func newCommand(stdout, stderr io.Writer) *cobra.Command {
 			return withDB(c.Context(), func(s *postgres.Store) error {
 				lr, err := s.Run(c.Context(), left)
 				if err != nil {
-					return err
+					return classified("storage_failure", err)
 				}
 				rr, err := s.Run(c.Context(), right)
 				if err != nil {
-					return err
+					return classified("storage_failure", err)
 				}
 				if (lr.State != "complete" && lr.State != "partial") ||
 					(rr.State != "complete" && rr.State != "partial") {
@@ -460,11 +468,11 @@ func newCommand(stdout, stderr io.Writer) *cobra.Command {
 				}
 				l, err := s.Findings(c.Context(), "", left)
 				if err != nil {
-					return err
+					return classified("storage_failure", err)
 				}
 				r, err := s.Findings(c.Context(), "", right)
 				if err != nil {
-					return err
+					return classified("storage_failure", err)
 				}
 				return emit(
 					"complete",
@@ -494,7 +502,7 @@ func newCommand(stdout, stderr io.Writer) *cobra.Command {
 		func(c *cobra.Command, _ []string) error {
 			items, err := cfg.Cache.Entries()
 			if err != nil {
-				return err
+				return classified("storage_failure", err)
 			}
 			return emit("complete", items)
 		},
@@ -507,7 +515,7 @@ func newCommand(stdout, stderr io.Writer) *cobra.Command {
 		func(c *cobra.Command, _ []string) error {
 			items, err := cfg.Cache.Prune(c.Context(), apply)
 			if err != nil {
-				return err
+				return classified("storage_failure", err)
 			}
 			return emit("complete", map[string]any{"applied": apply, "entries": items})
 		},

@@ -110,6 +110,18 @@ func TestPersistRestartCompareAndRemoveSource(t *testing.T) {
 		if _, ok := err.(*partialError); !ok {
 			t.Fatalf("expected truthful partial coverage, got %v", err)
 		}
+		if i == 0 {
+			var stdout, stderr bytes.Buffer
+			code := runCLI(context.Background(), []string{"--format", "json", "inspect", "--image", path, "--identity", "0"}, &stdout, &stderr)
+			if code != 2 {
+				t.Fatalf("partial inspection exit %d: %s", code, stderr.String())
+			}
+			response := decodeOneEnvelope(t, stdout.Bytes())
+			if response.State != "partial" || response.Results == nil || response.Diagnostic != nil ||
+				!bytes.Contains(stderr.Bytes(), []byte("Hashing IPSW")) {
+				t.Fatalf("partial output mixed with progress: %s; stderr %s", stdout.String(), stderr.String())
+			}
+		}
 		var run model.Run
 		if err = json.Unmarshal(b, &run); err != nil {
 			t.Fatal(err)
