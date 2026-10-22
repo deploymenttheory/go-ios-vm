@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"os"
 
 	"github.com/deploymenttheory/go-apfs-v3/apfs"
 	"github.com/deploymenttheory/go-apfs-v3/diskimage"
@@ -24,13 +25,19 @@ var (
 	errOSDiskMemberIsMissing = errors.New(
 		"OS disk member is missing",
 	)
-	errCompressedDiskUnsupported = errors.New(
-		"disk image is ZIP-compressed; bounded staging adapter is not implemented",
+	errCompressedDiskEvidenceExceeds32MiB = errors.New(
+		"compressed disk member exceeds 32 MiB retained source-byte limit",
 	)
 	errDiskMemberOutsideSource = errors.New(
 		"disk member outside source",
 	)
+	errUnsupportedDiskZIPMethod = errors.New("unsupported disk ZIP method")
 )
+
+// Stored images already cap captured source reads at this size. A Deflate
+// member needs its complete encoded stream to replay arbitrary decoded reads;
+// a prefix cannot support a disk observation after the original is removed.
+const diskEvidenceLimit = 32 << 20
 
 type readRange struct {
 	Offset int64  `json:"offset,string"`
@@ -44,6 +51,13 @@ type captureSource struct {
 	seen   map[int64][]byte
 }
 
+type diskMemberRead struct {
+	source          *captureSource
+	encodedEvidence []byte
+	encodedSize     uint64
+	staged          *stagedDisk
+}
+
 func (s *captureSource) ReadAt(p []byte, offset int64) (int, error) {
 	if err := s.ctx.Err(); err != nil {
 		return 0, fmt.Errorf("disk read cancelled: %w", err)
@@ -52,7 +66,7 @@ func (s *captureSource) ReadAt(p []byte, offset int64) (int, error) {
 		copy(p, old)
 		return len(p), nil
 	}
-	if len(p) > 32<<20-s.used {
+	if len(p) > diskEvidenceLimit-s.used {
 		return 0, errDiskMetadataCaptureExceeds32MiB
 	}
 	n, err := s.SectionReader.ReadAt(p, offset)
@@ -65,7 +79,75 @@ func (s *captureSource) ReadAt(p []byte, offset int64) (int, error) {
 	return n, err //nolint:wrapcheck // io.ReaderAt requires the original io.EOF sentinel.
 }
 
-func (a *Archive) inspectDisk(ctx context.Context, t model.Target) ([]model.Observation, error) {
+func (a *Archive) readDiskMember(ctx context.Context, member *zip.File) (diskMemberRead, error) {
+	offset, err := member.DataOffset()
+	if err != nil {
+		return diskMemberRead{}, fmt.Errorf("readDiskMember: DataOffset: %w", err)
+	}
+	if member.UncompressedSize64 > math.MaxInt64 || member.CompressedSize64 > math.MaxInt64 {
+		return diskMemberRead{}, errDiskMemberOutsideSource
+	}
+	memberSize := int64(member.UncompressedSize64)
+	encodedSize := int64(member.CompressedSize64)
+	if member.Method == zip.Deflate && encodedSize > diskEvidenceLimit {
+		return diskMemberRead{}, errCompressedDiskEvidenceExceeds32MiB
+	}
+	if offset < 0 || encodedSize > a.Artifact.Size || offset > a.Artifact.Size-encodedSize {
+		return diskMemberRead{}, errDiskMemberOutsideSource
+	}
+	if member.Method == zip.Store &&
+		(memberSize > a.Artifact.Size || offset > a.Artifact.Size-memberSize) {
+		return diskMemberRead{}, errDiskMemberOutsideSource
+	}
+	var diskFile *os.File
+	var encodedEvidence []byte
+	var staged *stagedDisk
+	if member.Method != zip.Store {
+		if member.Method != zip.Deflate {
+			return diskMemberRead{}, fmt.Errorf(
+				"%w: %d",
+				errUnsupportedDiskZIPMethod,
+				member.Method,
+			)
+		}
+		encodedEvidence, err = io.ReadAll(
+			contextReader{ctx, io.NewSectionReader(a.file, offset, encodedSize)},
+		)
+		if err != nil {
+			return diskMemberRead{}, fmt.Errorf("readDiskMember: encoded member read: %w", err)
+		}
+		if int64(len(encodedEvidence)) != encodedSize {
+			return diskMemberRead{}, errDiskMemberOutsideSource
+		}
+		options := a.stageOptions
+		if options.free == nil {
+			options = defaultDiskStageOptions()
+		}
+		staged, err = stageDiskMember(ctx, member, options)
+		if err != nil {
+			return diskMemberRead{}, fmt.Errorf("readDiskMember: stage ZIP member: %w", err)
+		}
+		diskFile = staged.file
+		offset = 0
+	} else {
+		diskFile = a.file
+	}
+	return diskMemberRead{
+		source: &captureSource{
+			ctx:           ctx,
+			SectionReader: io.NewSectionReader(diskFile, offset, memberSize),
+			seen:          map[int64][]byte{},
+		},
+		encodedEvidence: encodedEvidence,
+		encodedSize:     member.CompressedSize64,
+		staged:          staged,
+	}, nil
+}
+
+func (a *Archive) inspectDisk(
+	ctx context.Context,
+	t model.Target,
+) (_ []model.Observation, resultErr error) {
 	name, ok := t.Components["OS"]
 	if !ok {
 		return nil, errOSDiskImageNotDeclared
@@ -74,26 +156,21 @@ func (a *Archive) inspectDisk(ctx context.Context, t model.Target) ([]model.Obse
 	if !ok {
 		return nil, errOSDiskMemberIsMissing
 	}
-	member := a.ZIP.File[index]
-	if member.Method != zip.Store {
-		return nil, errCompressedDiskUnsupported
-	}
-	offset, err := member.DataOffset()
+	read, err := a.readDiskMember(ctx, a.ZIP.File[index])
 	if err != nil {
-		return nil, fmt.Errorf("inspectDisk: DataOffset: %w", err)
+		return nil, err
 	}
-	if member.UncompressedSize64 > math.MaxInt64 {
-		return nil, errDiskMemberOutsideSource
+	if read.staged != nil {
+		defer func() {
+			if err := read.staged.Close(); err != nil {
+				resultErr = errors.Join(
+					resultErr,
+					fmt.Errorf("inspectDisk: cleanup staging: %w", err),
+				)
+			}
+		}()
 	}
-	memberSize := int64(member.UncompressedSize64)
-	if offset < 0 || memberSize > a.Artifact.Size || offset > a.Artifact.Size-memberSize {
-		return nil, errDiskMemberOutsideSource
-	}
-	source := &captureSource{
-		ctx:           ctx,
-		SectionReader: io.NewSectionReader(a.file, offset, memberSize),
-		seen:          map[int64][]byte{},
-	}
+	source := read.source
 	image, err := diskimage.New(source)
 	if err != nil {
 		return nil, fmt.Errorf("inspectDisk: diskimage.New: %w", err)
@@ -144,19 +221,27 @@ func (a *Archive) inspectDisk(ctx context.Context, t model.Target) ([]model.Obse
 			item{fmt.Sprintf("disk/OS/partition/%d", part.Index), "apfs", container},
 		)
 	}
-	evidence, err := json.Marshal(struct {
-		Schema string      `json:"schema"`
-		Ranges []readRange `json:"ranges"`
-	}{"encoded-disk-read-ranges/v1", source.ranges})
-	if err != nil {
-		return nil, fmt.Errorf("inspectDisk: json.Marshal: %w", err)
-	}
 	loc := model.Location{
 		ArtifactID: t.ArtifactID,
 		Member:     name,
 		Entry:      index,
 		Coordinate: "zip-member-byte-ranges",
 		Transforms: []string{"zip-stored-member", "go-apfs-v3@v0.1.0"},
+	}
+	var evidence []byte
+	if read.staged != nil {
+		evidence = read.encodedEvidence
+		loc.Coordinate = "zip-encoded-member"
+		loc.Length = read.encodedSize
+		loc.Transforms = []string{"zip-deflate-member", "go-apfs-v3@v0.1.0"}
+	} else {
+		evidence, err = json.Marshal(struct {
+			Schema string      `json:"schema"`
+			Ranges []readRange `json:"ranges"`
+		}{"encoded-disk-read-ranges/v1", source.ranges})
+		if err != nil {
+			return nil, fmt.Errorf("inspectDisk: json.Marshal: %w", err)
+		}
 	}
 	out := []model.Observation{}
 	blob := model.NewBlob(evidence)

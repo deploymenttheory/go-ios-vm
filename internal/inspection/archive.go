@@ -63,13 +63,14 @@ type Manifest struct {
 }
 
 type Archive struct {
-	file     *os.File
-	original os.FileInfo
-	ZIP      *zip.Reader
-	Artifact model.Artifact
-	Targets  []model.Target
-	manifest []byte
-	members  map[string]int
+	file         *os.File
+	original     os.FileInfo
+	ZIP          *zip.Reader
+	Artifact     model.Artifact
+	Targets      []model.Target
+	manifest     []byte
+	members      map[string]int
+	stageOptions diskStageOptions
 }
 
 type contextReader struct {

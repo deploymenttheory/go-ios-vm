@@ -141,7 +141,7 @@ func (o Observation) ValidateMetadata() error {
 		return errIncompleteObservation
 	}
 	switch o.Source.Coordinate {
-	case "plist-selector", "decoded-payload-byte", "zip-member-byte-ranges":
+	case "plist-selector", "decoded-payload-byte", "zip-member-byte-ranges", "zip-encoded-member":
 	default:
 		return fmt.Errorf("%w: %q", errUnsupportedSourceCoordinate, o.Source.Coordinate)
 	}
