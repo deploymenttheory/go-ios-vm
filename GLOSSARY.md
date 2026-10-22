@@ -25,6 +25,15 @@ Examination of a running guest's execution, device accesses, interrupts, and fai
 **Observed finding**:
 A statement directly supported by identified firmware contents or a recorded execution event. Its scope is limited to what was actually inspected.
 
+**Finding**:
+The enduring question about one exact target, subject, and property. Different readings of that question belong to the same finding.
+
+**Finding revision**:
+One recorded answer or unanswered state for a finding, with its basis and rationale. A correction links to the earlier revision while preserving it.
+
+**Basis reference**:
+An explicit supporting or contradicting link to a retained observation or another finding revision.
+
 **Inferred finding**:
 An interpretation drawn from identified evidence and an explicit reasoning step.
 

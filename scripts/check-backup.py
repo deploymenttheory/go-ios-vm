@@ -14,7 +14,9 @@ queries = [
     "SELECT id || ':' || encode(sha256(data),'hex') FROM evidence_chunk ORDER BY id",
     "SELECT row_to_json(x)::text FROM (SELECT * FROM blob_chunk ORDER BY blob_id,ordinal) x",
     "SELECT row_to_json(x)::text FROM (SELECT * FROM observation ORDER BY id) x",
+    "SELECT row_to_json(x)::text FROM (SELECT * FROM finding ORDER BY id) x",
     "SELECT row_to_json(x)::text FROM (SELECT * FROM finding_revision ORDER BY id) x",
+    "SELECT row_to_json(x)::text FROM (SELECT * FROM finding_basis ORDER BY revision_id,role,observation_id,reference_revision_id) x",
     "SELECT row_to_json(x)::text FROM (SELECT * FROM run_observation ORDER BY run_id,observation_id) x",
 ]
 subprocess.run(prefix + ["createdb", "-U", "goiosvm", name], check=True)
@@ -33,6 +35,6 @@ try:
     after = [sql(name, q) for q in queries]
     if before != after:
         raise SystemExit("Restored evidence bytes or relationships differ")
-    print("Backup/restore preserved supporting bytes and publication relationships")
+    print("Backup/restore preserved supporting bytes, finding revisions and basis relationships")
 finally:
     subprocess.run(prefix + ["dropdb", "-U", "goiosvm", name], check=True)

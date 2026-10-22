@@ -75,14 +75,19 @@ The actual `results.sources` includes the Apple catalogs as well. Listing record
 bin/go-ios-vm target list --image /path/to/verified.ipsw
 bin/go-ios-vm --format json inspect --image /path/to/verified.ipsw --identity 0
 bin/go-ios-vm finding list --run RUN_ID
+bin/go-ios-vm finding show --finding FINDING_ID
 bin/go-ios-vm finding show --evidence EVIDENCE_SHA256
+bin/go-ios-vm finding revise --target TARGET_ID --subject SUBJECT --property PROPERTY \
+  --basis inferred --presence present --value '{"kind":"candidate"}' \
+  --rationale 'Reason for this interpretation' --supersedes REVISION_ID \
+  --support-observation OBSERVATION_ID
 bin/go-ios-vm compare --left FIRST_RUN_ID --right SECOND_RUN_ID
 bin/go-ios-vm cache status
 bin/go-ios-vm cache prune         # preview
 bin/go-ios-vm cache prune --apply
 ```
 
-Choose the identity index from `target list`; `0` is only an example. Evidence bytes in `finding show` are base64 within JSON. Present zero, missing observations, and conflicting readings stay distinct in comparisons. Comparisons match exact semantic subjects/properties; they do not establish cross-hardware equivalence.
+Choose the identity index from `target list`; `0` is only an example. `finding list` returns stable target/subject/property questions and their revision chains. `finding show --finding` displays one chain; `--evidence` still returns integrity-checked supporting bytes as base64. `finding revise` accepts `observed`, `inferred`, or `unknown` and returns the committed finding and revision IDs; use `finding show --finding` to read the chain. An observed revision uses `--observation` and takes its value from that published observation. An inferred revision needs `--presence`, a JSON `--value` when present (bare `null` is rejected), and at least one `--support-observation` or `--support-revision`. An unknown revision records an unanswered question and rationale. All bases accept repeatable `--contradict-observation` and `--contradict-revision` references; `--supersedes` links a correction to an earlier revision of the same finding. Finding chain and receipt JSON use `schema_version: 2`; other command outputs keep version 1. Present zero, missing observations, and conflicting readings stay distinct in comparisons. Comparisons match exact semantic subjects/properties; they do not establish cross-hardware equivalence.
 
 Viper accepts `--config FILE`, flags, and `GOIOSVM_` environment variables; prefer `GOIOSVM_DATABASE_URL` over passing credentials on the command line. Defaults: 8 GiB image-cache budget, 2 GiB free-disk reserve, 2 GiB distinct retained source bytes in PostgreSQL. The evidence budget excludes database/index/WAL overhead. These limits are configurable using `--cache-limit`, `--disk-reserve`, and `--evidence-limit` (bytes). Credentials and firmware images are ignored by Git.
 

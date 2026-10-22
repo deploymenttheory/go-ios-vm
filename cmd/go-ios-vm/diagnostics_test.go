@@ -46,6 +46,8 @@ func TestJSONSuccessInvalidFatalAndCancelled(t *testing.T) {
 		{name: "missing input", state: "failed", code: "missing_input", args: []string{"--format", "json", "target", "list"}, exit: 1},
 		{name: "incomplete exact fetch", state: "failed", code: "missing_input", args: []string{"--format", "json", "firmware", "fetch", "--product", "iPhone12,1"}, exit: 1},
 		{name: "invalid command", state: "failed", code: "invalid_invocation", args: []string{"unrecognized", "--format=json"}, exit: 1},
+		{name: "finding selector", state: "failed", code: "invalid_invocation", args: []string{"--format", "json", "finding", "show"}, exit: 1},
+		{name: "finding revision input", state: "failed", code: "invalid_invocation", args: []string{"--format", "json", "finding", "revise"}, exit: 1},
 		{name: "storage failure", state: "failed", code: "storage_failure", args: []string{"--format", "json", "--database-url", "postgres://user:secret@localhost:bad/db", "db", "migrate"}, exit: 1},
 		{name: "cancelled", state: "cancelled", code: "cancelled", args: []string{"--format", "json", "cache", "prune", "--apply"}, cancel: true, exit: 130},
 	}
@@ -126,5 +128,39 @@ func TestTextSummaryAvoidsStructuredDump(t *testing.T) {
 	}
 	if !strings.Contains(stdout.String(), "1 managed cache entries") || !strings.Contains(stdout.String(), path) || strings.Contains(stdout.String(), "\"path\"") {
 		t.Fatalf("unexpected text summary: %s", stdout.String())
+	}
+}
+
+func TestFindingTextSummariesShowRevisionChainAndReceipt(t *testing.T) {
+	chain := model.FindingChain{
+		ID: "finding-1", TargetID: "target-1", Subject: "device", Property: "address",
+		Revisions: []model.FindingRevision{
+			{ID: "revision-1", Basis: "observed", Presence: "present", Value: json.RawMessage(`0`),
+				Rationale: "direct reading", References: []model.BasisReference{{Role: "supporting", ObservationID: "observation-1",
+					Observation: &model.Observation{EvidenceID: "digest-1", Source: model.Location{Member: "tree", Selector: "/device/address"}}}}},
+			{ID: "revision-2", Basis: "unknown", Presence: "unexamined", Supersedes: "revision-1",
+				Rationale: "parser disagreement", References: []model.BasisReference{{Role: "contradicting", RevisionID: "revision-1"}}},
+		},
+	}
+	for _, tc := range []struct {
+		name  string
+		value any
+		want  []string
+	}{
+		{"list", []model.FindingChain{chain}, []string{"1 findings", "device address", "revision-1", "revision-2"}},
+		{"show", chain, []string{"finding revision chain", "value: 0", "rationale: parser disagreement", "contradicting revision revision-1", "source: tree /device/address; evidence digest-1"}},
+		{"revise", model.RevisionReceipt{FindingID: "finding-1", RevisionID: "revision-3"}, []string{"revision-3 recorded", "finding show --finding finding-1"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var out bytes.Buffer
+			if err := printSummary(&out, "complete", tc.value); err != nil {
+				t.Fatal(err)
+			}
+			for _, part := range tc.want {
+				if !strings.Contains(out.String(), part) {
+					t.Fatalf("missing %q in %s", part, out.String())
+				}
+			}
+		})
 	}
 }
