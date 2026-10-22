@@ -1,0 +1,19 @@
+:root { color-scheme: light; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #17243a; background: #f4f7fb; }
+* { box-sizing: border-box; }
+body { margin: 0; }
+.shell { max-width: 860px; margin: 0 auto; padding: 64px 24px 96px; }
+header { margin-bottom: 40px; }
+.eyebrow { margin: 0 0 10px; color: #245b87; font-size: 0.85rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
+h1 { margin: 0; font-size: clamp(2.5rem, 6vw, 4rem); line-height: 1.1; letter-spacing: -0.04em; }
+h2 { margin: 0 0 16px; font-size: 1.15rem; }
+p { line-height: 1.55; }
+.intro { color: #4a5b70; font-size: 1.2rem; }
+.panel { margin-top: 20px; padding: 28px; border: 1px solid #dce4ed; border-radius: 16px; background: #fff; box-shadow: 0 8px 28px #142b470d; }
+.panel p:last-child { margin-bottom: 0; }
+.panel-heading { display: flex; gap: 12px; justify-content: space-between; align-items: start; }
+.badge { padding: 6px 12px; border-radius: 999px; background: #e8eef6; color: #2d4a69; font-size: 0.85rem; font-weight: 700; white-space: nowrap; }
+.badge[data-state="ready"] { background: #e0f4e8; color: #176539; }
+.badge[data-state="unavailable"] { background: #fce8e6; color: #a12b23; }
+.hint { color: #64748b; font-size: 0.9rem; }
+code { padding: 2px 5px; border-radius: 4px; background: #edf2f7; }
+@media (max-width: 540px) { .shell { padding: 36px 16px 64px; } .panel { padding: 20px; } }

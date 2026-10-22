@@ -34,9 +34,9 @@ type partialError struct{}
 func (*partialError) Error() string { return "inspection has incomplete coverage" }
 
 type config struct {
-	DatabaseURL, Format string
-	Cache               acquisition.Cache
-	EvidenceLimit       int64
+	DatabaseURL, Format, UIListen string
+	Cache                         acquisition.Cache
+	EvidenceLimit                 int64
 }
 type envelope struct {
 	SchemaVersion int         `json:"schema_version"`
@@ -93,6 +93,7 @@ func newCommand(stdout, stderr io.Writer) *cobra.Command {
 		cfg = config{
 			DatabaseURL:   v.GetString("database-url"),
 			Format:        v.GetString("format"),
+			UIListen:      v.GetString("ui-listen"),
 			EvidenceLimit: v.GetInt64("evidence-limit"),
 			Cache: acquisition.Cache{
 				Dir:     v.GetString("cache-dir"),
@@ -628,6 +629,7 @@ func newCommand(stdout, stderr io.Writer) *cobra.Command {
 	)
 	c.Flags().
 		BoolVar(&apply, "apply", false, "Delete listed managed images after acquiring exclusive cache lease")
+	addUICommand(root, v, &cfg, stderr)
 	return root
 }
 

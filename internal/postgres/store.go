@@ -89,6 +89,15 @@ func Open(ctx context.Context, dsn string) (*Store, error) {
 	return &Store{pool: p, EvidenceLimit: 2 << 30}, nil
 }
 func (s *Store) Close() { s.pool.Close() }
+
+// Ping checks the existing pool without querying or changing evidence.
+func (s *Store) Ping(ctx context.Context) error {
+	if err := s.pool.Ping(ctx); err != nil {
+		return fmt.Errorf("Ping: pool: %w", err)
+	}
+	return nil
+}
+
 func (s *Store) Migrate(ctx context.Context) error {
 	c, err := s.pool.Acquire(ctx)
 	if err != nil {

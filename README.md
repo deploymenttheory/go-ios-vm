@@ -44,6 +44,15 @@ bin/go-ios-vm firmware list --product iPhone12,1 --search 14.0
 bin/go-ios-vm firmware fetch --product iPhone12,1 --version 14.0 --build 18A373
 ```
 
+Serve the local inspection app from the same database configuration while CLI inspections run in another process:
+
+```sh
+bin/go-ios-vm ui serve
+# Open http://127.0.0.1:8765/
+```
+
+The UI binds `127.0.0.1:8765` by default. Set `--listen 127.0.0.1:PORT`, `GOIOSVM_UI_LISTEN`, or `ui-listen` in the Viper configuration to choose a different port; `--listen 127.0.0.1:0` requests an available port and prints the chosen address. Only numeric loopback addresses are accepted, including `::1`. The command requires the existing PostgreSQL URL and closes its listener and database pool on shutdown. A database connection failure produces a safe CLI diagnostic; if the database later becomes unavailable, the browser status and `GET /api/v1/health` report it without exposing connection details. The versioned `/api/v1` boundary currently offers health and serves no write routes. Result browsing is a later UI ticket.
+
 `firmware list` requires PostgreSQL (`GOIOSVM_DATABASE_URL` or `--database-url`) and queries Apple release metadata, Apple's restore catalog, and the historical device index. It shows only restore IPSW rows, sorted by version and build. `--search` matches a version or build substring without needing the exact build first. Each row includes the Apple-hosted URL, source, declared size and SHA-1 where available, an explicit **unverified catalog locator** status, and a copyable exact `firmware fetch` command. Release-only metadata cannot be downloaded. If any source fails, the result is `partial` with exit status 2, including the failed source; an empty matching result is not proof that no archive exists. Conflicting locators for one exact version/build are marked ambiguous and do not offer a fetch command.
 
 For automation, use the versioned JSON envelope:
