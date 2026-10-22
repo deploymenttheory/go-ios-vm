@@ -31,7 +31,7 @@ jobs:
           POSTGRES_PASSWORD: ephemeral-ci-only
         ports: ['5432:5432']
         options: >-
-          --health-cmd 'pg_isready -U goiosvm -d goiosvm'
+          --health-cmd "pg_isready -U goiosvm -d goiosvm"
           --health-interval 2s --health-timeout 2s --health-retries 20
     env:
       GOIOSVM_TEST_DATABASE_URL: postgres://goiosvm:ephemeral-ci-only@127.0.0.1:5432/goiosvm?sslmode=disable
