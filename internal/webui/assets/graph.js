@@ -5,7 +5,7 @@ const graphEdgeKinds = [
   "contains_device_tree_node", "declares_driver", "observed_apfs_path",
   "has_finding", "has_property", "declares_driver_dependency",
   "declared_by_driver", "resolves_to_apfs_object", "records_observation",
-  "has_revision", "supersedes_revision", "supporting_observation",
+  "has_revision", "belongs_to_finding", "supersedes_revision", "supporting_observation",
   "contradicting_observation", "supporting_evidence", "contradicting_evidence",
   "supporting_revision", "contradicting_revision", "assessed_as",
   "assesses_revision", "retains_evidence", "used_by_revision",
@@ -253,6 +253,10 @@ function graphRender() {
   const edges = graphFilteredEdges(data);
   byId("graph-scope").textContent = `${graphLabel(data.center.kind)}: ${data.center.label} · ${data.edges.length} loaded relationship${data.edges.length === 1 ? "" : "s"}${graphView.search ? ` · ${edges.length} search matches` : ""}${data.run_id ? ` · latest run ${data.run_id}` : ""}`;
   const gaps = byId("graph-gaps"); clear(gaps);
+  if (!data.run_id) {
+    const unknown = node("div", "graph-gap", "No retained inspection run for this target; absence cannot be inferred.");
+    unknown.dataset.state = "unexamined"; gaps.append(unknown);
+  }
   for (const gap of data.gaps || []) {
     const item = node("div", "graph-gap", `${gap.component}: ${gap.state}${gap.reason ? ` · ${gap.reason}` : ""}`);
     item.dataset.state = gap.state; gaps.append(item);

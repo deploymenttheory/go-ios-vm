@@ -168,7 +168,9 @@ func graphBrowserNeighborhood(query url.Values) map[string]any {
 		center := graphBrowserNode(nodeID, "revision", "inferred · present", target, "present", "")
 		observation := graphBrowserNode("opaque:observation:1", "observation", "device / register", target, "present", "obs-device")
 		evidence := graphBrowserNode("opaque:evidence:1", "evidence", "evidence-1", target, "", "")
-		return graphBrowserData(center, []any{observation, evidence}, []any{
+		finding := graphBrowserNode("opaque:finding:1", "finding", "device / register", target, "", "finding-1")
+		return graphBrowserData(center, []any{finding, observation, evidence}, []any{
+			graphBrowserEdge("revision-finding", "belongs_to_finding", nodeID, "opaque:finding:1", "finding", "finding-1", "stored_record"),
 			graphBrowserEdge("revision-observation", "supporting_observation", nodeID, "opaque:observation:1", "observation", "obs-device", "stored_extraction"),
 			graphBrowserEdge("revision-evidence", "supporting_evidence", nodeID, "opaque:evidence:1", "observation", "obs-device", "stored_extraction"),
 		}, false)
@@ -267,7 +269,9 @@ window.addEventListener("load", () => {
     document.querySelector('[data-node-id="opaque:revision:1"]').click();
     document.querySelector("#graph-detail button.button-primary").click();
     await until(() => document.getElementById("graph-scope").textContent.includes("inferred · present"));
-    document.querySelector("#graph-map .graph-relation").click();
+    document.querySelector('[data-node-id="opaque:finding:1"]').click();
+    if (!document.querySelector('#graph-detail a[href*="finding=finding-1"]')) throw new Error("revision lost exact finding link");
+    document.querySelector('[data-edge-id="revision-observation"] .graph-relation').click();
     if (!document.getElementById("graph-detail").textContent.includes("Member: tree")) throw new Error("finding basis source missing");
     document.getElementById("graph-reset").click();
     await until(() => count().join() === "70,70");
