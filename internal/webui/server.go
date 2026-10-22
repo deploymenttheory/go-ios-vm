@@ -114,6 +114,10 @@ func newHandler(check func(context.Context) error, store *postgres.Store) http.H
 				endpoints = append(endpoints,
 					"/api/v1/artifacts", "/api/v1/targets",
 					"/api/v1/acquisitions", "/api/v1/runs",
+					"/api/v1/acquisitions/{attempt_id}/progress",
+					"/api/v1/acquisitions/{attempt_id}/progress/events",
+					"/api/v1/runs/{run_id}/progress",
+					"/api/v1/runs/{run_id}/progress/events",
 					"/api/v1/findings", "/api/v1/observations")
 			}
 			jsonResponse(w, r, http.StatusOK, response{
@@ -143,6 +147,9 @@ func newHandler(check func(context.Context) error, store *postgres.Store) http.H
 			serveAsset(w, r, static, "style.css", "text/css; charset=utf-8")
 		default:
 			if strings.HasPrefix(r.URL.Path, "/api/") {
+				if serveProgress(w, r, store) {
+					return
+				}
 				if store != nil && serveBrowse(w, r, store) {
 					return
 				}

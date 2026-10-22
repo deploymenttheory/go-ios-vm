@@ -1,6 +1,6 @@
 # Local inspection read API
 
-`go-ios-vm ui serve` exposes `GET` and `HEAD` routes on numeric loopback only. `GET /api/v1` lists available endpoints. Responses use a versioned envelope with `api_version: "v1"`, `state`, `read_only: true`, and either `data` or a safe `diagnostic`. There are no write routes. Artifact, target, acquisition and run requests have a three-second database deadline; finding, observation and evidence requests have a fifteen-second deadline.
+`go-ios-vm ui serve` exposes `GET` and `HEAD` routes on numeric loopback only. `GET /api/v1` lists available endpoints. Responses use a versioned envelope with `api_version: "v1"`, `state`, `read_only: true`, and either `data` or a safe `diagnostic`. There are no write routes. Artifact, target, acquisition, run and progress requests have a three-second database deadline; finding, observation and evidence requests have a fifteen-second deadline.
 
 | Route | Exact filters | Detail |
 | --- | --- | --- |
@@ -8,6 +8,10 @@
 | `/api/v1/targets` | `artifact_id`, `product`, `build`, `identity` | `/api/v1/targets/{id}` |
 | `/api/v1/acquisitions` | `product`, `build`, `status`, `from`, `before` | `/api/v1/acquisitions/{numeric-id}` |
 | `/api/v1/runs` | `target_id`, `state`, `from`, `before` | `/api/v1/runs/{id}` |
+| `/api/v1/acquisitions/{attempt_id}/progress` | none | Durable attempt snapshot |
+| `/api/v1/acquisitions/{attempt_id}/progress/events` | `since`, `limit` | Retained changes plus current snapshot |
+| `/api/v1/runs/{run_id}/progress` | none | Durable run snapshot and final ledger |
+| `/api/v1/runs/{run_id}/progress/events` | `since`, `limit` | Retained changes plus current snapshot |
 | `/api/v1/findings` | required `target_id`; `subject`, `property`, `component`, `basis`, `assessment` | `/api/v1/findings/{id}?target_id={id}` |
 | `/api/v1/observations` | required `target_id`; `run_id`, `subject`, `property`, `component` | `/api/v1/observations/{id}?target_id={id}` |
 | `/api/v1/evidence/{digest}/preview` | required `target_id`; `bytes` (1–4096, default 256) | Verified retained byte sample |
@@ -19,6 +23,12 @@ An artifact response gives its digest, size, and number of registered source loc
 An acquisition response gives the recorded source status, selected product/version/build when present, retained evidence ID and its completeness flag, and a URL origin when parseable. The API omits URL credentials, path, and query. A failed source includes `partial_reason` because its search scope is incomplete; an empty result from such an attempt does not establish absence.
 
 Run lists show durable run state, target, input digest/size, extractor, and planned components. A run detail adds committed component checkpoints and batch counts. `final_coverage_available` is true only when the final coverage ledger has records; `final_coverage` then gives each recorded state and reason. Running, failed, cancelled, or interrupted runs can have completed checkpoints without final coverage. Uncheckpointed work is not presented as progress, and the API does not infer a completion percentage. All run detail reads use one read-only database snapshot. Each detail caps planned components, checkpoints, coverage rows, and batch groups at 128; oversized data returns a safe service error.
+
+Progress URLs use the durable acquisition attempt ID or inspection run ID, not the numeric catalog acquisition record ID. A snapshot returns `data.progress`, `effective_state`, `stale`, and decimal-string `cursor`. Inspection snapshots also include `data.run`, with committed checkpoints and `final_coverage_available`. The progress snapshot, retained events, run ledger, and lease status are read in one read-only PostgreSQL transaction, so a server restart or second process sees the same committed state. Unknown byte and unit totals are absent, and counters do not imply that inspection succeeded. Only the final run state and coverage ledger establish a complete or partial inspection.
+
+An inspection run with an expired or missing lease still has stored `progress.state: "running"`; the API reports `effective_state: "stale"` and `stale: true` without writing reconciliation. After recovery commits, the durable state and effective state become `interrupted`. `failed`, `cancelled`, `partial`, and `complete` remain separate states. Acquisition attempts have no lease and are never inferred stale from elapsed time. Diagnostic codes are bounded safe identifiers; database errors use a generic response that omits connection strings.
+
+Progress event requests accept `since` as the last seen nonnegative sequence for that operation URL (default `0`) and `limit` from 1 through 64 (default 64). They return `data.snapshot` with the same current fields as the snapshot route, `events` in ascending sequence, decimal-string `next_cursor`, `oldest_sequence`, `gap`, and `has_more`. Pass `next_cursor` as the next `since` while `has_more` is true. The producer retains at most the latest 64 phase/state events. If `since` precedes the oldest retained sequence by more than one, `gap: true` tells the browser to replace its event history from the included snapshot; the returned events still begin at the oldest retained sequence. A future or malformed `since` and an invalid limit return HTTP 400. Byte-counter-only updates increase `progress.version` without producing an event, so clients must use the included snapshot on every poll even when `events` is empty. This is bounded polling; the routes do not hold a connection open.
 
 Finding and observation lists require an exact target ID so identical names in different firmware identities remain separate. `subject` and `property` are prefix filters; `component` matches the observation source member recorded for the selected target. Finding lists return identity, subject, property and revision count. A finding detail includes its full immutable revision chain, typed values, supporting and contradicting references, exact assessment state and append-only history. A new revision never inherits an earlier assessment. Observation lists and details include presence and logical source coordinates. JSON typed values, including unsigned 64-bit integers, are passed through without a floating-point conversion. Finding and observation cursors are opaque and bound to the selected filters.
 

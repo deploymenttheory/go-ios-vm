@@ -425,6 +425,17 @@ func (s *Store) BrowseRun(ctx context.Context, id string) (RunRecord, error) {
 		return RunRecord{}, fmt.Errorf("BrowseRun: BeginTx: %w", err)
 	}
 	defer rollback(ctx, tx)
+	record, err := browseRunTx(ctx, tx, id)
+	if err != nil {
+		return record, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return record, fmt.Errorf("BrowseRun: Commit: %w", err)
+	}
+	return record, nil
+}
+
+func browseRunTx(ctx context.Context, tx pgx.Tx, id string) (RunRecord, error) {
 	record, err := scanRun(tx.QueryRow(ctx,
 		`SELECT `+runColumns+` FROM analysis_run WHERE id=$1`, id))
 	if err != nil {
@@ -461,9 +472,6 @@ func (s *Store) BrowseRun(ctx context.Context, id string) (RunRecord, error) {
 	rows.Close()
 	if len(record.CommittedBatches) > 128 {
 		return record, ErrBrowseTooLarge
-	}
-	if err := tx.Commit(ctx); err != nil {
-		return record, fmt.Errorf("BrowseRun: Commit: %w", err)
 	}
 	return record, nil
 }

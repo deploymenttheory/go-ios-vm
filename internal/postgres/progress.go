@@ -14,7 +14,10 @@ import (
 	"github.com/deploymenttheory/go-ios-vm/internal/model"
 )
 
-var ErrProgressIdentity = errors.New("progress identity or total changed")
+var (
+	ErrProgressIdentity         = errors.New("progress identity or total changed")
+	errProgressRunStateMismatch = errors.New("progress and run state disagree")
+)
 
 const progressHistoryLimit = 64
 
@@ -255,9 +258,18 @@ func recordProgressEvent(
 }
 
 func (s *Store) Progress(ctx context.Context, id string) (model.Progress, error) {
+	return progressFrom(ctx, s.pool, id)
+}
+
+type progressQuerier interface {
+	QueryRow(context.Context, string, ...any) pgx.Row
+	Query(context.Context, string, ...any) (pgx.Rows, error)
+}
+
+func progressFrom(ctx context.Context, q progressQuerier, id string) (model.Progress, error) {
 	var p model.Progress
 	var runID, inputSHA, fingerprint *string
-	err := s.pool.QueryRow(ctx, `SELECT id,kind,run_id,input_sha256,input_size,
+	err := q.QueryRow(ctx, `SELECT id,kind,run_id,input_sha256,input_size,
 	 source_fingerprint,phase,state,component,completed_bytes,verified_bytes,total_bytes,
 	 completed_units,total_units,published_batches,diagnostic_code,sequence,version,
 	 started,updated,finished FROM operation_progress WHERE id=$1`, id).Scan(
@@ -282,9 +294,17 @@ func (s *Store) Progress(ctx context.Context, id string) (model.Progress, error)
 }
 
 func (s *Store) ProgressEvents(ctx context.Context, id string) ([]model.ProgressEvent, error) {
-	rows, err := s.pool.Query(ctx, `SELECT operation_id,sequence,phase,state,component,
+	return progressEventsFrom(ctx, s.pool, id)
+}
+
+func progressEventsFrom(
+	ctx context.Context,
+	q progressQuerier,
+	id string,
+) ([]model.ProgressEvent, error) {
+	rows, err := q.Query(ctx, `SELECT operation_id,sequence,phase,state,component,
 	 diagnostic_code,created FROM operation_progress_event WHERE operation_id=$1
-	 ORDER BY sequence`, id)
+	 ORDER BY sequence LIMIT 65`, id)
 	if err != nil {
 		return nil, fmt.Errorf("ProgressEvents: Query: %w", err)
 	}
@@ -301,7 +321,65 @@ func (s *Store) ProgressEvents(ctx context.Context, id string) ([]model.Progress
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("ProgressEvents: Err: %w", err)
 	}
+	if len(out) > progressHistoryLimit {
+		return nil, ErrBrowseTooLarge
+	}
 	return out, nil
+}
+
+// ProgressStatus reads the durable snapshot, retained events, run ledger and
+// lease within one read-only database snapshot. A stale lease is reported, not
+// reconciled: only the worker/recovery path may change a run's state.
+type ProgressStatus struct {
+	Progress       model.Progress
+	Events         []model.ProgressEvent
+	Run            *RunRecord
+	Stale          bool
+	EffectiveState string
+}
+
+func (s *Store) ReadProgressStatus(ctx context.Context, id string) (ProgressStatus, error) {
+	tx, err := s.pool.BeginTx(ctx, pgx.TxOptions{
+		IsoLevel: pgx.RepeatableRead, AccessMode: pgx.ReadOnly,
+	})
+	if err != nil {
+		return ProgressStatus{}, fmt.Errorf("ReadProgressStatus: BeginTx: %w", err)
+	}
+	defer rollback(ctx, tx)
+	p, err := progressFrom(ctx, tx, id)
+	if err != nil {
+		return ProgressStatus{}, err
+	}
+	events, err := progressEventsFrom(ctx, tx, id)
+	if err != nil {
+		return ProgressStatus{}, err
+	}
+	status := ProgressStatus{
+		Progress: p, Events: events, EffectiveState: p.State,
+	}
+	if p.Kind == "inspection" {
+		run, runErr := browseRunTx(ctx, tx, id)
+		if runErr != nil {
+			return ProgressStatus{}, runErr
+		}
+		if run.State != p.State {
+			return ProgressStatus{}, errProgressRunStateMismatch
+		}
+		status.Run = &run
+		if p.State == "running" {
+			if err := tx.QueryRow(ctx, `SELECT lease_expires IS NULL OR lease_expires<=now()
+			 FROM analysis_run WHERE id=$1`, id).Scan(&status.Stale); err != nil {
+				return ProgressStatus{}, fmt.Errorf("ReadProgressStatus: lease: %w", err)
+			}
+			if status.Stale {
+				status.EffectiveState = "stale"
+			}
+		}
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return ProgressStatus{}, fmt.Errorf("ReadProgressStatus: Commit: %w", err)
+	}
+	return status, nil
 }
 
 // InspectionPhase reports the component currently being decoded. Published
