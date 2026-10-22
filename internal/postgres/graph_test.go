@@ -162,6 +162,18 @@ func TestGraphNeighborhoodUsesStoredTargetScopedRelationships(t *testing.T) {
 	if observedRevision == "" {
 		t.Fatal("missing observed revision")
 	}
+	for _, tc := range []struct{ kind, recordID string }{
+		{"finding", chains[0].ID},
+		{"observation", observations[2].ID},
+	} {
+		graph, err := s.GraphNeighborhood(ctx, GraphQuery{
+			TargetID: target.ID,
+			NodeID:   GraphID(target.ID, tc.kind, tc.recordID), Limit: 20,
+		})
+		if err != nil || graph.Center.RecordID != tc.recordID {
+			t.Fatalf("%s detail reference: %+v %v", tc.kind, graph.Center, err)
+		}
+	}
 	receipt, err := s.AddRevision(ctx, model.RevisionDraft{
 		TargetID: target.ID, Subject: observations[2].Subject, Property: observations[2].Property,
 		Basis: "inferred", Presence: "present", Value: json.RawMessage(`{"type":"number","decimal":"0"}`),

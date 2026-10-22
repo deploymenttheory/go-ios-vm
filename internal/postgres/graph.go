@@ -47,6 +47,7 @@ type GraphNode struct {
 	Label    string `json:"label"`
 	TargetID string `json:"target_id"`
 	State    string `json:"state,omitempty"`
+	RecordID string `json:"record_id,omitempty"`
 }
 
 type GraphBasis struct {
@@ -99,10 +100,14 @@ type graphBuilder struct {
 }
 
 func (b *graphBuilder) node(kind, key, label, state string) GraphNode {
-	return GraphNode{
+	node := GraphNode{
 		ID: GraphID(b.target, kind, key), Kind: kind, Label: label,
 		TargetID: b.target, State: state,
 	}
+	if kind == "finding" || kind == "observation" {
+		node.RecordID = key
+	}
+	return node
 }
 
 func (b *graphBuilder) add(kind string, from, to GraphNode, basis GraphBasis) {
