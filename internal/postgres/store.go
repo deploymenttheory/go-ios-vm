@@ -471,6 +471,7 @@ func (s *Store) Acquisition(
 	request any,
 	status string,
 	data []byte,
+	attemptID ...string,
 ) error {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
@@ -485,13 +486,19 @@ func (s *Store) Acquisition(
 	if err != nil {
 		return fmt.Errorf("Acquisition: json.Marshal: %w", err)
 	}
+	var attempt string
+	if len(attemptID) > 0 {
+		attempt = attemptID[0]
+	}
 	_, err = tx.Exec(
 		ctx,
-		"INSERT INTO acquisition(source,requested,status,evidence_id) VALUES($1,$2,$3,$4)",
+		`INSERT INTO acquisition(source,requested,status,evidence_id,attempt_id)
+		 VALUES($1,$2,$3,$4,NULLIF($5,''))`,
 		source,
 		b,
 		status,
 		id,
+		attempt,
 	)
 	if err != nil {
 		return fmt.Errorf("Acquisition: Exec: %w", err)

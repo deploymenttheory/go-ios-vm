@@ -44,6 +44,16 @@ func TestAcquisitionProgressIsVisibleToAnotherProcessAndBounded(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if err := s.Acquisition(ctx, "https://example.invalid/catalog", map[string]string{
+		"product": "iPhone12,1",
+	}, "catalog", []byte("bounded catalog response"), id); err != nil {
+		t.Fatal(err)
+	}
+	var linkedID string
+	if err := s.pool.QueryRow(ctx, `SELECT attempt_id FROM acquisition WHERE attempt_id=$1`,
+		id).Scan(&linkedID); err != nil || linkedID != id {
+		t.Fatalf("catalog evidence did not retain attempt ownership: %s %v", linkedID, err)
+	}
 	initial, err := s.Progress(ctx, id)
 	if err != nil || initial.Phase != "resolving" || initial.TotalBytes != nil ||
 		initial.SourceFingerprint != "" {

@@ -273,6 +273,7 @@ func newCommand(stdout, stderr io.Writer) *cobra.Command {
 						map[string]any{"selection": req, "diagnostic": response.Error},
 						response.Status,
 						response.Data,
+						progressID,
 					); err != nil {
 						return classified("storage_failure", err)
 					}
@@ -359,6 +360,7 @@ func newCommand(stdout, stderr io.Writer) *cobra.Command {
 					},
 					"manifest_probe",
 					probe.RawBuildManifest,
+					progressID,
 				); err != nil {
 					return classified("storage_failure", err)
 				}
@@ -412,6 +414,7 @@ func newCommand(stdout, stderr io.Writer) *cobra.Command {
 					req,
 					"verified",
 					receipt,
+					progressID,
 				); err != nil {
 					return classified("storage_failure", err)
 				}

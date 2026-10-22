@@ -38,6 +38,8 @@ CREATE TABLE operation_progress_event (
  created timestamptz NOT NULL DEFAULT now(),
  PRIMARY KEY(operation_id,sequence)
 );
+ALTER TABLE acquisition ADD COLUMN attempt_id text REFERENCES operation_progress(id);
+CREATE INDEX acquisition_attempt ON acquisition(attempt_id,created,id);
 
 INSERT INTO operation_progress
  (id,kind,run_id,input_sha256,input_size,phase,state,completed_units,
@@ -54,4 +56,5 @@ INSERT INTO operation_progress_event(operation_id,sequence,phase,state)
  SELECT id,1,phase,state FROM operation_progress;
 
 ---- create above / drop below ----
+ALTER TABLE acquisition DROP COLUMN attempt_id;
 DROP TABLE operation_progress_event, operation_progress;
