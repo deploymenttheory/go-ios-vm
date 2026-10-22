@@ -1,10 +1,10 @@
 # Implementation status — 2026-10-22
 
-The design interview concluded with approval of item 20. This is a fresh implementation in `go-ios-vm`, on `feat/firmware-inspection`. No code, images or reports have been imported from the previous spike. The usable iOS VM remains the project objective; there is no runner or demonstrated guest boot in this repository yet.
+The design interview concluded with approval of item 20. This is a fresh implementation in `go-ios-vm`; the first inspection CLI is merged into `main`. No code, images or reports have been imported from the previous spike. The usable iOS VM remains the project objective; there is no runner or demonstrated guest boot in this repository yet.
 
 ## Demonstrated capabilities
 
-- The Cobra/Viper CLI builds on macOS arm64 and Linux arm64. Local verification used Go 1.27.1 on macOS and Go 1.27.2 in an already-cached Linux container. Cgo is required by the reused LZFSE decoder. GitHub CI is defined but has not been run for this unpublished branch.
+- The Cobra/Viper CLI builds on macOS arm64 and Linux arm64. Local verification used Go 1.27.1 on macOS and Go 1.27.2 in an already-cached Linux container. Cgo is required by the reused LZFSE decoder. The current historical-resolution changes have not yet run in CI.
 - Synthetic IPSWs with two build identities exercise manifest selection, IM4P device-tree decoding, exact unsigned values, source-byte recovery, Mach-O prelinked driver metadata and dependency extraction. Distinct identities are not collapsed. Wrong versions, duplicate ZIP members, invalid structure and decompression output over budget are rejected.
 - PostgreSQL-backed integration exercises atomic publication, rollback on invalid target ownership, deduplication across reruns, evidence-budget rejection, new CLI instances reading retained findings, and comparison after the synthetic source files have been deleted.
 - A shared cache lease prevents pruning an active source. Cleanup only selects regular digest-named images in the configured cache; external originals and failed download staging are preserved or removed according to their ownership.
@@ -15,16 +15,27 @@ The design interview concluded with approval of item 20. This is a fresh impleme
 
 ## Live acquisition evidence
 
-Successful HTTPS requests were made to:
+Current [Apple GDMF release metadata](https://gdmf.apple.com/v2/pmv) and
+[Apple's iTunes restore catalog](https://itunes.apple.com/WebObjects/MZStore.woa/wa/com.apple.jingle.appserver.client.MZITunesClientCheck/version/)
+do not yield the exact `iPhone12,1` iOS 14.0/15.0 public restore pair. A bounded
+historical-index fallback now supplies Apple-hosted URL locators. When run with
+PostgreSQL, the CLI retains the response with source attribution; an Apple CDN
+byte-range probe checks actual ZIP BuildManifest identity before any full download.
 
-- [GDMF release metadata](https://gdmf.apple.com/v2/pmv).
-- [Apple's iTunes restore catalog](https://itunes.apple.com/WebObjects/MZStore.woa/wa/com.apple.jingle.appserver.client.MZITunesClientCheck/version/).
+Both public builds have now been probed successfully: 14.0/`18A373` and
+15.0/`19A346`. The exact URLs, declared checksums, measured sizes, manifest
+digests, boards, identities and source limitations are in the
+[public iPhone 11 pair record](qualification/historical-resolution.md). These
+are real remote-manifest observations, not verified full IPSW artifacts. The
+old 14.0 seed build is not substituted for the public one.
 
-For `iPhone12,1`, neither catalog adapter returned an exact `14.0` or `15.0` match. The broad device query returned current GDMF release metadata and an iTunes restore candidate labelled `27.0.1 / 24A446`. That candidate has not been downloaded or verified through BuildManifest and is not substituted for the agreed initial comparison pair.
-
-The six catalog-query records reference four distinct response blobs (6,545,498 logical source bytes at the end of the initial pass). Responses changed between requests; they are retained as separate captured versions. The PostgreSQL database was approximately 9.3 MiB after removing temporary synthetic test records. There are no real IPSW downloads or decoded image archives in this project. Cache cleanup does not delete database evidence.
-
-No match in a current feed is not proof that a historical Apple CDN image is unavailable. Historical restore URL resolution is the next acquisition gap to resolve explicitly, preserving its source and validating the downloaded manifest before publication.
+A full 14.0 transfer was attempted but stopped when Apple CDN throughput
+proved too low for a single-session fetch. Bounded sequential and parallel
+range measurements confirmed that parallel requests did not improve aggregate
+transfer. The disposable trial partial was removed; no full image remains in the
+cache. The download path now resumes a managed partial pinned to the probed
+size and ETag, and still requires full checksum and local manifest verification
+before publication.
 
 ## Implemented but not yet qualified on real images
 
@@ -36,7 +47,7 @@ No match in a current feed is not proof that a historical Apple CDN image is una
 
 The first-tooling release is not complete:
 
-- Real iOS 14/15 images on matching hardware have not been acquired, pinned or compared. iOS 26/27 and cross-generation comparisons remain separate qualification work.
+- Real iOS 14/15 BuildManifests on matching hardware are qualified; the full images have not been acquired, hashed, inspected or compared. iOS 26/27 and cross-generation comparisons remain separate qualification work.
 - Filesystem-content inspection, ZIP-compressed disk-image staging, Mach-O fileset drivers and a bounded LZSS adapter remain unimplemented. Coverage reports these gaps; an inspection currently ends `partial` because filesystem-content inspection is unexamined.
 - Findings currently expose direct, unreviewed static observations. The schema has revision/basis fields, but user-driven inference, assessment, linked corrections and dependency invalidation are not yet implemented. Comparison reports multiple readings as conflicts; it does not adjudicate them.
 - Publication is one bounded transaction per inspection, after parsing. Per-batch restart/resume, recovery of runs left `running` after process crashes, and idempotent finalization after an ambiguous commit response remain to be implemented. Graceful cancellation records a terminal state when PostgreSQL remains reachable.
@@ -46,8 +57,8 @@ The first-tooling release is not complete:
 
 ## Next work, in order
 
-1. Resolve exact historical Apple restore URLs for the agreed hardware/version pair. Record the source route and any catalog limitations; retain the distinction between discovery and verified image identity.
-2. Acquire and inspect one image at a time within the current free-disk budget. Exercise actual device-tree/kernel/disk formats and recover every reported source location from retained bytes. Qualify only capabilities demonstrated by those inputs.
+1. Acquire and verify each exact historical candidate in full, one image at a time within the current free-disk budget. The bounded manifest probes are not full archive pins.
+2. Inspect actual device-tree/kernel/disk formats and recover every reported source location from retained bytes. Qualify only capabilities demonstrated by those inputs.
 3. Complete the concrete inspection gaps exposed by those images, including required file-content/driver dependencies. Confirm any disk/filesystem codec gap in `go-apfs-v3` before changing that library.
 4. Finish the remaining finding/publication contracts and compare the matching-hardware pair after cache cleanup and database restore. This is the first-tooling acceptance gate.
 5. Design the bounded whole-machine profile and complete lifecycle contracts, then implement the Hypervisor.framework runner. Static observations alone do not choose runtime behavior.

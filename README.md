@@ -13,7 +13,7 @@ The inspection suite covers static firmware inspection and live execution observ
 
 The first inspection workflow is: open an IPSW, select a device identity, explore its firmware and hardware descriptions, and compare findings with another image. Unsupported content must be reported explicitly. The CLI uses Cobra for commands and Viper for configuration, with readable terminal output and structured output for consumers. Existing libraries and tools should be reused where suitable; new Go tooling will fill demonstrated gaps. Confirmed missing disk-image/filesystem codec support belongs in `go-apfs-v3`. Hardware findings distinguish direct observations, interpretations, and unknowns, and retain references to their sources.
 
-PostgreSQL stores findings, provenance, and retained supporting evidence, including binary data. Disposable decoded files and bulk traces are subject to bounded retention. IPSWs are acquired on demand using GDMF discovery plus Apple-owned restore catalogs as needed, and held in a managed local cache. Historical restore resolution remains an explicit qualification gap. Development includes a dedicated local PostgreSQL instance; its connection is configurable through Viper for local or remote use. Findings inform a reviewed, versioned machine profile consumed by the runner.
+PostgreSQL stores findings, provenance, and retained supporting evidence, including binary data. Disposable decoded files and bulk traces are subject to bounded retention. IPSWs are acquired on demand using GDMF discovery plus Apple-owned restore catalogs as needed, and held in a managed local cache. When those current feeds lack an exact historical release, a historical index can locate an Apple-hosted restore URL; its claim is checked against the archive's BuildManifest and is not treated as a verified image. Development includes a dedicated local PostgreSQL instance; its connection is configurable through Viper for local or remote use. Findings inform a reviewed, versioned machine profile consumed by the runner.
 
 Usable-VM acceptance includes an interactive iOS UI, input, persistence, restart, and operation with SIP enabled. Exact hardware and image builds remain to be selected for this project. The wider Weave product family remains unchanged.
 
@@ -21,7 +21,7 @@ This is a fresh implementation. The previous project may be consulted for a spec
 
 ## Current stage
 
-The design interview is accepted. The first CLI implementation is on `feat/firmware-inspection`; the full first-tooling release is **not yet qualified on real iOS images**. No VM runner has been implemented.
+The design interview is accepted. The first CLI implementation is merged into `main`; the full first-tooling release is **not yet qualified on real iOS images**. No VM runner has been implemented.
 
 Implemented: Apple catalog discovery, bounded verified downloads, explicit BuildManifest identity selection, source-addressable device-tree and prelinked kernel/driver metadata, read-only disk/APFS metadata through `go-apfs-v3`, PostgreSQL publication/retrieval, run comparison and leased cache cleanup. Unsupported components produce partial coverage. Retained evidence includes the bytes needed to inspect findings after source-cache deletion.
 
@@ -42,9 +42,9 @@ bin/go-ios-vm db migrate
 bin/go-ios-vm firmware discover --product iPhone12,1 --version 14.0
 ```
 
-Discovery records exact catalog responses in PostgreSQL. The current Apple catalogs did not resolve the proposed iOS 14.0/15.0 fixtures during the initial checks. Do not substitute another image automatically.
+Discovery records exact catalog responses in PostgreSQL. The current Apple catalogs did not resolve the proposed iOS 14.0/15.0 fixtures during the initial checks. A historical locator has since returned exact Apple CDN candidates; see [historical resolution and bounded manifest probes](docs/qualification/historical-resolution.md). Do not substitute another image automatically.
 
-For an exact catalog-resolved release, `firmware fetch --product PRODUCT --version VERSION` downloads, verifies BuildManifest identity and publishes a SHA-256-named cache entry. It refuses an unresolved release, a failed checksum/identity check, or insufficient cache/free-disk capacity.
+`firmware probe --product PRODUCT --version VERSION --build BUILD` reads only bounded byte ranges to check an Apple CDN archive's BuildManifest. It reports the manifest's identity indices, boards, variants, and digest but **does not verify the whole archive**. For an exact resolved release, `firmware fetch` probes, downloads, verifies the full archive's declared size, checksum where supplied, and BuildManifest identity, then publishes a SHA-256-named cache entry. It refuses an unresolved release, a failed check, or insufficient cache/free-disk capacity.
 
 ```sh
 bin/go-ios-vm target list --image /path/to/verified.ipsw

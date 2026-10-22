@@ -3,6 +3,7 @@ package acquisition
 import (
 	"bytes"
 	"context"
+	"errors"
 	"io"
 	"net/http"
 	"os"
@@ -81,7 +82,7 @@ func TestFailedVerificationAndCancellationLeaveNoPublishedImage(t *testing.T) {
 						StatusCode:    200,
 						ContentLength: 4,
 						Body:          io.NopCloser(bytes.NewReader([]byte("data"))),
-						Header:        http.Header{},
+						Header:        http.Header{"Etag": []string{`"stable"`}},
 					}, nil
 				}),
 			}
@@ -92,7 +93,7 @@ func TestFailedVerificationAndCancellationLeaveNoPublishedImage(t *testing.T) {
 			}
 			_, err := client.Fetch(
 				ctx,
-				Candidate{URL: "https://updates.cdn-apple.com/a.ipsw"},
+				Candidate{URL: "https://updates.cdn-apple.com/a.ipsw", Size: 4, ETag: `"stable"`},
 				cache,
 				func(context.Context, string, Candidate) error { return io.ErrUnexpectedEOF },
 			)
@@ -110,6 +111,33 @@ func TestFailedVerificationAndCancellationLeaveNoPublishedImage(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestFetchRejectsHistoricalLocatorSizeMismatch(t *testing.T) {
+	cache := Cache{Dir: t.TempDir(), Limit: 1024}
+	client := NewClient()
+	client.HTTP.Transport = roundTrip(func(*http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode:    http.StatusOK,
+			ContentLength: 4,
+			Body:          io.NopCloser(bytes.NewReader([]byte("data"))),
+			Header:        http.Header{"Etag": []string{`"stable"`}},
+		}, nil
+	})
+	called := false
+	_, err := client.Fetch(
+		context.Background(),
+		Candidate{URL: "https://updates.cdn-apple.com/a.ipsw", Size: 5, ETag: `"stable"`},
+		cache,
+		func(context.Context, string, Candidate) error { called = true; return nil },
+	)
+	if !errors.Is(err, errCatalogSizeMismatch) || called {
+		t.Fatalf("mismatched size reached verification: %v, %v", err, called)
+	}
+	entries, err := cache.Entries()
+	if err != nil || len(entries) != 0 {
+		t.Fatalf("mismatched image entered cache: %v, %v", entries, err)
 	}
 }
 
@@ -141,5 +169,93 @@ func TestLeasePreventsPruneAndExternalFilesSurvive(t *testing.T) {
 	}
 	if _, err = os.Stat(outside); err != nil {
 		t.Fatal("external image removed")
+	}
+}
+
+func TestFetchRejectsSourceChangedAfterProbe(t *testing.T) {
+	client := NewClient()
+	client.HTTP.Transport = roundTrip(func(r *http.Request) (*http.Response, error) {
+		if r.Header.Get("If-Match") != `"probed"` {
+			t.Fatal("full fetch lost ETag precondition")
+		}
+		return &http.Response{
+			StatusCode:    200,
+			ContentLength: 4,
+			Header:        http.Header{"Etag": []string{`"changed"`}},
+			Body:          io.NopCloser(strings.NewReader("data")),
+		}, nil
+	})
+	cache := Cache{Dir: t.TempDir(), Limit: 1024}
+	_, err := client.Fetch(
+		context.Background(),
+		Candidate{URL: "https://updates.cdn-apple.com/a.ipsw", Size: 4, ETag: `"probed"`},
+		cache,
+		func(context.Context, string, Candidate) error { return nil },
+	)
+	if !errors.Is(err, errCDNObjectChanged) {
+		t.Fatal("changed CDN object accepted after manifest probe", err)
+	}
+	files, err := os.ReadDir(cache.Dir)
+	if err != nil || len(files) != 1 || files[0].Name() != ".lock" {
+		t.Fatal("changed object left a cache image", files, err)
+	}
+}
+
+func TestInterruptedFetchResumesOnlyMatchingObject(t *testing.T) {
+	client := NewClient()
+	attempt := 0
+	client.HTTP.Transport = roundTrip(func(r *http.Request) (*http.Response, error) {
+		attempt++
+		if r.Header.Get("If-Match") != `"stable"` {
+			t.Fatal("missing ETag precondition")
+		}
+		if attempt == 1 {
+			if r.Header.Get("Range") != "" {
+				t.Fatal("unexpected initial range")
+			}
+			return &http.Response{
+				StatusCode: 200, ContentLength: 4,
+				Header: http.Header{"Etag": []string{`"stable"`}},
+				Body:   io.NopCloser(strings.NewReader("da")),
+			}, nil
+		}
+		if r.Header.Get("Range") != "bytes=2-" {
+			t.Fatal("resume did not start after persisted bytes", r.Header)
+		}
+		return &http.Response{
+			StatusCode: 206, ContentLength: 2,
+			Header: http.Header{
+				"Etag":          []string{`"stable"`},
+				"Content-Range": []string{"bytes 2-3/4"},
+			},
+			Body: io.NopCloser(strings.NewReader("ta")),
+		}, nil
+	})
+	cache := Cache{Dir: t.TempDir(), Limit: 1024}
+	candidate := Candidate{URL: "https://updates.cdn-apple.com/a.ipsw", Size: 4, ETag: `"stable"`}
+	verify := func(_ context.Context, path string, _ Candidate) error {
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		if string(data) != "data" {
+			t.Fatalf("corrupt resumed image: %q", data)
+		}
+		return nil
+	}
+	if _, err := client.Fetch(context.Background(), candidate, cache, verify); err == nil {
+		t.Fatal("truncated initial response accepted")
+	}
+	entries, err := cache.Entries()
+	if err != nil || len(entries) != 1 || entries[0].Size != 2 {
+		t.Fatal("partial bytes not retained", entries, err)
+	}
+	artifact, err := client.Fetch(context.Background(), candidate, cache, verify)
+	if err != nil || artifact.Size != 4 || attempt != 2 {
+		t.Fatal(artifact, err, attempt)
+	}
+	entries, err = cache.Entries()
+	if err != nil || len(entries) != 1 || !strings.HasSuffix(entries[0].Path, ".ipsw") {
+		t.Fatal("partial not replaced by verified image", entries, err)
 	}
 }

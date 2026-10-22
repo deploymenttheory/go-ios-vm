@@ -2,6 +2,7 @@
 
 - [Scope and current stage](../README.md)
 - [Implementation status and next work](implementation-status.md)
+- [Historical iPhone12,1 restore resolution and bounded manifest probes](qualification/historical-resolution.md)
 - [Essential references retained before legacy deletion](research/retired-spike-notes.md)
 - [Glossary](../GLOSSARY.md)
 - [Fresh implementation with on-demand historical reference](adr/0001-fresh-implementation.md)

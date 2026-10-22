@@ -25,6 +25,7 @@ var (
 	errInvalidCacheBudget     = errors.New("invalid cache budget")
 	errRunOrTargetIsRequired  = errors.New("run or target is required")
 	errUnpublishedComparison  = errors.New("both runs must have published results")
+	errCandidateSizeMismatch  = errors.New("historical locator size differs from Apple CDN")
 )
 
 type partialError struct{}
@@ -150,24 +151,25 @@ func newCommand(stdout, stderr io.Writer) *cobra.Command {
 		Short: "Discover and acquire Apple restore firmware",
 	}
 	root.AddCommand(firmware)
-	for _, fetch := range []bool{false, true} {
+	for _, mode := range []string{"discover", "probe", "fetch"} {
 		var req acquisition.Request
-		name, short := "discover", "Resolve release metadata and restore IPSW candidates from Apple catalogs"
-		if fetch {
-			name, short = "fetch", "Download and verify one exact catalog-resolved restore IPSW"
-		}
-		c := command(firmware, name, short, func(c *cobra.Command, _ []string) error {
+		short := map[string]string{
+			"discover": "Resolve restore image candidates and retain source responses",
+			"probe":    "Check an exact restore IPSW BuildManifest using bounded byte ranges",
+			"fetch":    "Download and verify one exact restore IPSW",
+		}[mode]
+		c := command(firmware, mode, short, func(c *cobra.Command, _ []string) error {
 			return withDB(c.Context(), func(s *postgres.Store) error {
 				client := acquisition.NewClient()
-				fmt.Fprintln(stderr, "Reading Apple catalogs…")
+				fmt.Fprintln(stderr, "Reading restore catalogs…")
 				responses := client.Discover(c.Context(), req)
-				for _, r := range responses {
+				for _, response := range responses {
 					if err := s.Acquisition(
 						c.Context(),
-						r.Source,
-						map[string]any{"selection": req, "diagnostic": r.Error},
-						r.Status,
-						r.Data,
+						response.Source,
+						map[string]any{"selection": req, "diagnostic": response.Error},
+						response.Status,
+						response.Data,
 					); err != nil {
 						return err
 					}
@@ -175,10 +177,10 @@ func newCommand(stdout, stderr io.Writer) *cobra.Command {
 				if err := c.Context().Err(); err != nil {
 					return err
 				}
-				if !fetch {
+				if mode == "discover" {
 					state := "complete"
-					for _, r := range responses {
-						if r.Status == "failed" {
+					for _, response := range responses {
+						if response.Status == "failed" {
 							state = "partial"
 						}
 					}
@@ -196,15 +198,59 @@ func newCommand(stdout, stderr io.Writer) *cobra.Command {
 				}
 				fmt.Fprintln(
 					stderr,
-					"Downloading and verifying",
+					"Probing BuildManifest for",
 					selected.Product,
 					selected.Version,
 					selected.Build,
 				)
-				a, err := client.Fetch(
+				remote, err := client.OpenRange(c.Context(), selected.URL)
+				if err != nil {
+					return err
+				}
+				if selected.Size > 0 && selected.Size != remote.Size() {
+					return fmt.Errorf(
+						"%w: index %d, Apple CDN %d",
+						errCandidateSizeMismatch,
+						selected.Size,
+						remote.Size(),
+					)
+				}
+				probe, err := inspection.ProbeManifest(
 					c.Context(),
-					selected,
-					cfg.Cache,
+					remote,
+					remote.Size(),
+					selected.Product,
+					selected.Version,
+					selected.Build,
+				)
+				if err != nil {
+					return err
+				}
+				info := remote.Info()
+				selected.Size = info.Size
+				selected.ETag = info.ETag
+				if err := s.Acquisition(
+					c.Context(),
+					selected.URL,
+					map[string]any{
+						"candidate":       selected,
+						"range":           info,
+						"manifest_sha256": probe.ManifestSHA256,
+					},
+					"manifest_probe",
+					probe.RawBuildManifest,
+				); err != nil {
+					return err
+				}
+				if mode == "probe" {
+					return emit("complete", map[string]any{
+						"candidate": selected, "range": info, "manifest": probe,
+						"full_archive_verified": false,
+					})
+				}
+				fmt.Fprintln(stderr, "Downloading and verifying full IPSW")
+				a, err := client.Fetch(
+					c.Context(), selected, cfg.Cache,
 					func(ctx context.Context, path string, selected acquisition.Candidate) error {
 						image, err := inspection.Open(ctx, path)
 						if err != nil {
@@ -237,6 +283,7 @@ func newCommand(stdout, stderr io.Writer) *cobra.Command {
 		c.Flags().StringVar(&req.Version, "version", "", "Exact version, e.g. 14.0")
 		c.Flags().StringVar(&req.Build, "build", "", "Exact build")
 	}
+
 	target := &cobra.Command{Use: "target", Short: "Build identities from an IPSW"}
 	root.AddCommand(target)
 	var targetImage string
