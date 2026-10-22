@@ -1,22 +1,162 @@
 package main
 
 import (
+	"archive/zip"
 	"bytes"
 	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
+	"io"
 	"net/url"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
+	lzfse "github.com/blacktop/lzfse-cgo"
 	"github.com/jackc/pgx/v5"
 
 	"github.com/deploymenttheory/go-ios-vm/internal/acquisition"
 	"github.com/deploymenttheory/go-ios-vm/internal/model"
 	"github.com/deploymenttheory/go-ios-vm/internal/testfixture"
 )
+
+func TestCLICancelledNativeDecodeKeepsRunInterrupted(t *testing.T) {
+	dsn := os.Getenv("GOIOSVM_TEST_DATABASE_URL")
+	if dsn == "" {
+		t.Skip("PostgreSQL integration")
+	}
+	admin, err := pgx.Connect(context.Background(), dsn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var nonce [8]byte
+	if _, err := rand.Read(nonce[:]); err != nil {
+		t.Fatal(err)
+	}
+	schema := "native_test_" + hex.EncodeToString(nonce[:])
+	if _, err := admin.Exec(context.Background(), "CREATE SCHEMA "+schema); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		admin.Exec(context.Background(), "DROP SCHEMA "+schema+" CASCADE")
+		admin.Close(context.Background())
+	})
+	u, err := url.Parse(dsn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	q := u.Query()
+	q.Set("search_path", schema)
+	u.RawQuery = q.Encode()
+	t.Setenv("GOIOSVM_DATABASE_URL", u.String())
+	t.Setenv("GOIOSVM_CACHE_DIR", t.TempDir())
+	var stdout, stderr bytes.Buffer
+	if code := runCLI(context.Background(), []string{"db", "migrate"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("migrate exit %d: %s", code, stderr.String())
+	}
+	path := filepath.Join(t.TempDir(), "compressed-tree.ipsw")
+	makeCompressedTreeIPSW(t, path)
+	pidFile := filepath.Join(t.TempDir(), "worker.pid")
+	t.Setenv("GOIOSVM_NATIVE_TEST_MODE", "stall:"+pidFile)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	stdout.Reset()
+	stderr.Reset()
+	finished := make(chan int, 1)
+	go func() {
+		finished <- runCLI(ctx, []string{"--format", "json", "inspect", "--image", path,
+			"--identity", "0"}, &stdout, &stderr)
+	}()
+	deadline := time.After(5 * time.Second)
+	for {
+		if _, err := os.Stat(pidFile); err == nil {
+			break
+		}
+		select {
+		case code := <-finished:
+			t.Fatalf("inspection exited before worker, code %d: %s", code, stderr.String())
+		case <-deadline:
+			t.Fatal("native decode did not start")
+		case <-time.After(10 * time.Millisecond):
+		}
+	}
+	cancel()
+	select {
+	case code := <-finished:
+		if code != 130 {
+			t.Fatalf("cancel exit %d: %s", code, stderr.String())
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("cancelled CLI did not return")
+	}
+	conn, err := pgx.Connect(context.Background(), u.String())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close(context.Background())
+	var state string
+	var checkpoints, coverage int
+	if err := conn.QueryRow(context.Background(), `SELECT state,
+	 (SELECT count(*) FROM run_checkpoint WHERE run_id=analysis_run.id),
+	 (SELECT count(*) FROM run_coverage WHERE run_id=analysis_run.id)
+	 FROM analysis_run`).Scan(&state, &checkpoints, &coverage); err != nil {
+		t.Fatal(err)
+	}
+	if state != "cancelled" || checkpoints != 1 || coverage != 0 {
+		t.Fatalf("cancelled run published as complete: %s, checkpoints=%d, coverage=%d",
+			state, checkpoints, coverage)
+	}
+}
+
+func makeCompressedTreeIPSW(t *testing.T, path string) {
+	t.Helper()
+	if err := testfixture.IPSW(path, "14.0", 1); err != nil {
+		t.Fatal(err)
+	}
+	archive, err := zip.OpenReader(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer archive.Close()
+	rewritten := path + ".tmp"
+	file, err := os.Create(rewritten)
+	if err != nil {
+		t.Fatal(err)
+	}
+	writer := zip.NewWriter(file)
+	for _, member := range archive.File {
+		reader, err := member.Open()
+		if err != nil {
+			t.Fatal(err)
+		}
+		data, err := io.ReadAll(reader)
+		if closeErr := reader.Close(); err == nil {
+			err = closeErr
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+		if member.Name == "Firmware/tree.im4p" {
+			data = testfixture.IM4P("dtre", lzfse.EncodeBuffer(testfixture.Tree(1)))
+		}
+		w, err := writer.CreateHeader(&zip.FileHeader{Name: member.Name, Method: zip.Store})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := w.Write(data); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := errors.Join(writer.Close(), file.Close()); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Rename(rewritten, path); err != nil {
+		t.Fatal(err)
+	}
+}
 
 func TestListingTextReportsPartialSourcesAndExactNextCommand(t *testing.T) {
 	listing := acquisition.BuildListing([]acquisition.Response{

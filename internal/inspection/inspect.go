@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/blacktop/ipsw/pkg/img4"
-	lzfse "github.com/blacktop/lzfse-cgo"
 
 	"github.com/deploymenttheory/go-ios-vm/internal/model"
 )
@@ -77,7 +76,7 @@ func (a *Archive) Inspect(ctx context.Context, identity int) (Result, error) {
 	return result, err
 }
 
-func decodePayload(raw []byte, limit int) ([]byte, []string, error) {
+func decodePayload(ctx context.Context, raw []byte, limit int) ([]byte, []string, error) {
 	p, err := img4.ParsePayload(raw)
 	if err != nil {
 		return nil, nil, fmt.Errorf("decodePayload: img4.ParsePayload: %w", err)
@@ -90,15 +89,11 @@ func decodePayload(raw []byte, limit int) ([]byte, []string, error) {
 		return nil, nil, errShortIM4PPayload
 	}
 	if strings.HasPrefix(string(p.Data[:4]), "bvx") {
-		dst := make([]byte, limit+1)
-		n := lzfse.DecodeBufferInto(p.Data, dst)
-		if n == 0 {
-			return nil, nil, errLZFSEDecodeFailed
+		decoded, err := decodeNativeLZFSE(ctx, p.Data, limit)
+		if err != nil {
+			return nil, nil, err
 		}
-		if n > limit {
-			return nil, nil, fmt.Errorf("%w: limit %d bytes", errLZFSEExceedsOutputBudget, limit)
-		}
-		return dst[:n], append(transforms, "lzfse"), nil
+		return decoded, append(transforms, "lzfse"), nil
 	}
 	if strings.HasPrefix(string(p.Data), "complzss") {
 		return nil, nil, errLZSSAdapterIsNotQualified

@@ -46,7 +46,7 @@ func TestInspectRetainsReplayableSourceAndExactIdentities(t *testing.T) {
 		}
 		if o.Property == "test-value" {
 			foundTree = true
-			data, _, err := decodePayload(o.Evidence, TreeLimit)
+			data, _, err := decodePayload(context.Background(), o.Evidence, TreeLimit)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -87,10 +87,10 @@ func TestMalformedTreeAndBoundedLZFSE(t *testing.T) {
 	if len(encoded) == 0 {
 		t.Fatal("encode fixture")
 	}
-	if _, _, err := decodePayload(testfixture.IM4P("dtre", encoded), 32); err == nil {
+	if _, _, err := decodePayload(context.Background(), testfixture.IM4P("dtre", encoded), 32); err == nil {
 		t.Fatal("output cap ignored")
 	}
-	decoded, _, err := decodePayload(testfixture.IM4P("dtre", encoded), len(source))
+	decoded, _, err := decodePayload(context.Background(), testfixture.IM4P("dtre", encoded), len(source))
 	if err != nil || !bytes.Equal(decoded, source) {
 		t.Fatalf("decode: %v", err)
 	}
