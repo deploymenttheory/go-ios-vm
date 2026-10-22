@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
@@ -121,6 +122,35 @@ func monitorDeepLink(serverURL, id, kind string) string {
 	}.Encode()
 }
 
+func monitorBrowserScreenshots(t *testing.T, browser, pageURL string) {
+	t.Helper()
+	directory := os.Getenv("GOIOSVM_BROWSER_SCREENSHOT_DIR")
+	if directory == "" {
+		return
+	}
+	if err := os.MkdirAll(directory, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	for _, capture := range []struct{ name, size string }{
+		{"monitor-desktop.png", "1360,900"}, {"monitor-mobile.png", "500,900"},
+	} {
+		path := filepath.Join(directory, capture.name)
+		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		cmd := exec.CommandContext(ctx, browser,
+			"--headless", "--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage",
+			"--disable-background-networking", "--no-first-run", "--no-default-browser-check",
+			"--user-data-dir="+t.TempDir(), "--virtual-time-budget=5000",
+			"--window-size="+capture.size, "--screenshot="+path, pageURL,
+		)
+		output, runErr := cmd.CombinedOutput()
+		cancel()
+		info, statErr := os.Stat(path)
+		if statErr != nil || info.Size() == 0 {
+			t.Fatalf("capture %s: %v: %s", capture.name, runErr, tail(string(output), 600))
+		}
+	}
+}
+
 // TestBrowserMonitorCommittedTransitions is opt-in because CI does not install
 // Chrome. The browser is a second process reading a separate PostgreSQL pool.
 func TestBrowserMonitorCommittedTransitions(t *testing.T) {
@@ -219,4 +249,5 @@ func TestBrowserMonitorCommittedTransitions(t *testing.T) {
 			t.Fatalf("terminal monitor missing %q: %s", want, tail(terminal, 1800))
 		}
 	}
+	monitorBrowserScreenshots(t, browser, monitorDeepLink(server.URL, partial.ID, "inspection"))
 }
