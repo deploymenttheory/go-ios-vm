@@ -5,8 +5,8 @@ The baseline figures below come from the verified iOS 14.0 (`18A373`) and iOS 15
 and [iOS 15](qualification/iphone12-1-ios15.md) records contain the host,
 command, run ID and digest for each measurement. Both OS members are stored ZIP
 entries and both inspections stop at the upstream UDIF LZFSE codec gap, so the
-baseline measurements do not cover real-image APFS traversal. A later iOS 15
-trial with the still-open upstream codec work is recorded below.
+baseline measurements do not cover real-image APFS traversal. Later trials of
+both images with the still-open upstream codec work are recorded below.
 
 | Pinned image | IPSW bytes | OS member bytes | ZIP staging | Highest observed process RSS | Representative retained source bytes |
 | --- | ---: | ---: | ---: | ---: | ---: |
@@ -35,10 +35,12 @@ or user cancellation. Timeout, resource failure and cancellation remain distinct
 the first two leave partial component coverage; cancellation leaves an
 interrupted run without final coverage.
 
-The exact cached iOS 15.0 `19A346` archive (6,959,737,743 bytes; SHA-256
+The exact iOS 14.0 `18A373` (5,574,812,591 bytes; SHA-256
+`a30f2fa8d4dbdcd2a8cf0f1644de3879019ba6f8be8fba49806a9c82dec09759`)
+and iOS 15.0 `19A346` (6,959,737,743 bytes; SHA-256
 `13d574566eec7be3b9e23ec93c2374cabf7f150be63aafd7f8479d7d162480e0`)
-was inspected at identity 1 (`iPhone12,1`, `n104ap`) on both arm64 hosts with
-this branch based on PR #53 and a local upstream go-apfs-v3 composite commit
+archives were inspected at identity 1 (`iPhone12,1`, `n104ap`) on both arm64
+hosts with this branch based on PR #53 and a local upstream go-apfs-v3 composite commit
 `52e6d48`. That composite contains the open [UDIF LZFSE PR #147](https://github.com/deploymenttheory/go-apfs-v3/pull/147)
 and [decmpfs type-4 PR #149](https://github.com/deploymenttheory/go-apfs-v3/pull/149).
 Upstream [CI limit PR #150](https://github.com/deploymenttheory/go-apfs-v3/pull/150)
@@ -46,15 +48,17 @@ and [snapshot unmount PR #151](https://github.com/deploymenttheory/go-apfs-v3/pu
 are also open. These are trial measurements, not a claim that the released
 `go-apfs-v3 v0.1.0` dependency can traverse this APFS image.
 
-| Host | Run ID | Wall | User CPU | System CPU | Reported peak RSS | Findings | Retained distinct bytes | PostgreSQL table/index bytes | ZIP staging |
-| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| macOS arm64, Go 1.27.1 | `8a08e8be3128af6c35e16f68f3f034ec` | 13.66 s | 3.15 s | 1.95 s | 215,400,448 | 5,369 | 29,562,367 | 51,945,472 | 0 |
-| Linux arm64, Go 1.27.1 | `045120fd5833330562dc36b144be0274` | 23.46 s | 4.17 s | 3.46 s | 218,132,480 | 5,369 | 29,562,367 | 51,945,472 | 0 |
+| Image | Host | Run ID | Wall | User CPU | System CPU | Reported peak RSS | Findings | Retained distinct bytes | PostgreSQL table/index bytes | ZIP staging |
+| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| iOS 14 | macOS arm64, Go 1.27.1 | `b4a87e3b3a065eca43365f05b60af14e` | 14.73 s | 2.80 s | 2.07 s | 211,206,144 | 5,135 | 26,870,369 | 48,955,392 | 0 |
+| iOS 14 | Linux arm64, Go 1.27.1 | `5cda340b7dc1b3221d83b06d890e2e89` | 26.58 s | 3.88 s | 3.86 s | 208,449,536 | 5,135 | 26,870,369 | 48,988,160 | 0 |
+| iOS 15 | macOS arm64, Go 1.27.1 | `8a08e8be3128af6c35e16f68f3f034ec` | 13.66 s | 3.15 s | 1.95 s | 215,400,448 | 5,369 | 29,562,367 | 51,945,472 | 0 |
+| iOS 15 | Linux arm64, Go 1.27.1 | `045120fd5833330562dc36b144be0274` | 23.46 s | 4.17 s | 3.46 s | 218,132,480 | 5,369 | 29,562,367 | 51,945,472 | 0 |
 
-Both runs have complete Manifest, DeviceTree, KernelCache and disk-metadata
+All four runs have complete Manifest, DeviceTree, KernelCache and disk-metadata
 coverage. Filesystem-content is partial under the existing 65,536-byte per-file
-capture cap for two files and the bounded path selection; filesystem-wide
-absence remains unexamined. The selected OS ZIP member is stored, so no
+capture cap for two files per image and the bounded path selection; filesystem-wide
+absence remains unexamined. Each selected OS ZIP member is stored, so no
 expanded-image staging file was needed. PostgreSQL table/index bytes exclude
 cluster WAL and shared overhead. `time` reports a peak for the inspected command,
 not the simultaneous sum of parent and worker RSS. Allow at least 1 GiB for
@@ -62,11 +66,10 @@ the inspection process tree, plus separate PostgreSQL and OS headroom. This is
 an operational minimum derived from the observed parent peak and the 512 MiB
 worker threshold, not a whole-process hard cap.
 
-The exact iOS 14 archive is absent from the managed cache after the prior
-required prune, and the two archives together exceed its 8 GiB limit. Its
-post-codec APFS path is still unmeasured; the iOS 14 baseline above must not
-be used as a real-APFS peak. Reacquire it sequentially and repeat this trial
-before closing the two-image first-tooling gate.
+The iOS 14 archive was reacquired after the earlier required prune and verified
+again before this trial. The iOS 14 macOS and Linux runs retained identical
+observation and evidence ID sets. The two archives together exceed the default
+8 GiB managed-cache limit; these measurements do not change that policy.
 
 ## Current limits and checks
 
@@ -103,4 +106,4 @@ about 128 MiB in different processes, before parser objects and runtime
 overhead. DeviceTree uses 16 MiB caps; OS Deflate staging streams through a
 1 MiB copy buffer. There is no hard whole-process RSS/CPU limit. First-tooling
 acceptance [#20](https://github.com/deploymenttheory/go-ios-vm/issues/20)
-still depends on the upstream codec work and the remaining iOS 14 measurement.
+still depends on the upstream codec work and integrated two-image UI qualification.
