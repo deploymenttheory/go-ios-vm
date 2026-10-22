@@ -34,6 +34,8 @@ type ProgressBrowseFilter struct {
 type progressCursor struct {
 	Updated time.Time `json:"updated"`
 	ID      string    `json:"id"`
+	Kind    string    `json:"kind"`
+	State   string    `json:"state"`
 }
 
 func decodeProgressCursor(value string) (progressCursor, error) {
@@ -55,8 +57,11 @@ func decodeProgressCursor(value string) (progressCursor, error) {
 	return cursor, nil
 }
 
-func encodeProgressCursor(item ProgressBrowseItem) string {
-	data, _ := json.Marshal(progressCursor{Updated: item.Progress.Updated, ID: item.Progress.ID})
+func encodeProgressCursor(item ProgressBrowseItem, filter ProgressBrowseFilter) string {
+	data, _ := json.Marshal(progressCursor{
+		Updated: item.Progress.Updated, ID: item.Progress.ID,
+		Kind: filter.Kind, State: filter.State,
+	})
 	return base64.RawURLEncoding.EncodeToString(data)
 }
 
@@ -81,6 +86,9 @@ func (s *Store) BrowseProgress(
 	cursor, err := decodeProgressCursor(filter.Page.Cursor)
 	if err != nil {
 		return Page[ProgressBrowseItem]{}, err
+	}
+	if filter.Page.Cursor != "" && (cursor.Kind != filter.Kind || cursor.State != filter.State) {
+		return Page[ProgressBrowseItem]{}, ErrInvalidCursor
 	}
 	var cursorTime *time.Time
 	if !cursor.Updated.IsZero() {
@@ -131,7 +139,7 @@ func (s *Store) BrowseProgress(
 	out := Page[ProgressBrowseItem]{Items: []ProgressBrowseItem{}}
 	for _, e := range entries {
 		if len(out.Items) == limit {
-			out.NextCursor = encodeProgressCursor(out.Items[len(out.Items)-1])
+			out.NextCursor = encodeProgressCursor(out.Items[len(out.Items)-1], filter)
 			break
 		}
 		e.item.Progress, err = progressForBrowse(ctx, tx, e.item.Progress.ID)

@@ -160,6 +160,10 @@ func TestProgressListDiscoversUnpublishedFetchAndStaleRun(t *testing.T) {
 	if len(envelope["data"].(map[string]any)["items"].([]any)) != 1 {
 		t.Fatalf("terminal next page: %s", body)
 	}
+	code, _, _ = monitorListRequest(t, server, "/api/v1/progress?kind=inspection&state=terminal&cursor="+url.QueryEscape(cursor))
+	if code != http.StatusBadRequest {
+		t.Fatalf("cursor reused across filters: status %d", code)
+	}
 	artifact := model.Artifact{ID: strings.Repeat("a", 64), SHA256: strings.Repeat("a", 64), Size: 100}
 	target := model.Target{ID: strings.Repeat("b", 64), ArtifactID: artifact.ID, Identity: 1,
 		Products: []string{"iPhone12,1"}, Build: "19A346", Version: "15.0"}
