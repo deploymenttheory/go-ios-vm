@@ -4,7 +4,7 @@ The design interview concluded with approval of item 20. This is a fresh impleme
 
 ## Demonstrated capabilities
 
-- The Cobra/Viper CLI builds on macOS arm64 and Linux arm64. The exact iOS 14 qualification used Go 1.27.1 on both hosts. Cgo is required by the reused LZFSE payload decoder. The historical-resolution PR passed CI; the streaming-transfer fix in [PR #22](https://github.com/deploymenttheory/go-ios-vm/pull/22) passed its initial CI checks.
+- The Cobra/Viper CLI builds on macOS arm64 and Linux arm64. The exact iOS 14 and 15 qualifications used Go 1.27.1 on both hosts. Cgo is required by the reused LZFSE payload decoder. The historical-resolution PR passed CI; the streaming-transfer fix in [PR #22](https://github.com/deploymenttheory/go-ios-vm/pull/22) passed its initial CI checks.
 - Synthetic IPSWs with two build identities exercise manifest selection, IM4P device-tree decoding, exact unsigned values, source-byte recovery, Mach-O prelinked driver metadata and dependency extraction. Distinct identities are not collapsed. Wrong versions, duplicate ZIP members, invalid structure and decompression output over budget are rejected.
 - PostgreSQL-backed integration exercises atomic publication, rollback on invalid target ownership, deduplication across reruns, evidence-budget rejection, new CLI instances reading retained findings, and comparison after the synthetic source files have been deleted.
 - A shared cache lease prevents pruning an active source. Cleanup only selects regular digest-named images in the configured cache; external originals and failed download staging are preserved or removed according to their ownership.
@@ -36,7 +36,10 @@ old 14.0 seed build was not substituted for the public one. The full iOS 14
 archive has since been downloaded, verified, and inspected on macOS and Linux;
 its SHA-256, selected identity, run IDs, retained-byte checks, resource use, and
 partial coverage are in the [iOS 14 qualification record](qualification/iphone12-1-ios14.md).
-The iOS 15 archive remains a bounded remote-manifest observation only.
+The exact iOS 15 archive has also been downloaded, verified, and inspected on
+macOS and Linux. Its independent SHA-1/SHA-256/BuildManifest checks, selected
+identity, run IDs, retained-byte checks, and partial coverage are in the
+[iOS 15 qualification record](qualification/iphone12-1-ios15.md).
 
 The first long iOS 14 transfer encountered the HTTP client's 30-minute total
 timeout despite continuing progress. [PR #22](https://github.com/deploymenttheory/go-ios-vm/pull/22)
@@ -47,6 +50,7 @@ entry was published only after full checksum and local manifest verification.
 ## Real-image adapter limits
 
 - The 5,574,812,591-byte iOS 14 restore archive completed the managed fetch and independent SHA-1/SHA-256/BuildManifest checks. Synthetic failure, cancellation, identity-mismatch, and lease tests still cover the refusal paths.
+- The 6,959,737,743-byte iOS 15 restore archive also completed managed fetch and independent full-file checks on both hosts. Its SHA-256 is `13d574566eec7be3b9e23ec93c2374cabf7f150be63aafd7f8479d7d162480e0`. The macOS and Linux runs each retained 4,612 matching observations; Manifest, DeviceTree and KernelCache coverage are complete.
 - The device-tree adapter produced 3,520 direct findings on the selected real image. A follow-up bounded IOKit `IDREF` decoder recovered 938 driver findings across 246 bundles on macOS and Linux, with matching observation IDs and KernelCache coverage `complete`; see the [qualification follow-up](qualification/iphone12-1-ios14.md). LZFSE payload decompression uses upstream `DecodeBufferInto` with a fixed output cap.
 - Disk/APFS metadata uses `go-apfs-v3 v0.1.0` through a borrowed read-only ZIP member view. Stored OS members are read directly. Deflate OS members now use bounded disposable staging, with the full encoded member retained as evidence when it fits the existing 32 MiB disk source-capture cap. Larger compressed members report partial disk coverage without findings. APFS content inspection now searches selected firmware/driver paths, retains relevant file metadata and bounded logical bytes, and records APFS volume/view/object selectors. A synthetic APFS image and isolated PostgreSQL test verify retained content after archive deletion. This establishes the integration path, not real iOS filesystem qualification. Both pinned iPhone12,1 images, iOS 14.0 (`18A373`) and iOS 15.0 (`19A346`), reach unsupported LZFSE UDIF chunk kind `0x80000007` before APFS opens; [go-apfs-v3 #146](https://github.com/deploymenttheory/go-apfs-v3/issues/146) owns that decoder. The iOS 15 trial of this branch returned partial disk and filesystem coverage with zero filesystem observations. Physical extent provenance for decoded APFS file contents is not claimed.
 
@@ -54,7 +58,7 @@ entry was published only after full checksum and local manifest verification.
 
 The first-tooling release is not complete:
 
-- The exact iOS 14 image has been qualified with partial coverage. The exact iOS 15 image has not been acquired or inspected in full, so the matching-hardware pair has not been compared. iOS 26/27 and cross-generation comparisons remain separate work.
+- The exact iOS 14 and 15 images have been qualified with partial coverage on matching `iPhone12,1` / `n104ap` identities. Their retained macOS runs support exact subject/property comparison (3,852 equal, 604 changed, 230 unexamined entries); this does not imply semantic or boot compatibility. iOS 26/27 and cross-generation comparisons remain separate work.
 - Filesystem-wide content inspection, Mach-O fileset drivers and a bounded LZSS adapter remain unimplemented. The bounded APFS search reports partial coverage for paths outside its declared scope and for any source, codec or content limits. ZIP-compressed disk staging has fixed 8 GiB expanded and 2 GiB free-space reserve limits; it has synthetic-fixture coverage but no real compressed OS-member qualification.
 - Findings have a stable exact target/subject/property identity and retain linked observed, inferred, and unknown revisions with rationale and typed supporting or contradicting references. Direct observed values come from published observations; conflicting parser readings coexist. Assessment and dependency invalidation are still outstanding. Comparison reports multiple direct readings as conflicts; it does not adjudicate them.
 - Inspection publishes at most 128 observations per transaction and stores completed component checkpoints. Explicit `inspect --resume RUN_ID` rehashes the full archive and requires the same target, size, extractor and component plan; interrupted runs have no final coverage ledger. Crash recovery for abandoned `running` runs and idempotent finalization after an ambiguous commit response remain outstanding in issue #17. Graceful cancellation records a terminal state when PostgreSQL remains reachable.
@@ -64,9 +68,8 @@ The first-tooling release is not complete:
 
 ## Next work, in order
 
-1. Acquire and verify the exact iOS 15 candidate in full within the current free-disk budget. Its bounded manifest probe is not a full archive pin.
-2. Advance the iOS 14 disk adapter through [go-apfs-v3 #146](https://github.com/deploymenttheory/go-apfs-v3/issues/146), then check for further format gaps. [Issue #13](https://github.com/deploymenttheory/go-ios-vm/issues/13) owns filesystem content. Requalify kernel metadata on the iOS 15 image when acquired.
-3. Complete the remaining finding/publication contracts and compare the matching-hardware pair after cache cleanup and database restore. This is the first-tooling acceptance gate.
-4. Design the bounded whole-machine profile and complete lifecycle contracts, then implement the Hypervisor.framework runner. Static observations alone do not choose runtime behavior.
+1. Advance the iOS 14 and 15 disk adapter through [go-apfs-v3 #146](https://github.com/deploymenttheory/go-apfs-v3/issues/146), then requalify the bounded [APFS content path](https://github.com/deploymenttheory/go-ios-vm/issues/13) and check for further format gaps.
+2. Complete the remaining finding/publication contracts and prove the matching-hardware comparison survives database backup/restore. This is the first-tooling acceptance gate.
+3. Design the bounded whole-machine profile and complete lifecycle contracts, then implement the Hypervisor.framework runner. Static observations alone do not choose runtime behavior.
 
 This work does not create a general campaign harness, retain disposable report trees or alter the wider Weave products.
