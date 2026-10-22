@@ -120,7 +120,11 @@ func (a *Archive) InspectEach(
 			if err := a.Unchanged(); err != nil {
 				return err
 			}
-			if err := emit("filesystem-content", filesystemObservations, filesystemCoverage); err != nil {
+			if err := emit(
+				"filesystem-content",
+				filesystemObservations,
+				filesystemCoverage,
+			); err != nil {
 				return err
 			}
 		}

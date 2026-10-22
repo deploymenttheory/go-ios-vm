@@ -212,7 +212,8 @@ func (a *Archive) inspectDisk(
 	foundAPFS := false
 	for _, part := range image.Partitions {
 		if err := ctx.Err(); err != nil {
-			return nil, contentObservations, filesystemCoverage, fmt.Errorf("inspectDisk: Err: %w", err)
+			return nil, contentObservations, filesystemCoverage,
+				fmt.Errorf("inspectDisk: Err: %w", err)
 		}
 		view, err := image.Partition(part.Index)
 		if err != nil {
@@ -280,22 +281,7 @@ func (a *Archive) inspectDisk(
 		))
 	}
 	if inspectContent {
-		switch {
-		case foundAPFS:
-			filesystemCoverage.State = "partial"
-			filesystemCoverage.Reason = "bounded firmware/driver paths and selected file formats only; filesystem-wide absence is unexamined"
-			if len(contentGaps) > 0 {
-				filesystemCoverage.Reason += "; " + strings.Join(contentGaps, "; ")
-			}
-		case gap != nil:
-			filesystemCoverage.State = "partial"
-			filesystemCoverage.Reason = gap.Error()
-		default:
-			filesystemCoverage.Reason = "no APFS partition identified in selected OS image"
-		}
-		if gap != nil && foundAPFS {
-			filesystemCoverage.Reason += "; " + gap.Error()
-		}
+		filesystemCoverage = apfsContentCoverage(foundAPFS, gap, contentGaps)
 	}
 	loc := model.Location{
 		ArtifactID: t.ArtifactID,
@@ -316,7 +302,8 @@ func (a *Archive) inspectDisk(
 			Ranges []readRange `json:"ranges"`
 		}{"encoded-disk-read-ranges/v1", source.ranges})
 		if err != nil {
-			return nil, contentObservations, filesystemCoverage, fmt.Errorf("inspectDisk: json.Marshal: %w", err)
+			return nil, contentObservations, filesystemCoverage,
+				fmt.Errorf("inspectDisk: json.Marshal: %w", err)
 		}
 	}
 	var out []model.Observation
@@ -333,9 +320,31 @@ func (a *Archive) inspectDisk(
 			"go-ios-vm/disk-v1;go-apfs-v3=v0.1.0",
 		)
 		if err != nil {
-			return out, contentObservations, filesystemCoverage, fmt.Errorf("inspectDisk: model.NewObservation: %w", err)
+			return out, contentObservations, filesystemCoverage,
+				fmt.Errorf("inspectDisk: model.NewObservation: %w", err)
 		}
 		out = append(out, o)
 	}
 	return out, contentObservations, filesystemCoverage, gap
+}
+
+func apfsContentCoverage(foundAPFS bool, gap error, contentGaps []string) model.Coverage {
+	coverage := model.Coverage{Component: "filesystem-content", State: "unexamined"}
+	switch {
+	case foundAPFS:
+		coverage.State = "partial"
+		coverage.Reason = "bounded firmware/driver paths and selected file formats only; filesystem-wide absence is unexamined"
+		if len(contentGaps) > 0 {
+			coverage.Reason += "; " + strings.Join(contentGaps, "; ")
+		}
+	case gap != nil:
+		coverage.State = "partial"
+		coverage.Reason = gap.Error()
+	default:
+		coverage.Reason = "no APFS partition identified in selected OS image"
+	}
+	if gap != nil && foundAPFS {
+		coverage.Reason += "; " + gap.Error()
+	}
+	return coverage
 }
