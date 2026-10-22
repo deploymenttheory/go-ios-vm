@@ -15,7 +15,10 @@ import (
 var (
 	errDiskStageLimit        = errors.New("expanded disk member exceeds staging limit")
 	errDiskStageSpace        = errors.New("insufficient free space for disk staging reserve")
-	errDiskStageSizeMismatch = errors.New("expanded disk member size differs from ZIP declaration")
+	errDiskStageSizeMismatch = errors.New(
+		"expanded disk member size differs from ZIP declaration",
+	)
+	errDiskStageInvalidBlockSize = errors.New("invalid disk staging filesystem block size")
 )
 
 const (
@@ -44,7 +47,11 @@ func diskStageFree(path string) (uint64, error) {
 	if err := unix.Statfs(path, &stat); err != nil {
 		return 0, fmt.Errorf("disk staging free space: %w", err)
 	}
-	hi, lo := bits.Mul64(uint64(stat.Bavail), uint64(stat.Bsize))
+	if stat.Bsize <= 0 {
+		return 0, errDiskStageInvalidBlockSize
+	}
+	blockSize := uint64(stat.Bsize) //nolint:gosec // Statfs block size was checked positive above.
+	hi, lo := bits.Mul64(uint64(stat.Bavail), blockSize)
 	if hi != 0 {
 		return ^uint64(0), nil
 	}
