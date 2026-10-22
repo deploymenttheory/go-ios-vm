@@ -26,6 +26,7 @@ var (
 	errRunOrTargetIsRequired  = errors.New("run or target is required")
 	errUnpublishedComparison  = errors.New("both runs must have published results")
 	errCandidateSizeMismatch  = errors.New("historical locator size differs from Apple CDN")
+	errFindingShowSelector    = errors.New("specify exactly one of --finding or --evidence")
 )
 
 type partialError struct{}
@@ -107,14 +108,17 @@ func newCommand(stdout, stderr io.Writer) *cobra.Command {
 		}
 		return nil
 	}
-	emit := func(state string, result any) error {
-		value := envelope{SchemaVersion: model.SchemaVersion, State: state, Results: result}
+	emitWithVersion := func(version int, state string, result any) error {
+		value := envelope{SchemaVersion: version, State: state, Results: result}
 		enc := json.NewEncoder(stdout)
 		enc.SetEscapeHTML(false)
 		if cfg.Format == "text" {
 			return printSummary(stdout, state, result)
 		}
 		return enc.Encode(value)
+	}
+	emit := func(state string, result any) error {
+		return emitWithVersion(model.SchemaVersion, state, result)
 	}
 	withDB := func(ctx context.Context, fn func(*postgres.Store) error) error {
 		s, err := postgres.Open(ctx, cfg.DatabaseURL)
@@ -412,23 +416,33 @@ func newCommand(stdout, stderr io.Writer) *cobra.Command {
 				return errRunOrTargetIsRequired
 			}
 			return withDB(c.Context(), func(s *postgres.Store) error {
-				f, err := s.Findings(c.Context(), targetID, runID)
+				f, err := s.FindingChains(c.Context(), targetID, runID)
 				if err != nil {
 					return classified("storage_failure", err)
 				}
-				return emit("complete", f)
+				return emitWithVersion(2, "complete", f)
 			})
 		},
 	)
 	c.Flags().StringVar(&runID, "run", "", "Run ID")
 	c.Flags().StringVar(&targetID, "target", "", "Target ID")
-	var evidenceID string
+	var evidenceID, findingID string
 	c = command(
 		finding,
 		"show",
-		"Retrieve integrity-checked supporting bytes from PostgreSQL",
+		"Show a finding revision chain or integrity-checked supporting bytes",
 		func(c *cobra.Command, _ []string) error {
+			if (evidenceID == "") == (findingID == "") {
+				return classified("invalid_invocation", errFindingShowSelector)
+			}
 			return withDB(c.Context(), func(s *postgres.Store) error {
+				if findingID != "" {
+					chain, err := s.FindingChain(c.Context(), findingID)
+					if err != nil {
+						return err
+					}
+					return emitWithVersion(2, "complete", chain)
+				}
 				b, err := s.Evidence(c.Context(), evidenceID)
 				if err != nil {
 					return classified("storage_failure", err)
@@ -446,7 +460,75 @@ func newCommand(stdout, stderr io.Writer) *cobra.Command {
 		},
 	)
 	c.Flags().StringVar(&evidenceID, "evidence", "", "Evidence SHA-256")
-	_ = c.MarkFlagRequired("evidence")
+	c.Flags().StringVar(&findingID, "finding", "", "Stable finding ID")
+	var draft model.RevisionDraft
+	var value string
+	var supportObservations, supportRevisions, contradictObservations, contradictRevisions []string
+	c = command(
+		finding,
+		"revise",
+		"Create a linked observed, inferred or unknown finding revision",
+		func(c *cobra.Command, _ []string) error {
+			if c.Flags().Changed("value") {
+				draft.Value = json.RawMessage(value)
+			}
+			for _, id := range supportObservations {
+				draft.References = append(
+					draft.References,
+					model.BasisReference{Role: "supporting", ObservationID: id},
+				)
+			}
+			for _, id := range supportRevisions {
+				draft.References = append(
+					draft.References,
+					model.BasisReference{Role: "supporting", RevisionID: id},
+				)
+			}
+			for _, id := range contradictObservations {
+				draft.References = append(
+					draft.References,
+					model.BasisReference{Role: "contradicting", ObservationID: id},
+				)
+			}
+			for _, id := range contradictRevisions {
+				draft.References = append(
+					draft.References,
+					model.BasisReference{Role: "contradicting", RevisionID: id},
+				)
+			}
+			if err := draft.Validate(); err != nil {
+				return classified("invalid_invocation", err)
+			}
+			return withDB(c.Context(), func(s *postgres.Store) error {
+				receipt, err := s.AddRevision(c.Context(), draft)
+				if err != nil {
+					return err
+				}
+				return emitWithVersion(2, "complete", receipt)
+			})
+		},
+	)
+	c.Flags().StringVar(&draft.TargetID, "target", "", "Exact firmware target ID")
+	c.Flags().StringVar(&draft.Subject, "subject", "", "Exact subject")
+	c.Flags().StringVar(&draft.Property, "property", "", "Exact property")
+	c.Flags().StringVar(&draft.Basis, "basis", "", "observed, inferred or unknown")
+	c.Flags().
+		StringVar(&draft.Presence, "presence", "", "For inference: present, absent or unexamined")
+	c.Flags().StringVar(&value, "value", "", "JSON value for a present inference")
+	c.Flags().StringVar(&draft.Rationale, "rationale", "", "Reason for this revision")
+	c.Flags().StringVar(&draft.Author, "author", "cli", "Author or tool identity")
+	c.Flags().
+		StringVar(&draft.Supersedes, "supersedes", "", "Earlier revision ID in the same finding")
+	c.Flags().
+		StringVar(&draft.ObservationID, "observation", "", "Published direct observation for observed basis")
+	c.Flags().
+		StringSliceVar(&supportObservations, "support-observation", nil, "Supporting observation ID (repeatable)")
+	c.Flags().
+		StringSliceVar(&supportRevisions, "support-revision", nil, "Supporting revision ID (repeatable)")
+	c.Flags().
+		StringSliceVar(&contradictObservations, "contradict-observation", nil, "Contradicting observation ID (repeatable)")
+	c.Flags().
+		StringSliceVar(&contradictRevisions, "contradict-revision", nil, "Contradicting revision ID (repeatable)")
 	var left, right string
 	c = command(
 		root,

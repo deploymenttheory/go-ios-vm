@@ -1,6 +1,6 @@
 # Evidence data model
 
-Status: accepted logical design. The initial schema and static observation workflow are implemented. Full finding revision/assessment workflows and the other gaps listed in [implementation status](implementation-status.md) remain outstanding; the model below remains the intended contract.
+Status: accepted logical design. The schema, static observation workflow, and linked finding revisions are implemented. Assessment and dependency invalidation workflows and the other gaps listed in [implementation status](implementation-status.md) remain outstanding; the model below remains the intended contract.
 
 ## Purpose and first workflow
 

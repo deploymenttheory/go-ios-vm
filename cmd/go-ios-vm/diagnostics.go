@@ -145,6 +145,21 @@ func printSummary(w io.Writer, state string, result any) error {
 			}
 			fmt.Fprintf(&b, "  %s %s: %s\n", finding.Observation.Subject, finding.Observation.Property, finding.ID)
 		}
+	case []model.FindingChain:
+		fmt.Fprintf(&b, "%s: %d findings\n", label, len(v))
+		for i, finding := range v {
+			if i == 20 {
+				fmt.Fprintf(&b, "  … %d more; use --format json for all findings\n", len(v)-i)
+				break
+			}
+			printFindingChainSummary(&b, finding, false)
+		}
+	case model.FindingChain:
+		fmt.Fprintf(&b, "%s: finding revision chain\n", label)
+		printFindingChainSummary(&b, v, true)
+	case model.RevisionReceipt:
+		fmt.Fprintf(&b, "%s: revision %s recorded for finding %s\n", label, v.RevisionID, v.FindingID)
+		fmt.Fprintf(&b, "  next: go-ios-vm finding show --finding %s\n", v.FindingID)
 	case []acquisition.Entry:
 		fmt.Fprintf(&b, "%s: %d managed cache entries\n", label, len(v))
 		for _, entry := range v {
@@ -200,6 +215,36 @@ func printSummary(w io.Writer, state string, result any) error {
 		}
 	}
 	return nil
+}
+
+func printFindingChainSummary(w io.Writer, finding model.FindingChain, detail bool) {
+	fmt.Fprintf(w, "  %s %s: %s (target %s, %d revisions)\n",
+		finding.Subject, finding.Property, finding.ID, finding.TargetID, len(finding.Revisions))
+	for _, revision := range finding.Revisions {
+		fmt.Fprintf(w, "    %s: %s %s", revision.ID, revision.Basis, revision.Presence)
+		if revision.Supersedes != "" {
+			fmt.Fprintf(w, "; supersedes %s", revision.Supersedes)
+		}
+		fmt.Fprintln(w)
+		if !detail {
+			continue
+		}
+		if len(revision.Value) > 0 {
+			fmt.Fprintf(w, "      value: %s\n", revision.Value)
+		}
+		fmt.Fprintf(w, "      rationale: %s\n", revision.Rationale)
+		for _, ref := range revision.References {
+			if ref.ObservationID != "" {
+				fmt.Fprintf(w, "      %s observation %s\n", ref.Role, ref.ObservationID)
+				if ref.Observation != nil {
+					fmt.Fprintf(w, "        source: %s %s; evidence %s\n",
+						ref.Observation.Source.Member, ref.Observation.Source.Selector, ref.Observation.EvidenceID)
+				}
+			} else {
+				fmt.Fprintf(w, "      %s revision %s\n", ref.Role, ref.RevisionID)
+			}
+		}
+	}
 }
 
 func writeDiagnostic(w io.Writer, format string, err error) error {

@@ -319,13 +319,8 @@ func (s *Store) Publish(
 		); err != nil {
 			return fmt.Errorf("Publish: Exec: %w", err)
 		}
-		if _, err = tx.Exec(
-			ctx,
-			"INSERT INTO finding_revision(id,observation_id,basis,rationale) VALUES($1,$2,'observed','Direct extraction; not a claim of emulated behavior') ON CONFLICT DO NOTHING",
-			model.ID("finding", o.ID),
-			o.ID,
-		); err != nil {
-			return fmt.Errorf("Publish: Exec: %w", err)
+		if err = publishObservedRevision(ctx, tx, o); err != nil {
+			return fmt.Errorf("Publish: observed revision: %w", err)
 		}
 	}
 	b, err := json.Marshal(run.Coverage)
