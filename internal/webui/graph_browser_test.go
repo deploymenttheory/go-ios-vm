@@ -254,6 +254,11 @@ window.addEventListener("load", () => {
     document.getElementById("graph-limit").value = "100";
     document.getElementById("graph-limit").dispatchEvent(new Event("change", { bubbles: true }));
     await until(() => count().join() === "70,70");
+    document.querySelectorAll(".graph-sort")[2].click();
+    const firstAscending = document.querySelector("#graph-table-wrap tbody tr td:nth-child(3)").textContent;
+    document.querySelectorAll(".graph-sort")[2].click();
+    const firstDescending = document.querySelector("#graph-table-wrap tbody tr td:nth-child(3)").textContent;
+    if (firstAscending === firstDescending || document.querySelectorAll("#graph-table-wrap th")[2].getAttribute("aria-sort") !== "descending") throw new Error("relationship table sorting failed");
     document.querySelector('[data-node-id="opaque:finding:1"]').click();
     document.querySelector("#graph-detail button.button-primary").click();
     await until(() => document.getElementById("graph-scope").textContent.includes("device / register"));
