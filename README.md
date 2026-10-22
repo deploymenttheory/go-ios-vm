@@ -39,12 +39,37 @@ set +a
 docker compose up -d --wait postgres
 go build -o bin/go-ios-vm ./cmd/go-ios-vm
 bin/go-ios-vm db migrate
-bin/go-ios-vm firmware discover --product iPhone12,1 --version 14.0
+bin/go-ios-vm firmware list --product iPhone12,1
+bin/go-ios-vm firmware list --product iPhone12,1 --search 14.0
+bin/go-ios-vm firmware fetch --product iPhone12,1 --version 14.0 --build 18A373
 ```
 
-Discovery records exact catalog responses in PostgreSQL. The current Apple catalogs did not resolve the proposed iOS 14.0/15.0 fixtures during the initial checks. A historical locator has since returned exact Apple CDN candidates; see [historical resolution and bounded manifest probes](docs/qualification/historical-resolution.md). Do not substitute another image automatically.
+`firmware list` requires PostgreSQL (`GOIOSVM_DATABASE_URL` or `--database-url`) and queries Apple release metadata, Apple's restore catalog, and the historical device index. It shows only restore IPSW rows, sorted by version and build. `--search` matches a version or build substring without needing the exact build first. Each row includes the Apple-hosted URL, source, declared size and SHA-1 where available, an explicit **unverified catalog locator** status, and a copyable exact `firmware fetch` command. Release-only metadata cannot be downloaded. If any source fails, the result is `partial` with exit status 2, including the failed source; an empty matching result is not proof that no archive exists. Conflicting locators for one exact version/build are marked ambiguous and do not offer a fetch command.
 
-`firmware probe --product PRODUCT --version VERSION --build BUILD` reads only bounded byte ranges to check an Apple CDN archive's BuildManifest. It reports the manifest's identity indices, boards, variants, and digest but **does not verify the whole archive**. For an exact resolved release, `firmware fetch` probes, downloads, verifies the full archive's declared size, checksum where supplied, and BuildManifest identity, then publishes a SHA-256-named cache entry. It refuses an unresolved release, a failed check, or insufficient cache/free-disk capacity.
+For automation, use the versioned JSON envelope:
+
+```sh
+bin/go-ios-vm --format json firmware list --product iPhone12,1 --search 18A373
+```
+
+For the documented iOS 14.0 locator, text includes a row like this (the URL is abbreviated here):
+
+```text
+14.0 18A373  unverified_catalog_locator  5574812591 bytes  SHA-1 9d9bc29986dd302e26ccbf9cba069262bd3b2295
+  source: https://api.ipsw.me/v4/device/iPhone12%2C1?type=ipsw
+  URL: https://updates.cdn-apple.com/.../iPhone11,8,iPhone12,1_14.0_18A373_Restore.ipsw
+  next: go-ios-vm firmware fetch --product 'iPhone12,1' --version '14.0' --build '18A373'
+```
+
+The versioned JSON shape carries the same row and every source status:
+
+```json
+{"schema_version":1,"state":"complete","results":{"product":"iPhone12,1","query":"18A373","sources":[{"source":"https://api.ipsw.me/v4/device/iPhone12%2C1?type=ipsw","status":"complete"}],"restores":[{"product":"iPhone12,1","version":"14.0","build":"18A373","kind":"restore_ipsw","url":"https://updates.cdn-apple.com/.../iPhone11,8,iPhone12,1_14.0_18A373_Restore.ipsw","source":"https://api.ipsw.me/v4/device/iPhone12%2C1?type=ipsw","size":5574812591,"sources":["https://api.ipsw.me/v4/device/iPhone12%2C1?type=ipsw"],"status":"unverified_catalog_locator","fetchable":true,"next_command":"firmware fetch --product 'iPhone12,1' --version '14.0' --build '18A373'"}]}}
+```
+
+The actual `results.sources` includes the Apple catalogs as well. Listing records raw catalog responses with source attribution in PostgreSQL. The current Apple catalogs did not resolve the proposed iOS 14.0/15.0 fixtures during the initial checks. A historical locator has since returned exact Apple CDN candidates; see [historical resolution and bounded manifest probes](docs/qualification/historical-resolution.md). Do not substitute another image automatically.
+
+`firmware probe --product PRODUCT --version VERSION --build BUILD` reads only bounded byte ranges to check an Apple CDN archive's BuildManifest. It reports the manifest's identity indices, boards, variants, and digest but **does not verify the whole archive**. For an exact resolved release, `firmware fetch` probes, downloads, verifies the full archive's declared size, checksum where supplied, and BuildManifest identity, then publishes a SHA-256-named cache entry. It refuses an unresolved or ambiguous release, a failed check, or insufficient cache/free-disk capacity. When Apple and the historical index give the same URL, their metadata is combined; conflicting URL, size or checksum declarations for an exact selection are rejected.
 
 ```sh
 bin/go-ios-vm target list --image /path/to/verified.ipsw

@@ -13,9 +13,30 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/deploymenttheory/go-ios-vm/internal/acquisition"
 	"github.com/deploymenttheory/go-ios-vm/internal/model"
 	"github.com/deploymenttheory/go-ios-vm/internal/testfixture"
 )
+
+func TestListingTextReportsPartialSourcesAndExactNextCommand(t *testing.T) {
+	listing := acquisition.BuildListing([]acquisition.Response{
+		{Source: "https://gdmf.apple.com/fixture", Status: "failed", Error: "offline"},
+		{Source: "https://api.ipsw.me/fixture", Status: "complete", Candidates: []acquisition.Candidate{{
+			Product: "iPhone12,1", Version: "14.0", Build: "18A373", Kind: "restore_ipsw",
+			URL: "https://updates.cdn-apple.com/fixture.ipsw", Source: "https://api.ipsw.me/fixture",
+		}}},
+	}, "iPhone12,1", "14.0")
+	if listingState(listing) != "partial" {
+		t.Fatal("failed source reported complete")
+	}
+	var out bytes.Buffer
+	printFirmwareListing(&out, listingState(listing), listing)
+	for _, text := range []string{"PARTIAL", "Source failed", "unverified_catalog_locator", "firmware fetch --product 'iPhone12,1' --version '14.0' --build '18A373'"} {
+		if !bytes.Contains(out.Bytes(), []byte(text)) {
+			t.Fatalf("missing %q in %s", text, out.String())
+		}
+	}
+}
 
 func TestHelpAndConfigDoNotNeedDatabase(t *testing.T) {
 	for _, args := range [][]string{{"--help"}, {"--format", "bad", "cache", "status"}} {
