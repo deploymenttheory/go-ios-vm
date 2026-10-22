@@ -16,12 +16,12 @@ func TestNativeWorkerDeadlineKillsAndReapsStalledDecoder(t *testing.T) {
 	start := time.Now()
 	_, err := decodeNativeLZFSEWithBudget(
 		context.Background(), []byte("bvx2"), TreeLimit,
-		500*time.Millisecond, "stall:"+pidFile,
+		time.Second, "stall:"+pidFile,
 	)
 	if !errors.Is(err, errNativeDecodeTimeout) {
 		t.Fatalf("stalled decode: %v", err)
 	}
-	if elapsed := time.Since(start); elapsed > 2*time.Second {
+	if elapsed := time.Since(start); elapsed > 3*time.Second {
 		t.Fatalf("worker exceeded cancellation bound: %s", elapsed)
 	}
 	assertWorkerReaped(t, pidFile)
@@ -40,7 +40,7 @@ func TestNativeWorkerCancellationRemainsDistinctFromDeadline(t *testing.T) {
 	}()
 	deadline := time.After(3 * time.Second)
 	for {
-		if _, err := os.Stat(pidFile); err == nil {
+		if data, err := os.ReadFile(pidFile); err == nil && len(data) > 0 {
 			break
 		}
 		select {

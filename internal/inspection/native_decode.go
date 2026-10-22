@@ -171,16 +171,18 @@ func runNativeWorker() int {
 }
 
 func boundNativeMemory() error {
-	if runtime.GOOS == "linux" {
+	if runtime.GOOS == "linux" && !nativeRaceEnabled {
 		// The Go 1.27 runtime reserves more than 1 GiB of virtual address
 		// space before the decoder allocates a byte. Cap virtual mappings
-		// separately from the worker's measured resident budget.
+		// separately from the worker's measured resident budget. Race
+		// instrumentation reserves much larger virtual ranges; race test
+		// binaries keep the resident watchdog but cannot use RLIMIT_AS.
 		if err := syscall.Setrlimit(syscall.RLIMIT_AS, &syscall.Rlimit{
 			Cur: nativeAddressLimit, Max: nativeAddressLimit,
 		}); err != nil {
 			return fmt.Errorf("native address limit: %w", err)
 		}
-	} else if runtime.GOOS != "darwin" {
+	} else if runtime.GOOS != "darwin" && runtime.GOOS != "linux" {
 		return errNativeWorkerResource
 	}
 	// Darwin rejects RLIMIT_AS and RLIMIT_DATA with EINVAL. A dedicated Go
