@@ -152,6 +152,17 @@ func newCommand(stdout, stderr io.Writer) *cobra.Command {
 			})
 		},
 	)
+	runs := &cobra.Command{Use: "run", Short: "Inspect retained run state"}
+	root.AddCommand(runs)
+	command(runs, "recover", "Mark expired inspections interrupted and list runs that can resume", func(c *cobra.Command, _ []string) error {
+		return withDB(c.Context(), func(s *postgres.Store) error {
+			recoverable, err := s.ReconcileStale(c.Context())
+			if err != nil {
+				return classified("storage_failure", err)
+			}
+			return emit("complete", recoverable)
+		})
+	})
 	firmware := &cobra.Command{
 		Use:   "firmware",
 		Short: "Discover and acquire Apple restore firmware",

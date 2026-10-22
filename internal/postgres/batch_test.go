@@ -212,12 +212,12 @@ func TestBatchDatabaseFailureRollbackAndIdempotentRetry(t *testing.T) {
 	}
 	run := model.Run{
 		ID: "batch-retry", TargetID: target.ID, Started: time.Now(), InputSHA256: artifact.SHA256,
-		InputSize: artifact.Size, Extractor: "fixture/v1", Planned: []string{"manifest"},
+		InputSize: artifact.Size, Extractor: "fixture/v1", Planned: []string{"manifest"}, LeaseToken: "fixture-worker",
 	}
 	if err := s.Start(ctx, run); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := s.Finish(ctx, run.ID); !errors.Is(err, errIncompleteBatchPlan) {
+	if _, err := s.Finish(ctx, run.ID, run.LeaseToken); !errors.Is(err, errIncompleteBatchPlan) {
 		t.Fatalf("premature finalization: %v", err)
 	}
 	location := model.Location{
@@ -316,7 +316,7 @@ func TestBatchDatabaseFailureRollbackAndIdempotentRetry(t *testing.T) {
 		count != 1 {
 		t.Fatalf("retry duplicated evidence: %d %v", count, err)
 	}
-	final, err := s.Finish(ctx, run.ID)
+	final, err := s.Finish(ctx, run.ID, run.LeaseToken)
 	if err != nil || final.State != "complete" || len(final.Coverage) != 1 {
 		t.Fatalf("final run: %+v %v", final, err)
 	}
@@ -324,8 +324,8 @@ func TestBatchDatabaseFailureRollbackAndIdempotentRetry(t *testing.T) {
 		ctx,
 		`UPDATE analysis_run SET coverage='[]' WHERE id=$1`,
 		run.ID,
-	); err != nil {
-		t.Fatal(err)
+	); err == nil {
+		t.Fatal("terminal coverage document was mutable")
 	}
 	fromLedger, err := s.Run(ctx, run.ID)
 	if err != nil || len(fromLedger.Coverage) != 1 ||

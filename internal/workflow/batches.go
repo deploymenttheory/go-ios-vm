@@ -28,11 +28,12 @@ type BatchRepository interface {
 	Register(context.Context, model.Artifact, []model.Target) error
 	Start(context.Context, model.Run) error
 	Run(context.Context, string) (model.Run, error)
-	Resume(context.Context, string) error
+	Resume(context.Context, string, string) error
+	Heartbeat(context.Context, string, string) error
 	Checkpoints(context.Context, string) (map[string]model.Coverage, error)
 	PublishBatch(context.Context, model.Run, model.ObservationBatch) error
-	Finish(context.Context, string) (model.Run, error)
-	Fail(context.Context, string, string) error
+	Finish(context.Context, string, string) (model.Run, error)
+	FailBatched(context.Context, string, string, string) error
 }
 
 type BatchInspectFunc func(
@@ -65,7 +66,31 @@ func InspectBatched(
 	if err != nil {
 		return run, err
 	}
-	checkpoints, err := store.Checkpoints(ctx, run.ID)
+	if run.State == "complete" || run.State == "partial" {
+		return run, nil
+	}
+	workerCtx, stopWorker := context.WithCancel(ctx)
+	heartbeatDone := make(chan struct{})
+	defer func() { stopWorker(); <-heartbeatDone }()
+	heartbeatErr := make(chan error, 1)
+	go func() {
+		defer close(heartbeatDone)
+		ticker := time.NewTicker(20 * time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-workerCtx.Done():
+				return
+			case <-ticker.C:
+				if err := store.Heartbeat(workerCtx, run.ID, run.LeaseToken); err != nil {
+					heartbeatErr <- err
+					stopWorker()
+					return
+				}
+			}
+		}
+	}()
+	checkpoints, err := store.Checkpoints(workerCtx, run.ID)
 	if err != nil {
 		return run, fmt.Errorf("InspectBatched: Checkpoints: %w", err)
 	}
@@ -84,7 +109,7 @@ func InspectBatched(
 			return errComponentOutsidePlan
 		}
 		for offset, ordinal := 0, 0; ; ordinal++ {
-			if err := ctx.Err(); err != nil {
+			if err := workerCtx.Err(); err != nil {
 				return fmt.Errorf("InspectBatched: %w", err)
 			}
 			end := min(offset+model.MaxObservationsPerBatch, len(observations))
@@ -95,7 +120,7 @@ func InspectBatched(
 			if end == len(observations) {
 				batch.Final = &coverage
 			}
-			if err := store.PublishBatch(ctx, run, batch); err != nil {
+			if err := store.PublishBatch(workerCtx, run, batch); err != nil {
 				return fmt.Errorf("InspectBatched: PublishBatch: %w", err)
 			}
 			if end == len(observations) {
@@ -106,19 +131,32 @@ func InspectBatched(
 		done[component] = true
 		return nil
 	}
-	if err := inspect(ctx, done, emit); err != nil {
+	inspectErr := inspect(workerCtx, done, emit)
+	stopWorker()
+	<-heartbeatDone
+	if err := inspectErr; err != nil {
+		select {
+		case leaseErr := <-heartbeatErr:
+			return run, fmt.Errorf("InspectBatched: lease: %w", leaseErr)
+		default:
+		}
 		run.State = "failed"
 		if ctx.Err() != nil {
 			run.State = "cancelled"
 		}
 		cleanup, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 		defer cancel()
-		if e := store.Fail(cleanup, run.ID, run.State); e != nil {
+		if e := store.FailBatched(cleanup, run.ID, run.State, run.LeaseToken); e != nil {
 			return run, fmt.Errorf("InspectBatched: %w; terminal state: %w", err, e)
 		}
 		return run, fmt.Errorf("InspectBatched: %w", err)
 	}
-	run, err = store.Finish(ctx, run.ID)
+	select {
+	case leaseErr := <-heartbeatErr:
+		return run, fmt.Errorf("InspectBatched: lease: %w", leaseErr)
+	default:
+	}
+	run, err = store.Finish(ctx, run.ID, run.LeaseToken)
 	if err != nil {
 		return run, fmt.Errorf("InspectBatched: Finish: %w", err)
 	}
@@ -146,7 +184,24 @@ func beginBatchedRun(
 			!slices.Equal(prior.Planned, plan) {
 			return prior, ErrResumeInputMismatch
 		}
-		if err := store.Resume(ctx, resumeID); err != nil {
+		if prior.State == "complete" || prior.State == "partial" {
+			return prior, nil
+		}
+		var token [16]byte
+		if _, err := rand.Read(token[:]); err != nil {
+			return prior, fmt.Errorf("InspectBatched: lease nonce: %w", err)
+		}
+		prior.LeaseToken = hex.EncodeToString(token[:])
+		if err := store.Resume(ctx, resumeID, prior.LeaseToken); err != nil {
+			// Finalization may commit between the initial read and this claim.
+			// Return that committed result instead of treating the retry as a failure.
+			if current, readErr := store.Run(ctx, resumeID); readErr == nil &&
+				(current.State == "complete" || current.State == "partial") &&
+				current.TargetID == targets[identity].ID && current.InputSHA256 == artifact.SHA256 &&
+				current.InputSize == artifact.Size && current.Extractor == extractor &&
+				slices.Equal(current.Planned, plan) {
+				return current, nil
+			}
 			return prior, fmt.Errorf("InspectBatched: Resume: %w", err)
 		}
 		run = prior
@@ -164,6 +219,11 @@ func beginBatchedRun(
 			State: "running", Started: time.Now().UTC(), InputSHA256: artifact.SHA256,
 			InputSize: artifact.Size, Extractor: extractor, Planned: slices.Clone(plan),
 		}
+		var token [16]byte
+		if _, err := rand.Read(token[:]); err != nil {
+			return run, fmt.Errorf("InspectBatched: lease nonce: %w", err)
+		}
+		run.LeaseToken = hex.EncodeToString(token[:])
 		if err := store.Start(ctx, run); err != nil {
 			return run, fmt.Errorf("InspectBatched: Start: %w", err)
 		}

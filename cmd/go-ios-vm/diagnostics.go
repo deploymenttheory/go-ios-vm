@@ -140,6 +140,11 @@ func printSummary(w io.Writer, state string, result any) error {
 			}
 			b.WriteByte('\n')
 		}
+	case []model.Run:
+		fmt.Fprintf(&b, "%s: %d recoverable inspection runs\n", label, len(v))
+		for _, run := range v {
+			fmt.Fprintf(&b, "  %s: %s target %s, input %s\n", run.State, run.ID, run.TargetID, run.InputSHA256)
+		}
 	case []model.Finding:
 		fmt.Fprintf(&b, "%s: %d findings\n", label, len(v))
 		for i, finding := range v {
