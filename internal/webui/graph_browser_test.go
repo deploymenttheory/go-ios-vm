@@ -90,6 +90,26 @@ func TestGraphBrowserInteractions(t *testing.T) {
 	if !strings.Contains(dom, `data-graph-test="pass"`) {
 		t.Fatalf("graph browser interaction failure; DOM tail: %s", tail(dom, 4000))
 	}
+	if screenshot := os.Getenv("GOIOSVM_BROWSER_GRAPH_SCREENSHOT"); screenshot != "" {
+		viewport := os.Getenv("GOIOSVM_BROWSER_GRAPH_VIEWPORT")
+		if viewport == "" {
+			viewport = "1360,900"
+		}
+		captureCtx, stop := context.WithTimeout(context.Background(), 12*time.Second)
+		defer stop()
+		capture := exec.CommandContext(captureCtx, browser,
+			"--headless", "--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage",
+			"--disable-background-networking", "--no-first-run", "--no-default-browser-check",
+			"--user-data-dir="+t.TempDir(), "--virtual-time-budget=5000", "--window-size="+viewport,
+			"--screenshot="+screenshot,
+			server.URL+"/?screen=graph&target="+url.QueryEscape(target)+"&graph_capture=1",
+		)
+		output, captureErr := capture.CombinedOutput()
+		info, statErr := os.Stat(screenshot)
+		if statErr != nil || info.Size() == 0 {
+			t.Fatalf("graph screenshot: %v: %s", captureErr, tail(string(output), 1000))
+		}
+	}
 	for _, want := range []string{
 		"Unsupported coverage", "unknown codec", "Neighborhood limit reached",
 	} {
@@ -245,6 +265,10 @@ window.addEventListener("load", () => {
   const until = async (test) => { for (let i = 0; i < 200; i++) { if (test()) return; await pause(); } throw new Error("timeout waiting for graph UI"); };
   (async () => {
     await until(() => document.querySelectorAll("#graph-map .graph-lane").length === 25);
+    if (new URLSearchParams(location.search).has("graph_capture")) {
+      document.documentElement.dataset.graphTest = "pass";
+      return;
+    }
     const count = () => [document.querySelectorAll("#graph-map .graph-lane").length, document.querySelectorAll("#graph-table-wrap tbody tr").length];
     if (count().join() !== "25,25" || document.getElementById("graph-truncated").hidden) throw new Error("bounded map/table mismatch");
     const finding = document.querySelector('[data-node-id="opaque:finding:1"]'); finding.click();

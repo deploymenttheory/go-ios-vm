@@ -4,6 +4,8 @@ Open the local UI and choose **Graph**. Select an exact firmware target by produ
 
 The relationship map and sortable table show the same loaded edges. Search filters those loaded rows only. The arrow points from the stored `from` node to `to`, and the selected detail pane shows the source record, extractor, run associations, and logical source location when recorded. Finding and observation nodes link to their read-only details. A declared driver dependency is a declaration, not proof that the driver was observed or works at runtime. Inferred and unknown finding revisions are labelled separately from extracted observations. Unsupported or unexamined latest-run coverage and a truncated neighborhood remain visible; neither an empty filtered result nor a truncated neighborhood proves absence.
 
+![Fixture relationship map with a selected target, coverage gap, truncation notice, directed map and matching table](images/relationship-map-fixture.png)
+
 ## Repeat the browser interaction test
 
 The opt-in test serves the production browser assets with a fixture API. It checks expansion, component and type filters, local search, keyboard-focusable node and table controls, source/detail navigation, and a 70-edge neighborhood that never requests more than 100 edges. It requires a local Chromium or Chrome binary but no PostgreSQL:
@@ -12,6 +14,8 @@ The opt-in test serves the production browser assets with a fixture API. It chec
 GOIOSVM_BROWSER=/path/to/chromium \
 go test ./internal/webui -run TestGraphBrowserInteractions -count=1 -v
 ```
+
+Set `GOIOSVM_BROWSER_GRAPH_SCREENSHOT=/tmp/graph.png` to capture the fixture view. This checked-in screenshot uses fixture identifiers and contains no proprietary image bytes.
 
 ## Real-image verification for integrated acceptance
 
