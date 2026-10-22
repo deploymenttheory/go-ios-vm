@@ -63,6 +63,60 @@ func TestHelpAndConfigDoNotNeedDatabase(t *testing.T) {
 	}
 }
 
+func TestResourceStatusShowsConfiguredBudgetsWithoutDatabase(t *testing.T) {
+	t.Setenv("GOIOSVM_CACHE_DIR", t.TempDir())
+	var out, errout bytes.Buffer
+	c := newCommand(&out, &errout)
+	c.SetArgs([]string{
+		"--format", "json", "--cache-limit", "4096", "--disk-reserve", "1024",
+		"--evidence-limit", "2048", "resources", "status",
+	})
+	if err := c.ExecuteContext(context.Background()); err != nil {
+		t.Fatal(err, errout.String())
+	}
+	var response struct {
+		State   string          `json:"state"`
+		Results json.RawMessage `json:"results"`
+	}
+	if err := json.Unmarshal(out.Bytes(), &response); err != nil {
+		t.Fatal(err)
+	}
+	if response.State != "complete" {
+		t.Fatalf("unexpected state: %+v", response)
+	}
+	var result struct {
+		Cache struct {
+			LimitBytes   int64 `json:"limit_bytes"`
+			ReserveBytes int64 `json:"reserve_bytes"`
+		} `json:"cache"`
+		DiskStaging struct {
+			LimitBytes uint64 `json:"limit_bytes"`
+		} `json:"disk_staging"`
+		EvidenceLimitBytes            int64 `json:"evidence_limit_bytes"`
+		InspectionParallelismPerCache int   `json:"inspection_parallelism_per_cache"`
+	}
+	if err := json.Unmarshal(response.Results, &result); err != nil {
+		t.Fatal(err)
+	}
+	if result.Cache.LimitBytes != 4096 || result.Cache.ReserveBytes != 1024 ||
+		result.EvidenceLimitBytes != 2048 || result.DiskStaging.LimitBytes != 8<<30 ||
+		result.InspectionParallelismPerCache != 1 {
+		t.Fatalf("resource configuration lost: %+v", result)
+	}
+	out.Reset()
+	errout.Reset()
+	c = newCommand(&out, &errout)
+	c.SetArgs([]string{"--cache-limit", "4096", "resources", "status"})
+	if err := c.ExecuteContext(context.Background()); err != nil {
+		t.Fatal(err, errout.String())
+	}
+	if !bytes.Contains(out.Bytes(), []byte("resource budgets")) ||
+		!bytes.Contains(out.Bytes(), []byte("cache:")) ||
+		!bytes.Contains(out.Bytes(), []byte("OS staging:")) {
+		t.Fatalf("resource text summary incomplete: %s", out.String())
+	}
+}
+
 func TestPersistRestartCompareAndRemoveSource(t *testing.T) {
 	dsn := os.Getenv("GOIOSVM_TEST_DATABASE_URL")
 	if dsn == "" {

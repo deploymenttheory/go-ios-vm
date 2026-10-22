@@ -51,6 +51,29 @@ type progressReader struct {
 	idle *time.Timer
 }
 
+type budgetedDownloadWriter struct {
+	ctx     context.Context
+	dst     io.Writer
+	dir     string
+	reserve int64
+	free    func(string) (int64, error)
+}
+
+func (w budgetedDownloadWriter) Write(p []byte) (int, error) {
+	if err := w.ctx.Err(); err != nil {
+		return 0, fmt.Errorf("download cancelled: %w", err)
+	}
+	free, err := w.free(w.dir)
+	if err != nil {
+		return 0, err
+	}
+	if free < w.reserve || int64(len(p)) > free-w.reserve {
+		return 0, fmt.Errorf("%w: need %d bytes plus %d-byte reserve, have %d bytes",
+			errInsufficientFreeSpace, len(p), w.reserve, free)
+	}
+	return w.dst.Write(p) //nolint:wrapcheck // io.Writer keeps the original error sentinel.
+}
+
 func (r progressReader) Read(p []byte) (int, error) {
 	n, err := r.Reader.Read(p)
 	if n > 0 {
@@ -163,34 +186,17 @@ func (c Cache) ensureSpace(remaining int64) error {
 	if remaining < 0 || c.Reserve < 0 {
 		return errInvalidImageSize
 	}
-	entries, err := c.Entries()
+	budget, err := c.budgetLocked()
 	if err != nil {
 		return err
 	}
-	var used int64
-	for _, entry := range entries {
-		used += entry.Size
-	}
-	if remaining > c.Limit-used {
+	if remaining > budget.LimitBytes-budget.UsedBytes {
 		return fmt.Errorf(
 			"%w: need %d bytes; prune inactive images before fetching",
 			errCacheBudgetExhausted, remaining,
 		)
 	}
-	var space unix.Statfs_t
-	if err := unix.Statfs(c.Dir, &space); err != nil {
-		return fmt.Errorf("ensureSpace: unix.Statfs: %w", err)
-	}
-	blockSize := int64(space.Bsize)
-	if blockSize <= 0 {
-		return errInsufficientFreeSpace
-	}
-	required := uint64(remaining) + uint64(c.Reserve)
-	blocks := required / uint64(blockSize)
-	if required%uint64(blockSize) != 0 {
-		blocks++
-	}
-	if blocks > space.Bavail {
+	if remaining > budget.FreeBytes-budget.ReserveBytes {
 		return errInsufficientFreeSpace
 	}
 	return nil
@@ -219,8 +225,7 @@ func (c *Client) Fetch(
 		return model.Artifact{}, err
 	}
 	defer release()
-	stageID := sha256.Sum256([]byte(selected.URL + "\x00" + selected.ETag))
-	stage := filepath.Join(cache.Dir, hex.EncodeToString(stageID[:])+".part")
+	stage := filepath.Join(cache.Dir, stageName(selected))
 	fd, err := unix.Open(stage, unix.O_CREAT|unix.O_RDWR|unix.O_NOFOLLOW, 0o600)
 	if err != nil {
 		return model.Artifact{}, fmt.Errorf("Fetch: open stage: %w", err)
@@ -245,7 +250,7 @@ func (c *Client) Fetch(
 		return model.Artifact{}, err
 	}
 	if remaining > 0 {
-		if err = c.appendPinned(ctx, selected, f, completed); err != nil {
+		if err = c.appendPinned(ctx, selected, cache, f, completed); err != nil {
 			if syncErr := f.Sync(); syncErr != nil {
 				return model.Artifact{}, fmt.Errorf(
 					"Fetch: sync partial after %w: %w",
@@ -294,6 +299,7 @@ func (c *Client) Fetch(
 func (c *Client) appendPinned(
 	ctx context.Context,
 	selected Candidate,
+	cache Cache,
 	stage *os.File,
 	offset int64,
 ) error {
@@ -352,9 +358,13 @@ func (c *Client) appendPinned(
 	}
 	idleTimer := time.AfterFunc(downloadIdleTimeout, func() { cancel(errDownloadIdleTimeout) })
 	defer idleTimer.Stop()
-	written, err := io.Copy(
-		stage,
+	written, err := io.CopyBuffer(
+		budgetedDownloadWriter{
+			ctx: ctx, dst: stage, dir: cache.Dir,
+			reserve: cache.Reserve, free: availableDiskBytes,
+		},
 		io.LimitReader(progressReader{Reader: res.Body, idle: idleTimer}, selected.Size-offset+1),
+		make([]byte, 1<<20),
 	)
 	if err != nil {
 		if errors.Is(context.Cause(streamCtx), errDownloadIdleTimeout) {

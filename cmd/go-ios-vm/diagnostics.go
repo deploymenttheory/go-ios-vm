@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/deploymenttheory/go-ios-vm/internal/acquisition"
+	"github.com/deploymenttheory/go-ios-vm/internal/inspection"
 	"github.com/deploymenttheory/go-ios-vm/internal/model"
 	"github.com/deploymenttheory/go-ios-vm/internal/workflow"
 )
@@ -181,6 +182,16 @@ func printSummary(w io.Writer, state string, result any) error {
 		}
 	case map[string]any:
 		switch {
+		case v["cache"] != nil:
+			cache, _ := v["cache"].(acquisition.CacheBudget)
+			stage, _ := v["disk_staging"].(inspection.StagingBudget)
+			fmt.Fprintf(&b, "%s: resource budgets\n", label)
+			fmt.Fprintf(&b, "  cache: %d used / %d limit; %d free, %d reserve, %d available bytes\n",
+				cache.UsedBytes, cache.LimitBytes, cache.FreeBytes, cache.ReserveBytes, cache.AvailableBytes)
+			fmt.Fprintf(&b, "  OS staging: %d limit; %d free, %d reserve, %d available bytes\n",
+				stage.LimitBytes, stage.FreeBytes, stage.ReserveBytes, stage.AvailableBytes)
+			fmt.Fprintf(&b, "  retained evidence limit: %v bytes; one inspection per cache\n",
+				v["evidence_limit_bytes"])
 		case v["manifest"] != nil:
 			candidate, _ := v["candidate"].(acquisition.Candidate)
 			fmt.Fprintf(&b, "%s: BuildManifest matches %s %s (%s); full archive unverified\n", label, candidate.Product, candidate.Version, candidate.Build)

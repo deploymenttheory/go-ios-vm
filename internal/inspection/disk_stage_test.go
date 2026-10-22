@@ -126,6 +126,37 @@ func TestStoredAndCompressedDiskLayoutAndEvidence(t *testing.T) {
 	}
 }
 
+func TestDiskStagingPlanMatchesSelectedMemberAndLimit(t *testing.T) {
+	for _, method := range []uint16{zip.Store, zip.Deflate} {
+		path := diskIPSW(t, method, make([]byte, 4096))
+		a, err := Open(context.Background(), path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		plan, err := a.DiskStagingPlan(0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if plan.Member != "OS.dmg" || plan.RequiresStaging != (method == zip.Deflate) || !plan.Fits {
+			t.Fatalf("method %d plan: %+v", method, plan)
+		}
+		if method == zip.Deflate {
+			if plan.DeclaredBytes != 4096 || plan.LimitBytes != diskStageLimit ||
+				plan.ReserveBytes != diskStageReserve {
+				t.Fatalf("unexpected staging estimate: %+v", plan)
+			}
+			a.ZIP.File[a.members["OS.dmg"]].UncompressedSize64 = diskStageLimit + 1
+			plan, err = a.DiskStagingPlan(0)
+			if err != nil || plan.Fits || plan.Reason != "declared OS image exceeds staging limit" {
+				t.Fatalf("oversized stage plan: %+v, %v", plan, err)
+			}
+		}
+		if err := a.Close(); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
 func stageOptions(t *testing.T, limit uint64) diskStageOptions {
 	t.Helper()
 	return diskStageOptions{

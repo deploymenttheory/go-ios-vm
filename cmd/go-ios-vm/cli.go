@@ -164,6 +164,27 @@ func newCommand(stdout, stderr io.Writer) *cobra.Command {
 			return emit("complete", recoverable)
 		})
 	})
+	resources := &cobra.Command{Use: "resources", Short: "Inspect configured resource budgets"}
+	root.AddCommand(resources)
+	command(resources, "status", "Show cache, staging and evidence budgets", func(c *cobra.Command, _ []string) error {
+		cacheBudget, err := cfg.Cache.Budget(c.Context())
+		if err != nil {
+			return classified("storage_failure", err)
+		}
+		stagingBudget, err := inspection.DefaultStagingBudget()
+		if err != nil {
+			return classified("storage_failure", err)
+		}
+		return emit("complete", map[string]any{
+			"cache":                            cacheBudget,
+			"disk_staging":                     stagingBudget,
+			"evidence_limit_bytes":             cfg.EvidenceLimit,
+			"manifest_limit_bytes":             inspection.ManifestLimit,
+			"device_tree_limit_bytes":          inspection.TreeLimit,
+			"kernel_limit_bytes":               inspection.KernelLimit,
+			"inspection_parallelism_per_cache": 1,
+		})
+	})
 	firmware := &cobra.Command{
 		Use:   "firmware",
 		Short: "Discover and acquire Apple restore firmware",
@@ -302,6 +323,16 @@ func newCommand(stdout, stderr io.Writer) *cobra.Command {
 						"full_archive_verified": false,
 					})
 				}
+				fetchPlan, err := cfg.Cache.PlanFetch(c.Context(), selected)
+				if err != nil {
+					return classified("storage_failure", err)
+				}
+				fmt.Fprintf(stderr, "Fetch budget: %d additional bytes, %d available; cache %d/%d bytes, disk reserve %d bytes\n",
+					fetchPlan.AdditionalBytes, fetchPlan.AvailableBytes,
+					fetchPlan.UsedBytes, fetchPlan.LimitBytes, fetchPlan.ReserveBytes)
+				if !fetchPlan.Fits {
+					return classified("acquisition_failure", errors.New(fetchPlan.Reason))
+				}
 				fmt.Fprintln(stderr, "Downloading and verifying full IPSW")
 				a, err := client.Fetch(
 					c.Context(), selected, cfg.Cache,
@@ -375,7 +406,7 @@ func newCommand(stdout, stderr io.Writer) *cobra.Command {
 		"Inspect a selected identity with durable component checkpoints",
 		func(c *cobra.Command, _ []string) error {
 			return withDB(c.Context(), func(s *postgres.Store) error {
-				release, err := cfg.Cache.Lease(c.Context(), false)
+				release, err := cfg.Cache.Lease(c.Context(), true)
 				if err != nil {
 					return classified("storage_failure", err)
 				}
@@ -397,6 +428,17 @@ func newCommand(stdout, stderr io.Writer) *cobra.Command {
 				}
 				if identity < 0 || identity >= len(a.Targets) {
 					return classified("invalid_selection", errors.New("identity index is outside the BuildManifest"))
+				}
+				stagePlan, err := a.DiskStagingPlan(identity)
+				if err != nil {
+					return classified("storage_failure", err)
+				}
+				if stagePlan.RequiresStaging {
+					fmt.Fprintf(stderr, "OS staging budget: %d declared bytes, %d available; reserve %d bytes\n",
+						stagePlan.DeclaredBytes, stagePlan.AvailableBytes, stagePlan.ReserveBytes)
+					if !stagePlan.Fits {
+						fmt.Fprintln(stderr, "OS staging will report partial coverage:", stagePlan.Reason)
+					}
 				}
 				run, err := workflow.InspectBatched(
 					c.Context(),
