@@ -22,7 +22,13 @@
 .graph-main { min-width: 0; }
 .graph-main h3 { margin: 21px 0 10px; }
 .graph-map { max-height: 530px; overflow: auto; border: 1px solid #d8e3ea; border-radius: 9px; padding: 9px; background: #f7fafc; }
-.graph-lane { display: grid; grid-template-columns: minmax(0, 1fr) minmax(110px, .7fr) minmax(0, 1fr); gap: 6px; align-items: center; min-height: 53px; border-bottom: 1px solid #e3ebf0; padding: 6px; border-left: 4px solid #8295a7; }
+.graph-star { display: grid; grid-template-columns: minmax(130px, .85fr) minmax(0, 2fr); gap: 14px; align-items: start; }
+.graph-hub { position: sticky; top: 7px; display: grid; gap: 6px; padding: 12px 10px; margin-top: 9px; background: #e6f0f5; border: 1px solid #a5c1cf; border-radius: 8px; }
+.graph-hub-label { color: #476579; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; }
+.graph-center-node { white-space: normal; overflow-wrap: anywhere; }
+.graph-spokes { min-width: 0; border-left: 2px solid #bdced8; padding-left: 10px; }
+.graph-lane { position: relative; display: grid; grid-template-columns: minmax(80px, .8fr) minmax(0, 1fr); gap: 6px; align-items: center; min-height: 53px; border-bottom: 1px solid #e3ebf0; padding: 6px; border-left: 4px solid #8295a7; }
+.graph-lane::before { content: ""; position: absolute; width: 10px; left: -14px; top: 50%; border-top: 2px solid #bdced8; }
 .graph-lane:last-child { border-bottom: 0; }
 .graph-lane[data-semantic="observed"] { border-left-color: #278779; }
 .graph-lane[data-semantic="inferred"] { border-left-color: #5476b7; }
@@ -34,7 +40,6 @@
 .graph-node[data-kind="evidence"], .graph-node[data-kind="observation"] { border-color: #8dbbad; background: #eff8f4; }
 .graph-node.is-selected { outline: 3px solid #2f8394; outline-offset: 1px; }
 .graph-relation { border: 0; border-bottom: 2px solid #8ba2b5; border-radius: 0; background: transparent; color: #4f6475; font-size: 11px; font-weight: 700; padding: 4px 2px; text-align: center; overflow-wrap: anywhere; }
-.graph-relation::after { content: " →"; white-space: nowrap; font-size: 15px; }
 .graph-lane[data-semantic="inferred"] .graph-relation,
 .graph-lane[data-semantic="declared"] .graph-relation,
 .graph-lane[data-semantic="unknown"] .graph-relation { border-bottom-style: dashed; }
@@ -55,4 +60,4 @@
 .graph-sort[data-sort="ascending"]::after { content: " ↑"; }
 .graph-sort[data-sort="descending"]::after { content: " ↓"; }
 @media (max-width: 1000px) { .graph-controls { grid-template-columns: repeat(2, minmax(0, 1fr)); } .graph-columns { grid-template-columns: 1fr; } .graph-detail { position: static; max-height: none; } }
-@media (max-width: 560px) { .graph-controls { grid-template-columns: 1fr; } .graph-lane { grid-template-columns: minmax(0, 1fr) 95px minmax(0, 1fr); } }
+@media (max-width: 560px) { .graph-controls { grid-template-columns: 1fr; } .graph-star { grid-template-columns: minmax(105px, .7fr) minmax(0, 1.3fr); gap: 8px; } .graph-lane { grid-template-columns: minmax(70px, .8fr) minmax(0, 1fr); } }

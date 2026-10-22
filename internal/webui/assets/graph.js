@@ -146,15 +146,23 @@ function graphNodeButton(item, className = "") {
 function graphRenderMap(edges, nodes) {
   const map = byId("graph-map"); clear(map);
   if (!edges.length) { message(map, graphView.search ? "No matching relationships in this loaded neighborhood." : "This neighborhood has no relationships of the selected type."); return; }
+  const star = node("div", "graph-star");
+  const hub = node("div", "graph-hub");
+  hub.append(node("span", "graph-hub-label", "Selected center"), graphNodeButton(graphView.neighborhood.center, "graph-center-node"));
+  const spokes = node("div", "graph-spokes");
   for (const edge of edges) {
     const lane = node("div", "graph-lane"); lane.dataset.edgeId = edge.id;
     lane.dataset.semantic = graphSemantic(edge, nodes);
-    const relation = node("button", "graph-relation", graphLabel(edge.kind));
+    const outgoing = edge.from === graphView.neighborhood.center.id;
+    const neighbor = nodes.get(outgoing ? edge.to : edge.from);
+    lane.dataset.direction = outgoing ? "out" : "in";
+    const relation = node("button", "graph-relation", `${outgoing ? "" : "← "}${graphLabel(edge.kind)}${outgoing ? " →" : ""}`);
     relation.type = "button"; relation.setAttribute("aria-label", `Select relationship ${graphLabel(edge.kind)}`);
     relation.addEventListener("click", () => graphSelect("edge", edge.id));
-    add(lane, graphNodeButton(nodes.get(edge.from)), relation, graphNodeButton(nodes.get(edge.to)));
-    map.append(lane);
+    add(lane, relation, graphNodeButton(neighbor));
+    spokes.append(lane);
   }
+  add(star, hub, spokes); map.append(star);
 }
 function graphRenderTable(edges, nodes) {
   const wrap = byId("graph-table-wrap"); clear(wrap);
