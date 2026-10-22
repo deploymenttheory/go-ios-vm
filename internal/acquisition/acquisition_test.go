@@ -287,6 +287,7 @@ func TestProgressingImageDownloadOutlivesClientTimeout(t *testing.T) {
 		return http.DefaultTransport.RoundTrip(local)
 	})
 	cache := Cache{Dir: t.TempDir(), Limit: 1024}
+	var phases []string
 	artifact, err := client.Fetch(
 		context.Background(),
 		Candidate{URL: "https://updates.cdn-apple.com/a.ipsw", Size: 4, ETag: `"stable"`},
@@ -301,8 +302,18 @@ func TestProgressingImageDownloadOutlivesClientTimeout(t *testing.T) {
 			}
 			return nil
 		},
+		func(_ context.Context, p FetchProgress) error {
+			if p.DownloadedBytes > p.TotalBytes || p.VerifiedBytes > p.TotalBytes {
+				t.Fatalf("progress exceeded known total: %+v", p)
+			}
+			phases = append(phases, p.Phase)
+			return nil
+		},
 	)
 	if err != nil || artifact.Size != 4 {
 		t.Fatalf("progressing download failed after short client timeout: %+v, %v", artifact, err)
+	}
+	if strings.Join(phases, ",") != "downloading,verifying,identity_check,published" {
+		t.Fatalf("fetch phase transitions: %v", phases)
 	}
 }

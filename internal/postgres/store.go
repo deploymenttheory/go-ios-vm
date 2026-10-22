@@ -198,7 +198,12 @@ func (s *Store) Start(ctx context.Context, r model.Run) error {
 	if len(r.Planned) == 0 {
 		plan = []byte("[]")
 	}
-	_, err = s.pool.Exec(
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("Start: Begin: %w", err)
+	}
+	defer rollback(ctx, tx)
+	_, err = tx.Exec(
 		ctx,
 		`INSERT INTO analysis_run(id,target_id,state,started,input_sha256,input_size,extractor,planned_components,lease_token,lease_expires)
 		 VALUES($1,$2,'running',$3,$4,$5,$6,$7,$8,now()+interval '2 minutes')`,
@@ -213,6 +218,24 @@ func (s *Store) Start(ctx context.Context, r model.Run) error {
 	)
 	if err != nil {
 		return fmt.Errorf("Start: Exec: %w", err)
+	}
+	var totalUnits *int64
+	if len(r.Planned) > 0 {
+		total := int64(len(r.Planned))
+		totalUnits = &total
+	}
+	_, err = tx.Exec(ctx, `INSERT INTO operation_progress
+	 (id,kind,run_id,input_sha256,input_size,phase,state,total_units,started,sequence)
+	 VALUES($1,'inspection',$1,$2,$3,'registered','running',$4,$5,1)`,
+		r.ID, digest, size, totalUnits, r.Started)
+	if err != nil {
+		return fmt.Errorf("Start: progress: %w", err)
+	}
+	if err := recordProgressEvent(ctx, tx, r.ID, 1, "registered", "running", "", ""); err != nil {
+		return fmt.Errorf("Start: progress event: %w", err)
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("Start: Commit: %w", err)
 	}
 	return nil
 }
@@ -402,6 +425,12 @@ func (s *Store) Publish(
 	); err != nil {
 		return fmt.Errorf("Publish: Exec: %w", err)
 	}
+	completed := int64(len(run.Coverage))
+	if err := advanceProgress(ctx, tx, run.ID, progressUpdate{
+		phase: "finalized", state: run.State, units: &completed,
+	}); err != nil {
+		return fmt.Errorf("Publish: progress: %w", err)
+	}
 	if err := tx.Commit(ctx); err != nil {
 		return fmt.Errorf("Publish: Commit: %w", err)
 	}
@@ -409,7 +438,12 @@ func (s *Store) Publish(
 }
 
 func (s *Store) Fail(ctx context.Context, id, state string) error {
-	_, err := s.pool.Exec(
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("Fail: Begin: %w", err)
+	}
+	defer rollback(ctx, tx)
+	tag, err := tx.Exec(
 		ctx,
 		"UPDATE analysis_run SET state=$2,finished=now() WHERE id=$1 AND state='running'",
 		id,
@@ -417,6 +451,16 @@ func (s *Store) Fail(ctx context.Context, id, state string) error {
 	)
 	if err != nil {
 		return fmt.Errorf("Fail: Exec: %w", err)
+	}
+	if tag.RowsAffected() == 1 {
+		if err := advanceProgress(ctx, tx, id, progressUpdate{
+			phase: state, state: state, diagnostic: state,
+		}); err != nil {
+			return fmt.Errorf("Fail: progress: %w", err)
+		}
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("Fail: Commit: %w", err)
 	}
 	return nil
 }
@@ -427,6 +471,7 @@ func (s *Store) Acquisition(
 	request any,
 	status string,
 	data []byte,
+	attemptID ...string,
 ) error {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
@@ -441,13 +486,19 @@ func (s *Store) Acquisition(
 	if err != nil {
 		return fmt.Errorf("Acquisition: json.Marshal: %w", err)
 	}
+	var attempt string
+	if len(attemptID) > 0 {
+		attempt = attemptID[0]
+	}
 	_, err = tx.Exec(
 		ctx,
-		"INSERT INTO acquisition(source,requested,status,evidence_id) VALUES($1,$2,$3,$4)",
+		`INSERT INTO acquisition(source,requested,status,evidence_id,attempt_id)
+		 VALUES($1,$2,$3,$4,NULLIF($5,''))`,
 		source,
 		b,
 		status,
 		id,
+		attempt,
 	)
 	if err != nil {
 		return fmt.Errorf("Acquisition: Exec: %w", err)

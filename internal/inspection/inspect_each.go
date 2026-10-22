@@ -24,16 +24,25 @@ const RunPlanVersion = Extractor + ";filesystem=" + filesystemExtractor
 // InspectEach emits one completed component at a time. The caller can commit
 // each component before parsing the next. A component marked done is never
 // decoded again on an explicit resume.
+//
+//nolint:gocyclo // Component-specific extraction branches are retained together for checkpoint order.
 func (a *Archive) InspectEach(
 	ctx context.Context,
 	identity int,
 	done map[string]bool,
 	emit func(string, []model.Observation, model.Coverage) error,
+	onStart ...func(string) error,
 ) error {
 	if identity < 0 || identity >= len(a.Targets) {
 		return errIdentityIndexOutsideBuildManifest
 	}
 	t := a.Targets[identity]
+	start := func(component string) error {
+		if len(onStart) > 0 && onStart[0] != nil {
+			return onStart[0](component)
+		}
+		return nil
+	}
 	add := func(out *[]model.Observation, subject, property string, value any, src model.Location, evidence model.Blob) error {
 		o, err := model.NewObservation(t, subject, property, value, src, evidence, Extractor)
 		if err != nil {
@@ -43,6 +52,9 @@ func (a *Archive) InspectEach(
 		return nil
 	}
 	if !done["manifest"] {
+		if err := start("manifest"); err != nil {
+			return err
+		}
 		source := model.Location{
 			ArtifactID: t.ArtifactID,
 			Member:     "BuildManifest.plist",
@@ -92,11 +104,17 @@ func (a *Archive) InspectEach(
 		if done[component] {
 			continue
 		}
+		if err := start(component); err != nil {
+			return err
+		}
 		if err := a.inspectPayloadComponent(ctx, t, component, emit); err != nil {
 			return err
 		}
 	}
 	if !done["disk-metadata"] || !done["filesystem-content"] {
+		if err := start("disk-metadata"); err != nil {
+			return err
+		}
 		if err := ctx.Err(); err != nil {
 			return fmt.Errorf("InspectEach: %w", err)
 		}
@@ -117,6 +135,9 @@ func (a *Archive) InspectEach(
 			}
 		}
 		if !done["filesystem-content"] {
+			if err := start("filesystem-content"); err != nil {
+				return err
+			}
 			if err := a.Unchanged(); err != nil {
 				return err
 			}

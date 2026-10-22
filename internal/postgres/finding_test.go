@@ -355,6 +355,12 @@ func TestMigrationBackfillsLegacyObservedRevision(t *testing.T) {
 	if err = s.Migrate(ctx); err != nil {
 		t.Fatal(err)
 	}
+	legacyProgress, err := s.Progress(ctx, run.ID)
+	if err != nil || legacyProgress.InputSHA256 != a.SHA256 ||
+		legacyProgress.State != "running" || legacyProgress.TotalUnits != nil ||
+		legacyProgress.CompletedUnits != 0 {
+		t.Fatalf("legacy run progress backfill invented work: %+v %v", legacyProgress, err)
+	}
 	chains, err := s.FindingChains(ctx, target.ID, "")
 	if err != nil || len(chains) != 1 || len(chains[0].Revisions) != 1 {
 		t.Fatal("legacy chain not backfilled", err)

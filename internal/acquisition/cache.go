@@ -44,7 +44,50 @@ var (
 const (
 	downloadHeaderTimeout = 45 * time.Second
 	downloadIdleTimeout   = 2 * time.Minute
+	progressByteInterval  = 32 << 20
+	progressTimeInterval  = time.Second
 )
+
+// FetchProgress reports durable downloaded bytes and hashed verification bytes.
+type FetchProgress struct {
+	Phase           string
+	DownloadedBytes int64
+	VerifiedBytes   int64
+	TotalBytes      int64
+}
+
+type ProgressFunc func(context.Context, FetchProgress) error
+
+type coalescingWriter struct {
+	writer       io.Writer
+	sync         func() error
+	report       func(int64) error
+	written      int64
+	lastReported int64
+	lastAt       time.Time
+}
+
+func (w *coalescingWriter) Write(p []byte) (int, error) {
+	n, err := w.writer.Write(p)
+	w.written += int64(n)
+	if err != nil {
+		return n, fmt.Errorf("coalescingWriter: Write: %w", err)
+	}
+	if w.written-w.lastReported >= progressByteInterval ||
+		time.Since(w.lastAt) >= progressTimeInterval {
+		if w.sync != nil {
+			if err := w.sync(); err != nil {
+				return n, err
+			}
+		}
+		if err := w.report(w.written); err != nil {
+			return n, err
+		}
+		w.lastReported = w.written
+		w.lastAt = time.Now()
+	}
+	return n, nil
+}
 
 type progressReader struct {
 	io.Reader
@@ -202,12 +245,23 @@ func (c Cache) ensureSpace(remaining int64) error {
 	return nil
 }
 
+//nolint:gocyclo // The transfer validates pinned HTTP, cache, hash and progress phases in one lifecycle.
 func (c *Client) Fetch(
 	ctx context.Context,
 	selected Candidate,
 	cache Cache,
 	verify func(context.Context, string, Candidate) error,
+	progress ...ProgressFunc,
 ) (model.Artifact, error) {
+	report := func(phase string, downloaded, verified int64) error {
+		if len(progress) == 0 || progress[0] == nil {
+			return nil
+		}
+		return progress[0](ctx, FetchProgress{
+			Phase: phase, DownloadedBytes: downloaded,
+			VerifiedBytes: verified, TotalBytes: selected.Size,
+		})
+	}
 	if err := AppleURL(selected.URL); err != nil {
 		return model.Artifact{}, err
 	}
@@ -249,8 +303,13 @@ func (c *Client) Fetch(
 	if err := cache.ensureSpace(remaining); err != nil {
 		return model.Artifact{}, err
 	}
+	if err := report("downloading", completed, 0); err != nil {
+		return model.Artifact{}, fmt.Errorf("Fetch: progress: %w", err)
+	}
 	if remaining > 0 {
-		if err = c.appendPinned(ctx, selected, cache, f, completed); err != nil {
+		if err = c.appendPinned(ctx, selected, cache, f, completed, func(downloaded int64) error {
+			return report("downloading", downloaded, 0)
+		}); err != nil {
 			if syncErr := f.Sync(); syncErr != nil {
 				return model.Artifact{}, fmt.Errorf(
 					"Fetch: sync partial after %w: %w",
@@ -264,17 +323,27 @@ func (c *Client) Fetch(
 	if err = f.Sync(); err != nil {
 		return model.Artifact{}, fmt.Errorf("Fetch: stage Sync: %w", err)
 	}
+	if err := report("verifying", selected.Size, 0); err != nil {
+		return model.Artifact{}, fmt.Errorf("Fetch: progress: %w", err)
+	}
 	if _, err = f.Seek(0, io.SeekStart); err != nil {
 		return model.Artifact{}, fmt.Errorf("Fetch: stage Seek: %w", err)
 	}
 	h := sha256.New()
 	legacy := sha1.New() //nolint:gosec // Additional historical-index check; SHA-256 is our identity.
-	n, err := io.Copy(io.MultiWriter(h, legacy), f)
+	verified := &coalescingWriter{
+		writer: io.Discard, lastAt: time.Now(),
+		report: func(n int64) error { return report("verifying", selected.Size, n) },
+	}
+	n, err := io.Copy(io.MultiWriter(h, legacy, verified), f)
 	if err != nil {
 		return model.Artifact{}, fmt.Errorf("Fetch: hash stage: %w", err)
 	}
 	if n != selected.Size {
 		return model.Artifact{}, errDownloadLengthMismatch
+	}
+	if err := report("identity_check", selected.Size, n); err != nil {
+		return model.Artifact{}, fmt.Errorf("Fetch: progress: %w", err)
 	}
 	if selected.SHA1 != "" &&
 		!strings.EqualFold(selected.SHA1, hex.EncodeToString(legacy.Sum(nil))) {
@@ -293,6 +362,9 @@ func (c *Client) Fetch(
 	if err = os.Rename(stage, name); err != nil {
 		return model.Artifact{}, fmt.Errorf("Fetch: os.Rename: %w", err)
 	}
+	if err := report("published", selected.Size, n); err != nil {
+		return model.Artifact{}, fmt.Errorf("Fetch: progress: %w", err)
+	}
 	return model.Artifact{ID: digest, SHA256: digest, Size: n, Path: name}, nil
 }
 
@@ -302,6 +374,7 @@ func (c *Client) appendPinned(
 	cache Cache,
 	stage *os.File,
 	offset int64,
+	report func(int64) error,
 ) error {
 	if _, err := stage.Seek(offset, io.SeekStart); err != nil {
 		return fmt.Errorf("appendPinned: Seek: %w", err)
@@ -358,11 +431,16 @@ func (c *Client) appendPinned(
 	}
 	idleTimer := time.AfterFunc(downloadIdleTimeout, func() { cancel(errDownloadIdleTimeout) })
 	defer idleTimer.Stop()
-	written, err := io.CopyBuffer(
-		budgetedDownloadWriter{
+	writer := &coalescingWriter{
+		writer: budgetedDownloadWriter{
 			ctx: ctx, dst: stage, dir: cache.Dir,
 			reserve: cache.Reserve, free: availableDiskBytes,
 		},
+		sync: stage.Sync, written: offset,
+		lastReported: offset, lastAt: time.Now(), report: report,
+	}
+	written, err := io.CopyBuffer(
+		writer,
 		io.LimitReader(progressReader{Reader: res.Body, idle: idleTimer}, selected.Size-offset+1),
 		make([]byte, 1<<20),
 	)
