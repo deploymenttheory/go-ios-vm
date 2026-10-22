@@ -122,6 +122,28 @@ func NewObservation(
 	evidence Blob,
 	extractor string,
 ) (Observation, error) {
+	return NewObservationWithPresence(
+		t,
+		subject,
+		property,
+		"present",
+		value,
+		source,
+		evidence,
+		extractor,
+	)
+}
+
+// NewObservationWithPresence keeps an incomplete or absent reading distinct
+// from a present value, including when both carry the same explanatory JSON.
+func NewObservationWithPresence(
+	t Target,
+	subject, property, presence string,
+	value any,
+	source Location,
+	evidence Blob,
+	extractor string,
+) (Observation, error) {
 	b, err := json.Marshal(value)
 	if err != nil {
 		return Observation{}, fmt.Errorf("NewObservation: json.Marshal: %w", err)
@@ -130,7 +152,7 @@ func NewObservation(
 		TargetID:   t.ID,
 		Subject:    subject,
 		Property:   property,
-		Presence:   "present",
+		Presence:   presence,
 		Value:      b,
 		Source:     source,
 		Extractor:  extractor,
@@ -141,7 +163,20 @@ func NewObservation(
 	if err != nil {
 		return Observation{}, fmt.Errorf("NewObservation: json.Marshal: %w", err)
 	}
-	o.ID = ID(t.ID, subject, property, string(b), string(location), o.EvidenceID, extractor)
+	if presence == "present" {
+		o.ID = ID(t.ID, subject, property, string(b), string(location), o.EvidenceID, extractor)
+	} else {
+		o.ID = ID(
+			t.ID,
+			subject,
+			property,
+			presence,
+			string(b),
+			string(location),
+			o.EvidenceID,
+			extractor,
+		)
+	}
 	return o, o.ValidateMetadata()
 }
 
@@ -154,7 +189,12 @@ func (o Observation) ValidateMetadata() error {
 		return errIncompleteObservation
 	}
 	switch o.Source.Coordinate {
-	case "plist-selector", "decoded-payload-byte", "zip-member-byte-ranges", "zip-encoded-member":
+	case "plist-selector",
+		"decoded-payload-byte",
+		"zip-member-byte-ranges",
+		"zip-encoded-member",
+		"apfs-file-object",
+		"apfs-logical-file-byte":
 	default:
 		return fmt.Errorf("%w: %q", errUnsupportedSourceCoordinate, o.Source.Coordinate)
 	}

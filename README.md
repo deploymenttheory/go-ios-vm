@@ -23,7 +23,7 @@ This is a fresh implementation. The previous project may be consulted for a spec
 
 The design interview is accepted. The first CLI implementation is merged into `main`. The [exact iPhone12,1 iOS 14.0 image](docs/qualification/iphone12-1-ios14.md) has been verified and inspected on macOS and Linux with **partial coverage**; the full first-tooling release is not yet accepted. No VM runner has been implemented.
 
-Implemented: Apple catalog discovery, bounded verified downloads, explicit BuildManifest identity selection, source-addressable device-tree and prelinked kernel/driver metadata, read-only disk/APFS metadata through `go-apfs-v3`, PostgreSQL publication/retrieval, run comparison and leased cache cleanup. Unsupported components produce partial coverage. Retained evidence includes the bytes needed to inspect findings after source-cache deletion.
+Implemented: Apple catalog discovery, bounded verified downloads, explicit BuildManifest identity selection, source-addressable device-tree and prelinked kernel/driver metadata, read-only disk/APFS metadata and bounded firmware/driver file inspection through `go-apfs-v3`, PostgreSQL publication/retrieval, run comparison and leased cache cleanup. Unsupported components produce partial coverage. Retained evidence includes the bytes needed to inspect findings after source-cache deletion.
 
 See [implementation status and limitations](docs/implementation-status.md), the [evidence model](docs/evidence-model.md), [inspection architecture](docs/inspection-architecture.md), and [design decisions](docs/README.md).
 
@@ -94,13 +94,15 @@ Viper accepts `--config FILE`, flags, and `GOIOSVM_` environment variables; pref
 
 ZIP Deflate OS members are staged in a disposable temporary directory for read-only disk inspection. Staging requires the declared expanded size to fit within 8 GiB and available space after a 2 GiB reserve; both size and free space are checked again as bytes are written. Disk observations need replayable source evidence. Because a Deflate member has no direct physical mapping from decoded reads, the full encoded member is retained only when it fits the existing 32 MiB disk source-capture cap. Larger compressed members get explicit partial disk coverage without disk findings. The staging file is removed when inspection finishes or fails; the original IPSW is unaffected.
 
+APFS content inspection searches selected OS-image volumes under `/System/Library/Extensions`, `/System/Library/DriverExtensions`, `/Library/Extensions`, and `/usr/standalone/firmware`. It records metadata for visited objects and retains logical contents of `.plist`, `.json`, `.entitlements`, and `.txt` files, capped at 2,048 objects and 8 MiB total retained file content per selected OS image, eight directory levels, and 64 KiB per file. A truncated file retains its captured prefix and explicit incomplete status. The source selector names the partition, APFS volume, view, object and logical data fork; it does not assert a physical extent for decoded bytes. Coverage stays partial because paths outside this search scope are unexamined. Missing searched roots, zero-byte files, unsupported or encrypted content, corrupt reads, and budget limits are reported separately.
+
 Structured output uses `--format json` and includes `schema_version`, `state` and `results` for complete or partial results. A failed command emits one JSON object with `schema_version`, `state`, and a `diagnostic` containing a stable `code` and safe `message`; for example:
 
 ```json
 {"schema_version":1,"state":"failed","diagnostic":{"code":"missing_input","message":"required flag(s) \"image\" not set"}}
 ```
 
-Diagnostic codes include `missing_input`, `changed_input`, `invalid_selection`, `unsupported_or_corrupt`, `storage_failure`, `acquisition_failure`, `invalid_invocation`, `operation_failed`, and `cancelled`. Terminal text shows concise summaries and errors; `finding show` still prints retained evidence in base64. Progress goes to stderr and does not enter JSON stdout. Exit status: 0 complete, 2 partial, 1 failure, 130 cancellation. The current inspector reports partial coverage because filesystem-content inspection remains unimplemented.
+Diagnostic codes include `missing_input`, `changed_input`, `invalid_selection`, `unsupported_or_corrupt`, `storage_failure`, `acquisition_failure`, `invalid_invocation`, `operation_failed`, and `cancelled`. Terminal text shows concise summaries and errors; `finding show` still prints retained evidence in base64. Progress goes to stderr and does not enter JSON stdout. Exit status: 0 complete, 2 partial, 1 failure, 130 cancellation. The current inspector reports partial filesystem coverage for the bounded search scope and for any decoder or resource gaps.
 
 ## Verify changes
 

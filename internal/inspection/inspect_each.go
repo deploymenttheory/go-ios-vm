@@ -19,7 +19,7 @@ var Components = []string{
 
 // RunPlanVersion covers component semantics that do not change the stable
 // observation extractor identity. A resume must use the same plan version.
-const RunPlanVersion = Extractor + ";filesystem=unexamined-v1"
+const RunPlanVersion = Extractor + ";filesystem=" + filesystemExtractor
 
 // InspectEach emits one completed component at a time. The caller can commit
 // each component before parsing the next. A component marked done is never
@@ -96,31 +96,37 @@ func (a *Archive) InspectEach(
 			return err
 		}
 	}
-	if !done["disk-metadata"] {
+	if !done["disk-metadata"] || !done["filesystem-content"] {
 		if err := ctx.Err(); err != nil {
 			return fmt.Errorf("InspectEach: %w", err)
 		}
-		observations, diskErr := a.inspectDisk(ctx, t)
-		c := model.Coverage{Component: "disk-metadata", State: "complete"}
-		if diskErr != nil {
-			c.State = "partial"
-			c.Reason = diskErr.Error()
+		diskObservations, filesystemObservations, filesystemCoverage, diskErr := a.inspectDisk(
+			ctx, t, !done["filesystem-content"],
+		)
+		if !done["disk-metadata"] {
+			c := model.Coverage{Component: "disk-metadata", State: "complete"}
+			if diskErr != nil {
+				c.State = "partial"
+				c.Reason = diskErr.Error()
+			}
+			if err := a.Unchanged(); err != nil {
+				return err
+			}
+			if err := emit("disk-metadata", diskObservations, c); err != nil {
+				return err
+			}
 		}
-		if err := a.Unchanged(); err != nil {
-			return err
-		}
-		if err := emit("disk-metadata", observations, c); err != nil {
-			return err
-		}
-	}
-	if !done["filesystem-content"] {
-		c := model.Coverage{
-			Component: "filesystem-content",
-			State:     "unexamined",
-			Reason:    "filesystem content inspection is not implemented",
-		}
-		if err := emit(c.Component, nil, c); err != nil {
-			return err
+		if !done["filesystem-content"] {
+			if err := a.Unchanged(); err != nil {
+				return err
+			}
+			if err := emit(
+				"filesystem-content",
+				filesystemObservations,
+				filesystemCoverage,
+			); err != nil {
+				return err
+			}
 		}
 	}
 	if err := ctx.Err(); err != nil {
