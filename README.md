@@ -1,75 +1,75 @@
-# Template
+# go-ios-vm
 
-This repository serves as a **Default Template Repository** according official [GitHub Contributing Guidelines][ProjectSetup] for healthy contributions. It brings you clean default Templates for several areas:
+A fresh Go project with two deliverables:
 
-- [Azure DevOps Pull Requests](.azuredevops/PULL_REQUEST_TEMPLATE.md) ([`.azuredevops\PULL_REQUEST_TEMPLATE.md`](`.azuredevops\PULL_REQUEST_TEMPLATE.md`))
-- [Azure Pipelines](.pipelines/pipeline.yml) ([`.pipelines/pipeline.yml`](`.pipelines/pipeline.yml`))
-- [GitHub Workflows](.github/workflows/)
-  - [Super Linter](.github/workflows/linter.yml) ([`.github/workflows/linter.yml`](`.github/workflows/linter.yml`))
-  - [Sample Workflows](.github/workflows/workflow.yml) ([`.github/workflows/workflow.yml`](`.github/workflows/workflow.yml`))
-- [GitHub Pull Requests](.github/PULL_REQUEST_TEMPLATE.md) ([`.github/PULL_REQUEST_TEMPLATE.md`](`.github/PULL_REQUEST_TEMPLATE.md`))
-- [GitHub Issues](.github/ISSUE_TEMPLATE/)
-  - [Feature Requests](.github/ISSUE_TEMPLATE/FEATURE_REQUEST.md) ([`.github/ISSUE_TEMPLATE/FEATURE_REQUEST.md`](`.github/ISSUE_TEMPLATE/FEATURE_REQUEST.md`))
-  - [Bug Reports](.github/ISSUE_TEMPLATE/BUG_REPORT.md) ([`.github/ISSUE_TEMPLATE/BUG_REPORT.md`](`.github/ISSUE_TEMPLATE/BUG_REPORT.md`))
-- [Codeowners](.github/CODEOWNERS) ([`.github/CODEOWNERS`](`.github/CODEOWNERS`)) _adjust usernames once cloned_
-- [Wiki and Documentation](docs/) ([`docs/`](`docs/`))
-- [gitignore](.gitignore) ([`.gitignore`](.gitignore))
-- [gitattributes](.gitattributes) ([`.gitattributes`](.gitattributes))
-- [Changelog](CHANGELOG.md) ([`CHANGELOG.md`](`CHANGELOG.md`))
-- [Code of Conduct](CODE_OF_CONDUCT.md) ([`CODE_OF_CONDUCT.md`](`CODE_OF_CONDUCT.md`))
-- [Contribution](CONTRIBUTING.md) ([`CONTRIBUTING.md`](`CONTRIBUTING.md`))
-- [License](LICENSE) ([`LICENSE`](`LICENSE`)) _adjust projectname once cloned_
-- [Readme](README.md) ([`README.md`](`README.md`))
-- [Security](SECURITY.md) ([`SECURITY.md`](`SECURITY.md`))
+- A suite of tools for inspecting IPSWs and firmware, to understand and implement virtual models of additional iPhone hardware generations.
+- An iOS virtual machine runner for macOS using Hypervisor.framework.
 
+## Agreed direction
 
-## Status
+Tools are the initial focus. The project language is Go; supporting tools may use Python. The inspection tools target macOS and Linux; Windows is out of scope. The Hypervisor.framework runner targets Apple Silicon macOS. The first guest target is iOS 14. The full version scope is iOS 14, 15, 26, and 27. Scope does not imply demonstrated support.
 
-[![Super Linter](<https://github.com/segraef/Template/actions/workflows/linter.yml/badge.svg>)](<https://github.com/segraef/Template/actions/workflows/linter.yml>)
+The inspection suite covers static firmware inspection and live execution observation. Work begins with static inspection: image components, device identities, device trees, kernel drivers and dependencies, and differences between images. Live observation will expose execution, device accesses, interrupts, and failures when a runner is available. Each tool must answer a concrete question and provide a usable output.
 
-[![Sample Workflow](<https://github.com/segraef/Template/actions/workflows/workflow.yml/badge.svg>)](<https://github.com/segraef/Template/actions/workflows/workflow.yml>)
+The first inspection workflow is: open an IPSW, select a device identity, explore its firmware and hardware descriptions, and compare findings with another image. Unsupported content must be reported explicitly. The CLI uses Cobra for commands and Viper for configuration, with readable terminal output and structured output for consumers. Existing libraries and tools should be reused where suitable; new Go tooling will fill demonstrated gaps. Confirmed missing disk-image/filesystem codec support belongs in `go-apfs-v3`. Hardware findings distinguish direct observations, interpretations, and unknowns, and retain references to their sources.
 
-## Creating a repository from a template
+PostgreSQL stores findings, provenance, and retained supporting evidence, including binary data. Disposable decoded files and bulk traces are subject to bounded retention. IPSWs are acquired on demand using GDMF discovery plus Apple-owned restore catalogs as needed, and held in a managed local cache. Historical restore resolution remains an explicit qualification gap. Development includes a dedicated local PostgreSQL instance; its connection is configurable through Viper for local or remote use. Findings inform a reviewed, versioned machine profile consumed by the runner.
 
-You can [generate](https://github.com/segraef/Template/generate) a new repository with the same directory structure and files as an existing repository. More details can be found [here][CreateFromTemplate].
+Usable-VM acceptance includes an interactive iOS UI, input, persistence, restart, and operation with SIP enabled. Exact hardware and image builds remain to be selected for this project. The wider Weave product family remains unchanged.
 
-## Reporting Issues and Feedback
+This is a fresh implementation. The previous project may be consulted for a specific question; its code, reports, image assets, and architecture are not a migration baseline. No historical material has been imported.
 
-### Issues and Bugs
+## Current stage
 
-If you find any bugs, please file an issue in the [GitHub Issues][GitHubIssues] page. Please fill out the provided template with the appropriate information.
+The design interview is accepted. The first CLI implementation is on `feat/firmware-inspection`; the full first-tooling release is **not yet qualified on real iOS images**. No VM runner has been implemented.
 
-If you are taking the time to mention a problem, even a seemingly minor one, it is greatly appreciated, and a totally valid contribution to this project. **Thank you!**
+Implemented: Apple catalog discovery, bounded verified downloads, explicit BuildManifest identity selection, source-addressable device-tree and prelinked kernel/driver metadata, read-only disk/APFS metadata through `go-apfs-v3`, PostgreSQL publication/retrieval, run comparison and leased cache cleanup. Unsupported components produce partial coverage. Retained evidence includes the bytes needed to inspect findings after source-cache deletion.
 
-## Feedback
+See [implementation status and limitations](docs/implementation-status.md), the [evidence model](docs/evidence-model.md), [inspection architecture](docs/inspection-architecture.md), and [design decisions](docs/README.md).
 
-If there is a feature you would like to see in here, please file an issue or feature request in the [GitHub Issues][GitHubIssues] page to provide direct feedback.
+## Run locally
 
-## Contribution
+Requires Go 1.27.1+, a C compiler (Xcode command-line tools on macOS), Python 3 for setup scripts, and Docker Compose for the optional local database. The inspection CLI itself uses Go and C-backed upstream LZFSE; Python is not a runtime dependency.
 
-If you would like to become an active contributor to this repository or project, please follow the instructions provided in [`CONTRIBUTING.md`][Contributing].
+```sh
+python3 scripts/dev-env.py  # once; preserves any existing .env
+set -a
+source .env
+set +a
+docker compose up -d --wait postgres
+go build -o bin/go-ios-vm ./cmd/go-ios-vm
+bin/go-ios-vm db migrate
+bin/go-ios-vm firmware discover --product iPhone12,1 --version 14.0
+```
 
-## Learn More
+Discovery records exact catalog responses in PostgreSQL. The current Apple catalogs did not resolve the proposed iOS 14.0/15.0 fixtures during the initial checks. Do not substitute another image automatically.
 
-* [GitHub Documentation][GitHubDocs]
-* [Azure DevOps Documentation][AzureDevOpsDocs]
-* [Microsoft Azure Documentation][MicrosoftAzureDocs]
+For an exact catalog-resolved release, `firmware fetch --product PRODUCT --version VERSION` downloads, verifies BuildManifest identity and publishes a SHA-256-named cache entry. It refuses an unresolved release, a failed checksum/identity check, or insufficient cache/free-disk capacity.
 
-<!-- References -->
+```sh
+bin/go-ios-vm target list --image /path/to/verified.ipsw
+bin/go-ios-vm --format json inspect --image /path/to/verified.ipsw --identity 0
+bin/go-ios-vm finding list --run RUN_ID
+bin/go-ios-vm finding show --evidence EVIDENCE_SHA256
+bin/go-ios-vm compare --left FIRST_RUN_ID --right SECOND_RUN_ID
+bin/go-ios-vm cache status
+bin/go-ios-vm cache prune         # preview
+bin/go-ios-vm cache prune --apply
+```
 
-<!-- Local -->
-[ProjectSetup]: <https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions>
-[CreateFromTemplate]: <https://docs.github.com/en/github/creating-cloning-and-archiving-repositories/creating-a-repository-on-github/creating-a-repository-from-a-template>
-[GitHubDocs]: <https://docs.github.com/>
-[AzureDevOpsDocs]: <https://docs.microsoft.com/en-us/azure/devops/?view=azure-devops>
-[GitHubIssues]: <https://github.com/segraef/Template/issues>
-[Contributing]: CONTRIBUTING.md
+Choose the identity index from `target list`; `0` is only an example. Evidence bytes in `finding show` are base64 within JSON. Present zero, missing observations, and conflicting readings stay distinct in comparisons. Comparisons match exact semantic subjects/properties; they do not establish cross-hardware equivalence.
 
-<!-- External -->
-[Az]: <https://img.shields.io/powershellgallery/v/Az.svg?style=flat-square&label=Az>
-[AzGallery]: <https://www.powershellgallery.com/packages/Az/>
-[PowerShellCore]: <https://github.com/PowerShell/PowerShell/releases/latest>
+Viper accepts `--config FILE`, flags, and `GOIOSVM_` environment variables; prefer `GOIOSVM_DATABASE_URL` over passing credentials on the command line. Defaults: 8 GiB image-cache budget, 2 GiB free-disk reserve, 2 GiB distinct retained source bytes in PostgreSQL. The evidence budget excludes database/index/WAL overhead. These limits are configurable using `--cache-limit`, `--disk-reserve`, and `--evidence-limit` (bytes). Credentials and firmware images are ignored by Git.
 
-<!-- Docs -->
-[MicrosoftAzureDocs]: <https://docs.microsoft.com/en-us/azure/>
-[PowerShellDocs]: <https://docs.microsoft.com/en-us/powershell/>
+Structured output uses `--format json` and includes `schema_version`, `state` and `results`. Progress goes to stderr. Exit status: 0 complete, 2 partial, 1 failure, 130 cancellation. The current inspector reports partial coverage because filesystem-content inspection remains unimplemented.
+
+## Verify changes
+
+```sh
+go test ./...
+go vet ./...
+GOIOSVM_TEST_DATABASE_URL="$GOIOSVM_DATABASE_URL" go test -race ./...
+python3 scripts/check-backup.py
+```
+
+Database tests use temporary schemas and remove them afterward. The backup check streams into a temporary database and removes it; no dump archive is kept. It should run while no evidence is being published. It compares retained bytes and publication relationships and does not claim real-image qualification. The dedicated development database remains available across CLI restarts. `docker compose down` stops it without deleting its volume.

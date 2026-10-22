@@ -1,70 +1,31 @@
-# Project Title
+# Project design
 
-Simple overview of your project and its use or purpose.
+- [Scope and current stage](../README.md)
+- [Implementation status and next work](implementation-status.md)
+- [Essential references retained before legacy deletion](research/retired-spike-notes.md)
+- [Glossary](../GLOSSARY.md)
+- [Fresh implementation with on-demand historical reference](adr/0001-fresh-implementation.md)
+- [Disk-image and filesystem codec ownership](adr/0002-codec-capabilities-in-go-apfs.md)
+- [PostgreSQL evidence ownership](adr/0003-postgresql-evidence-store.md)
+- [Evidence model and proposed schema](evidence-model.md)
+- [Consolidated inspection architecture](inspection-architecture.md)
 
->Make use of the [Markdow Syntax Guide](markdown-syntax-guide.md).
+## Settled requirements
 
-## Description
+- Fresh Go project, supporting Python permitted; no inherited implementation or evidence archive.
+- Two deliverables: firmware inspection tools first, then an iOS runner using macOS Hypervisor.framework.
+- Tools qualify on macOS and Linux. The runner targets Apple Silicon macOS. Windows is out of scope.
+- iOS 14 first; 15, 26 and 27 also in scope. First comparison uses matching hardware on iOS 14/15, followed by newer releases and different hardware generations.
+- Cobra/Viper CLI, readable and structured output, reuse suitable dependencies, new Go tooling where required.
+- GDMF discovery plus Apple-owned restore catalog resolution; exact IPSWs downloaded on demand into a managed cache.
+- PostgreSQL owns findings, provenance and supporting evidence bytes. Provide a dedicated local instance with configurable local/remote connectivity.
+- Bounded disposable caches, protected essential evidence, explicit unknowns and source coordinates.
+- Findings reach the runner through a reviewed versioned machine profile. Usable-VM acceptance includes interaction, persistence, restart and SIP-enabled operation.
 
-Describe your project.
+## Design tree status
 
-## Getting Started
+The first-tooling interview and shared-understanding review are complete. Initial implementation is on `feat/firmware-inspection`; see the implementation status for demonstrated behavior and remaining gaps.
 
-This is an example of how you may give instructions on setting up your project locally.
-To get a local copy up and running follow these simple example steps.
+Dependencies, local PostgreSQL startup and initial resource budgets are established. Concrete historical image resolution and real-image inspection remain outstanding.
 
-### Prerequisites
-
-Describe any prerequisites or dependencies.
-
-### Installation
-
-* How/where to download your program
-* Any modifications needed to be made to files/folders
-
-  ```bash
-  iex "&amp; { $(irm https://aka.ms/install-powershell.ps1) } -UseMSI"
-  ```
-
-## Usage
-
-Use this space to show useful examples of how a project can be used. Additional screenshots, code examples and demos work well in this space. You may also link to more resources.
-
-_For more examples, please refer to the [Documentation](https://example.com)_
-
-
-## FAQ and Known Issues
-
-Any advise for common problems or issues.
-  ```bash
-  command to run if program contains helper info
-  ```
-
-## Contributors
-
-Contributors names and contact info
-
-* You, Yourself and the Universe
-* [@your_twitter](<https://twitter.com/your_username>)
-
-## Contribution
-
-If you would like to become an active contributor to this repository or project, please follow the instructions provided in [`CONTRIBUTING.md`](../CONTRIBUTING.md).
-
-<!-- CONTACT -->
-## Contact
-
-Your Name - [@your_twitter](<https://twitter.com/your_username>) - email@example.com
-
-Project Link: [https://github.com/your_username/repo_name](<https://github.com/your_username/repo_name>)
-
-
-<!-- LICENSE -->
-## License
-
-Distributed under the MIT License. See [`LICENSE`](`../../LICENSE`).
-
-## References
-
-* [Emoji Cheat Sheet](<https://github.com/ikatyang/emoji-cheat-sheet>)
-* [License Helper](<https://choosealicense.com/>)
+The runner's exact machine profile and full subsystem contracts remain a later design branch before runner implementation. Inspection success does not establish VM feasibility. The old repository and wider Weave products remain unchanged.
