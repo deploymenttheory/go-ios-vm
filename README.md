@@ -21,7 +21,7 @@ This is a fresh implementation. The previous project may be consulted for a spec
 
 ## Current stage
 
-The design interview is accepted. The first CLI implementation is merged into `main`. The [exact iPhone12,1 iOS 14.0 image](docs/qualification/iphone12-1-ios14.md) has been verified and inspected on macOS and Linux with **partial coverage**; the full first-tooling release is not yet accepted. No VM runner has been implemented.
+The design interview is accepted. The first CLI implementation is merged into `main`. The exact `iPhone12,1` [iOS 14.0](docs/qualification/iphone12-1-ios14.md) and [iOS 15.0](docs/qualification/iphone12-1-ios15.md) images have been verified and inspected on macOS and Linux with **partial coverage**; the full first-tooling release is not yet accepted. No VM runner has been implemented.
 
 Implemented: Apple catalog discovery, bounded verified downloads, explicit BuildManifest identity selection, source-addressable device-tree and prelinked kernel/driver metadata, read-only disk/APFS metadata and bounded firmware/driver file inspection through `go-apfs-v3`, PostgreSQL publication/retrieval, run comparison and leased cache cleanup. Unsupported components produce partial coverage. Retained evidence includes the bytes needed to inspect findings after source-cache deletion.
 
