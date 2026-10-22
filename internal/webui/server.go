@@ -13,6 +13,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/deploymenttheory/go-ios-vm/internal/postgres"
 )
 
 //go:embed assets/*
@@ -30,6 +32,7 @@ type response struct {
 	State      string      `json:"state"`
 	ReadOnly   bool        `json:"read_only"`
 	Endpoints  []string    `json:"endpoints,omitempty"`
+	Data       any         `json:"data,omitempty"`
 	Diagnostic *diagnostic `json:"diagnostic,omitempty"`
 }
 
@@ -80,6 +83,15 @@ func jsonResponse(w http.ResponseWriter, r *http.Request, status int, body respo
 // NewHandler exposes only the versioned read API, its health check and the
 // bundled browser shell. The check callback must not return secrets to clients.
 func NewHandler(check func(context.Context) error) http.Handler {
+	return newHandler(check, nil)
+}
+
+// NewReadHandler adds bounded PostgreSQL browse routes to the local shell.
+func NewReadHandler(store *postgres.Store) http.Handler {
+	return newHandler(store.Ping, store)
+}
+
+func newHandler(check func(context.Context) error, store *postgres.Store) http.Handler {
 	static, _ := fs.Sub(assets, "assets")
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("X-Content-Type-Options", "nosniff")
@@ -97,9 +109,15 @@ func NewHandler(check func(context.Context) error) http.Handler {
 		}
 		switch r.URL.Path {
 		case "/api/v1", "/api/v1/":
+			endpoints := []string{"/api/v1/health"}
+			if store != nil {
+				endpoints = append(endpoints,
+					"/api/v1/artifacts", "/api/v1/targets",
+					"/api/v1/acquisitions", "/api/v1/runs")
+			}
 			jsonResponse(w, r, http.StatusOK, response{
 				APIVersion: "v1", State: "ready", ReadOnly: true,
-				Endpoints: []string{"/api/v1/health"},
+				Endpoints: endpoints,
 			})
 		case "/api/v1/health":
 			checkCtx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
@@ -124,6 +142,9 @@ func NewHandler(check func(context.Context) error) http.Handler {
 			serveAsset(w, r, static, "style.css", "text/css; charset=utf-8")
 		default:
 			if strings.HasPrefix(r.URL.Path, "/api/") {
+				if store != nil && serveBrowse(w, r, store) {
+					return
+				}
 				jsonResponse(w, r, http.StatusNotFound, response{
 					APIVersion: "v1", State: "not_found", ReadOnly: true,
 				})

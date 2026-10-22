@@ -45,7 +45,7 @@ func addUICommand(root *cobra.Command, v *viper.Viper, cfg *config, stderr io.Wr
 			}
 			defer listener.Close()
 			fmt.Fprintf(stderr, "Inspection UI: http://%s/\n", listener.Addr().String())
-			if err := webui.Serve(c.Context(), listener, webui.NewHandler(store.Ping)); err != nil {
+			if err := webui.Serve(c.Context(), listener, webui.NewReadHandler(store)); err != nil {
 				return classified("operation_failed", errUIListenerUnavailable)
 			}
 			return nil
