@@ -37,7 +37,27 @@ var (
 	errUnpinnedFetch            = errors.New("full fetch requires probed size and ETag")
 	errPartialNotRegular        = errors.New("managed partial is not a regular file")
 	errRangeResumeMismatch      = errors.New("resumed image range does not match pinned object")
+	errDownloadHeaderTimeout    = errors.New("image download response headers timed out")
+	errDownloadIdleTimeout      = errors.New("image download stalled")
 )
+
+const (
+	downloadHeaderTimeout = 45 * time.Second
+	downloadIdleTimeout   = 2 * time.Minute
+)
+
+type progressReader struct {
+	io.Reader
+	idle *time.Timer
+}
+
+func (r progressReader) Read(p []byte) (int, error) {
+	n, err := r.Reader.Read(p)
+	if n > 0 {
+		r.idle.Reset(downloadIdleTimeout)
+	}
+	return n, err //nolint:wrapcheck // io.Reader requires the original error sentinel.
+}
 
 type Cache struct {
 	Dir     string
@@ -280,7 +300,13 @@ func (c *Client) appendPinned(
 	if _, err := stage.Seek(offset, io.SeekStart); err != nil {
 		return fmt.Errorf("appendPinned: Seek: %w", err)
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, selected.URL, nil)
+	streamCtx, cancel := context.WithCancelCause(ctx)
+	defer cancel(nil)
+	headerTimer := time.AfterFunc(downloadHeaderTimeout, func() {
+		cancel(errDownloadHeaderTimeout)
+	})
+	defer headerTimer.Stop()
+	req, err := http.NewRequestWithContext(streamCtx, http.MethodGet, selected.URL, nil)
 	if err != nil {
 		return fmt.Errorf("appendPinned: NewRequestWithContext: %w", err)
 	}
@@ -289,8 +315,16 @@ func (c *Client) appendPinned(
 	if offset > 0 {
 		req.Header.Set("Range", fmt.Sprintf("bytes=%d-", offset))
 	}
-	res, err := c.HTTP.Do(req)
+	// Client.Timeout includes the entire response body. Large IPSWs can take
+	// longer than the catalog/range request limit while still making progress.
+	streamClient := *c.HTTP
+	streamClient.Timeout = 0
+	res, err := streamClient.Do(req)
+	headerTimer.Stop()
 	if err != nil {
+		if errors.Is(context.Cause(streamCtx), errDownloadHeaderTimeout) {
+			return errDownloadHeaderTimeout
+		}
 		return fmt.Errorf("appendPinned: Do: %w", err)
 	}
 	defer res.Body.Close()
@@ -316,8 +350,16 @@ func (c *Client) appendPinned(
 	if res.StatusCode != wantStatus {
 		return errRangeResumeMismatch
 	}
-	written, err := io.Copy(stage, io.LimitReader(res.Body, selected.Size-offset+1))
+	idleTimer := time.AfterFunc(downloadIdleTimeout, func() { cancel(errDownloadIdleTimeout) })
+	defer idleTimer.Stop()
+	written, err := io.Copy(
+		stage,
+		io.LimitReader(progressReader{Reader: res.Body, idle: idleTimer}, selected.Size-offset+1),
+	)
 	if err != nil {
+		if errors.Is(context.Cause(streamCtx), errDownloadIdleTimeout) {
+			return errDownloadIdleTimeout
+		}
 		return fmt.Errorf("appendPinned: Copy: %w", err)
 	}
 	if written != selected.Size-offset {

@@ -18,7 +18,7 @@ Initial qualification uses iOS 14 and 15 on matching iPhone hardware. Later qual
 
 ## Candidate image pair
 
-Propose iPhone 11: `iPhone12,1`, board `n104ap`, platform `t8030`, architecture `arm64e`. That mapping appears in [blacktop's Xcode-derived device list](https://blacktop.github.io/ipsw/docs/guides/device_list/). Initial release requests are iOS 14.0 and 15.0; `18A373` and `19A346` are candidate build labels, not verified pins from this research pass.
+Propose iPhone 11: `iPhone12,1`, board `n104ap`, platform `t8030`, architecture `arm64e`. That mapping appears in [blacktop's Xcode-derived device list](https://blacktop.github.io/ipsw/docs/guides/device_list/). Initial release requests are iOS 14.0 and 15.0; `18A373` and `19A346` were candidate build labels in this research pass. The [iOS 14 qualification](qualification/iphone12-1-ios14.md) later verified `18A373` in full; `19A346` remains a bounded remote-manifest observation.
 
 The acquisition contract must resolve the actual Apple URL and verify each archive's BuildManifest product, board, variant and component identities. Neither URL availability nor either manifest has been verified. An unavailable requested build is an explicit acquisition result; do not silently select a different build. These are proposed inspection fixtures, not a commitment to the runner's final machine profile.
 
