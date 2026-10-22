@@ -1,6 +1,6 @@
 # Local inspection read API
 
-`go-ios-vm ui serve` exposes `GET` and `HEAD` routes on numeric loopback only. `GET /api/v1` lists available endpoints. Responses use a versioned envelope with `api_version: "v1"`, `state`, `read_only: true`, and either `data` or a safe `diagnostic`. There are no write routes. Each browse request has a three-second database deadline.
+`go-ios-vm ui serve` exposes `GET` and `HEAD` routes on numeric loopback only. `GET /api/v1` lists available endpoints. Responses use a versioned envelope with `api_version: "v1"`, `state`, `read_only: true`, and either `data` or a safe `diagnostic`. There are no write routes. Artifact, target, acquisition and run requests have a three-second database deadline; finding, observation and evidence requests have a fifteen-second deadline.
 
 | Route | Exact filters | Detail |
 | --- | --- | --- |
@@ -8,6 +8,9 @@
 | `/api/v1/targets` | `artifact_id`, `product`, `build`, `identity` | `/api/v1/targets/{id}` |
 | `/api/v1/acquisitions` | `product`, `build`, `status`, `from`, `before` | `/api/v1/acquisitions/{numeric-id}` |
 | `/api/v1/runs` | `target_id`, `state`, `from`, `before` | `/api/v1/runs/{id}` |
+| `/api/v1/findings` | required `target_id`; `subject`, `property`, `component`, `basis`, `assessment` | `/api/v1/findings/{id}?target_id={id}` |
+| `/api/v1/observations` | required `target_id`; `run_id`, `subject`, `property`, `component` | `/api/v1/observations/{id}?target_id={id}` |
+| `/api/v1/evidence/{digest}/preview` | required `target_id`; `bytes` (1–4096, default 256) | Verified retained byte sample |
 
 List routes accept `limit` (default 25, maximum 100) and `cursor`. Lists return `data.items` and an optional `data.next_cursor`. Pass that cursor back with the same filters to request the next page. Artifact and target lists order by ID ascending; acquisition lists order by ID descending; run lists order by start time then ID descending. The cursor anchors the next page in that order, so newly added rows before it are not repeated. A cursor is scoped to its filters and is not a snapshot of later database changes. `from` is inclusive and `before` is exclusive, both RFC 3339 timestamps. Unknown, duplicate, malformed, or overlong query values receive HTTP 400.
 
@@ -16,3 +19,7 @@ An artifact response gives its digest, size, and number of registered source loc
 An acquisition response gives the recorded source status, selected product/version/build when present, retained evidence ID and its completeness flag, and a URL origin when parseable. The API omits URL credentials, path, and query. A failed source includes `partial_reason` because its search scope is incomplete; an empty result from such an attempt does not establish absence.
 
 Run lists show durable run state, target, input digest/size, extractor, and planned components. A run detail adds committed component checkpoints and batch counts. `final_coverage_available` is true only when the final coverage ledger has records; `final_coverage` then gives each recorded state and reason. Running, failed, cancelled, or interrupted runs can have completed checkpoints without final coverage. Uncheckpointed work is not presented as progress, and the API does not infer a completion percentage. All run detail reads use one read-only database snapshot. Each detail caps planned components, checkpoints, coverage rows, and batch groups at 128; oversized data returns a safe service error.
+
+Finding and observation lists require an exact target ID so identical names in different firmware identities remain separate. `subject` and `property` are prefix filters; `component` matches the observation source member recorded for the selected target. Finding lists return identity, subject, property and revision count. A finding detail includes its full immutable revision chain, typed values, supporting and contradicting references, exact assessment state and append-only history. A new revision never inherits an earlier assessment. Observation lists and details include presence and logical source coordinates. JSON typed values, including unsigned 64-bit integers, are passed through without a floating-point conversion. Finding and observation cursors are opaque and bound to the selected filters.
+
+An evidence preview requires the target that owns an observation referencing the digest. It reads and verifies the complete retained blob's length and SHA-256 while returning at most `bytes` bytes as hex and, when valid UTF-8, text. `state: "complete"` with `declared_bytes: 0` is a verified empty blob; `state: "unavailable"` means the retained blob is incomplete. A missing or cross-target digest returns 404, while inconsistent stored bytes return a safe storage failure. Preview does not read the IPSW cache, so it remains available after cache deletion.

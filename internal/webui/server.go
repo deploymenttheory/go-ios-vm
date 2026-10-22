@@ -113,7 +113,8 @@ func newHandler(check func(context.Context) error, store *postgres.Store) http.H
 			if store != nil {
 				endpoints = append(endpoints,
 					"/api/v1/artifacts", "/api/v1/targets",
-					"/api/v1/acquisitions", "/api/v1/runs")
+					"/api/v1/acquisitions", "/api/v1/runs",
+					"/api/v1/findings", "/api/v1/observations")
 			}
 			jsonResponse(w, r, http.StatusOK, response{
 				APIVersion: "v1", State: "ready", ReadOnly: true,
@@ -143,6 +144,9 @@ func newHandler(check func(context.Context) error, store *postgres.Store) http.H
 		default:
 			if strings.HasPrefix(r.URL.Path, "/api/") {
 				if store != nil && serveBrowse(w, r, store) {
+					return
+				}
+				if serveFindings(w, r, store) {
 					return
 				}
 				jsonResponse(w, r, http.StatusNotFound, response{
