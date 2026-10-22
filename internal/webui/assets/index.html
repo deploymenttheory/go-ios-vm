@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>go-ios-vm · Inspection</title>
+  <link rel="stylesheet" href="/assets/style.css">
+  <script defer src="/assets/app.js"></script>
+</head>
+<body>
+  <main class="shell">
+    <header>
+      <p class="eyebrow">go-ios-vm</p>
+      <h1>Inspection</h1>
+      <p class="intro">Explore retained firmware evidence on this computer.</p>
+    </header>
+    <section class="panel" aria-labelledby="status-title">
+      <div class="panel-heading">
+        <h2 id="status-title">Evidence database</h2>
+        <span class="badge" id="status" role="status" aria-live="polite">Checking…</span>
+      </div>
+      <p id="status-detail">Checking the local connection.</p>
+    </section>
+    <section class="panel" aria-labelledby="work-title">
+      <h2 id="work-title">Inspection workspace</h2>
+      <p>Run inspections in another terminal. This local app is ready for read-only result browsing.</p>
+      <p class="hint">The current API is available at <code>/api/v1</code>.</p>
+    </section>
+  </main>
+</body>
+</html>
