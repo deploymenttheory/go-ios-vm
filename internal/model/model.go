@@ -86,6 +86,8 @@ type Run struct {
 	Extractor   string     `json:"extractor,omitempty"`
 	Planned     []string   `json:"planned_components,omitempty"`
 	Coverage    []Coverage `json:"coverage"`
+	// LeaseToken is an in-process write claim; it is never included in output.
+	LeaseToken string `json:"-"`
 }
 type Finding struct {
 	ID          string      `json:"id"`

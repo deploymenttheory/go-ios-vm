@@ -55,7 +55,10 @@ var (
 	errResumeIdentity      = errors.New(
 		"resume input, target, extractor or component plan differs from the original run",
 	)
-	errBatchExceedsBound = errors.New("observation batch exceeds the 128-observation limit")
+	errBatchExceedsBound   = errors.New("observation batch exceeds the 128-observation limit")
+	errRunLeaseUnavailable = errors.New(
+		"run is owned by an active inspection or its lease has changed",
+	)
 )
 
 //go:embed migrations/*.sql
@@ -165,6 +168,9 @@ func (s *Store) Register(ctx context.Context, a model.Artifact, targets []model.
 }
 
 func (s *Store) Start(ctx context.Context, r model.Run) error {
+	if len(r.Planned) > 0 && r.LeaseToken == "" {
+		return errRunLeaseUnavailable
+	}
 	var digest string
 	var size int64
 	err := s.pool.QueryRow(ctx, `SELECT a.sha256,a.size FROM firmware_target t
@@ -180,10 +186,13 @@ func (s *Store) Start(ctx context.Context, r model.Run) error {
 	if err != nil {
 		return fmt.Errorf("Start: plan: %w", err)
 	}
+	if len(r.Planned) == 0 {
+		plan = []byte("[]")
+	}
 	_, err = s.pool.Exec(
 		ctx,
-		`INSERT INTO analysis_run(id,target_id,state,started,input_sha256,input_size,extractor,planned_components)
-		 VALUES($1,$2,'running',$3,$4,$5,$6,$7)`,
+		`INSERT INTO analysis_run(id,target_id,state,started,input_sha256,input_size,extractor,planned_components,lease_token,lease_expires)
+		 VALUES($1,$2,'running',$3,$4,$5,$6,$7,$8,now()+interval '2 minutes')`,
 		r.ID,
 		r.TargetID,
 		r.Started,
@@ -191,6 +200,7 @@ func (s *Store) Start(ctx context.Context, r model.Run) error {
 		size,
 		r.Extractor,
 		plan,
+		r.LeaseToken,
 	)
 	if err != nil {
 		return fmt.Errorf("Start: Exec: %w", err)

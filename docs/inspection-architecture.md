@@ -71,7 +71,7 @@ Dependencies are pinned in `go.mod`/`go.sum`. A dedicated PostgreSQL 17.7 servic
 
 A source owner keeps parent readers alive until borrowed image/partition/file views finish. Cancellation closes owned resources. Downloads transition through resolution, staging, verification and publication; partial files cannot appear as verified artifacts. Cache entries in use are leased against eviction. A changed source invalidates work derived from the changed bytes.
 
-A run moves from queued to running and then to complete, partial, failed or cancelled. Capture progress is distinct from published evidence. Completed observation batches publish their supporting database evidence and references atomically. Interrupted blobs remain incomplete and cannot satisfy a finding. Only a completed coverage ledger can support a complete result.
+A run moves from queued to running and then to complete, partial, failed or cancelled. A running process whose database lease expires can be reconciled to interrupted and resumed against the exact verified input. Capture progress is distinct from published evidence. Completed observation batches publish their supporting database evidence and references atomically. Interrupted blobs remain incomplete and cannot satisfy a finding. Only a completed coverage ledger can support a complete result.
 
 Reruns retain their own relevant configuration and coverage while reusing identical verified evidence. Repetition is not independent corroboration. Interpretations change by linked revisions; changed evidence requires reassessing dependent findings. Unsupported or unexamined fields remain distinct from absent fields and explicit zero values.
 

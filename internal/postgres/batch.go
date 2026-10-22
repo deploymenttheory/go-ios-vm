@@ -6,37 +6,124 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/deploymenttheory/go-ios-vm/internal/model"
 )
 
-// Resume reopens an interrupted run. Its caller must first verify the complete
-// archive SHA-256 and match it against the persisted run input identity.
-func (s *Store) Resume(ctx context.Context, id string) error {
+// Resume claims a failed, cancelled, interrupted, or expired run. Its caller
+// must first verify the complete archive against the persisted input identity.
+func (s *Store) Resume(ctx context.Context, id, token string) error {
+	if token == "" {
+		return errRunLeaseUnavailable
+	}
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("Resume: Begin: %w", err)
 	}
 	defer rollback(ctx, tx)
 	var state string
-	if err := tx.QueryRow(ctx, "SELECT state FROM analysis_run WHERE id=$1 FOR UPDATE", id).
-		Scan(&state); err != nil {
+	var expired bool
+	if err := tx.QueryRow(ctx, "SELECT state,lease_expires IS NULL OR lease_expires<now() FROM analysis_run WHERE id=$1 FOR UPDATE", id).
+		Scan(&state, &expired); err != nil {
 		return fmt.Errorf("Resume: run: %w", err)
 	}
 	if state == "complete" || state == "partial" {
 		return errResumeUnavailable
 	}
+	if state == "running" && !expired {
+		return errRunLeaseUnavailable
+	}
 	if _, err := tx.Exec(
 		ctx,
-		"UPDATE analysis_run SET state='running',finished=NULL WHERE id=$1",
-		id,
+		`UPDATE analysis_run SET state='running',finished=NULL,lease_token=$2,
+		 lease_expires=now()+interval '2 minutes' WHERE id=$1`,
+		id, token,
 	); err != nil {
 		return fmt.Errorf("Resume: update: %w", err)
 	}
 	if err := tx.Commit(ctx); err != nil {
 		return fmt.Errorf("Resume: Commit: %w", err)
+	}
+	return nil
+}
+
+// Heartbeat renews only the current claim. A former worker cannot extend a
+// lease after another process has reconciled and resumed the run.
+func (s *Store) Heartbeat(ctx context.Context, id, token string) error {
+	if token == "" {
+		return errRunLeaseUnavailable
+	}
+	tag, err := s.pool.Exec(ctx, `UPDATE analysis_run SET lease_expires=now()+interval '2 minutes'
+	 WHERE id=$1 AND lease_token=$2 AND state='running'`, id, token)
+	if err != nil {
+		return fmt.Errorf("Heartbeat: Exec: %w", err)
+	}
+	if tag.RowsAffected() != 1 {
+		return errRunLeaseUnavailable
+	}
+	return nil
+}
+
+// ReconcileStale marks expired running claims as interrupted. Completed
+// batches and input identity are retained for a later verified resume.
+func (s *Store) ReconcileStale(ctx context.Context) ([]model.Run, error) {
+	_, err := s.pool.Exec(
+		ctx,
+		`UPDATE analysis_run SET state='interrupted',lease_token=NULL,lease_expires=NULL
+		 WHERE state='running' AND lease_expires<now()`,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("ReconcileStale: update: %w", err)
+	}
+	rows, err := s.pool.Query(ctx, `SELECT id FROM analysis_run
+	 WHERE state IN ('interrupted','failed','cancelled') ORDER BY started DESC`)
+	if err != nil {
+		return nil, fmt.Errorf("ReconcileStale: Query: %w", err)
+	}
+	ids := []string{}
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			rows.Close()
+			return nil, fmt.Errorf("ReconcileStale: Scan: %w", err)
+		}
+		ids = append(ids, id)
+	}
+	err = rows.Err()
+	rows.Close()
+	if err != nil {
+		return nil, fmt.Errorf("ReconcileStale: Err: %w", err)
+	}
+	runs := make([]model.Run, 0, len(ids))
+	for _, id := range ids {
+		run, err := s.Run(ctx, id)
+		if err != nil {
+			return runs, fmt.Errorf("ReconcileStale: Run: %w", err)
+		}
+		if run.State == "interrupted" || run.State == "failed" || run.State == "cancelled" {
+			runs = append(runs, run)
+		}
+	}
+	return runs, nil
+}
+
+// FailBatched records a genuine parser failure or cancellation only for the
+// worker that still owns the run. It never overwrites a completed result.
+func (s *Store) FailBatched(ctx context.Context, id, state, token string) error {
+	if state != "failed" && state != "cancelled" {
+		return errInvalidPublicationState
+	}
+	tag, err := s.pool.Exec(ctx, `UPDATE analysis_run
+	 SET state=$3,finished=now(),lease_token=NULL,lease_expires=NULL
+	 WHERE id=$1 AND lease_token=$2 AND state='running'`, id, token, state)
+	if err != nil {
+		return fmt.Errorf("FailBatched: Exec: %w", err)
+	}
+	if tag.RowsAffected() != 1 {
+		return errRunLeaseUnavailable
 	}
 	return nil
 }
@@ -87,15 +174,18 @@ func (s *Store) PublishBatch(
 		return fmt.Errorf("PublishBatch: Begin: %w", err)
 	}
 	defer rollback(ctx, tx)
-	var state, targetID, artifactID string
+	var state, targetID, artifactID, leaseToken string
 	var planJSON []byte
-	if err := tx.QueryRow(ctx, `SELECT r.state,r.target_id,t.artifact_id,r.planned_components FROM analysis_run r
+	if err := tx.QueryRow(ctx, `SELECT r.state,r.target_id,t.artifact_id,r.planned_components,COALESCE(r.lease_token,'') FROM analysis_run r
 	 JOIN firmware_target t ON t.id=r.target_id WHERE r.id=$1 FOR UPDATE OF r`, run.ID).
-		Scan(&state, &targetID, &artifactID, &planJSON); err != nil {
+		Scan(&state, &targetID, &artifactID, &planJSON, &leaseToken); err != nil {
 		return fmt.Errorf("PublishBatch: run: %w", err)
 	}
 	if state != "running" {
 		return fmt.Errorf("%w: %s", errRunIsAlreadyTerminal, state)
+	}
+	if leaseToken != run.LeaseToken {
+		return errRunLeaseUnavailable
 	}
 	if targetID != run.TargetID {
 		return errRunTargetMismatch
@@ -168,20 +258,31 @@ func (s *Store) PublishBatch(
 
 // Finish writes the authoritative coverage ledger only when every planned
 // component has a committed checkpoint. Incomplete runs have no final ledger.
-func (s *Store) Finish(ctx context.Context, id string) (model.Run, error) {
+func (s *Store) Finish(ctx context.Context, id, token string) (model.Run, error) {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return model.Run{}, fmt.Errorf("Finish: Begin: %w", err)
 	}
 	defer rollback(ctx, tx)
-	var state string
+	var state, leaseToken string
 	var planJSON []byte
-	if err := tx.QueryRow(ctx, `SELECT state,planned_components FROM analysis_run WHERE id=$1 FOR UPDATE`, id).
-		Scan(&state, &planJSON); err != nil {
+	if err := tx.QueryRow(ctx, `SELECT state,planned_components,COALESCE(lease_token,'') FROM analysis_run WHERE id=$1 FOR UPDATE`, id).
+		Scan(&state, &planJSON, &leaseToken); err != nil {
 		return model.Run{}, fmt.Errorf("Finish: run: %w", err)
+	}
+	if state == "complete" || state == "partial" {
+		if err := tx.Commit(ctx); err != nil {
+			return model.Run{}, fmt.Errorf("Finish: terminal Commit: %w", err)
+		}
+		readCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+		defer cancel()
+		return s.Run(readCtx, id)
 	}
 	if state != "running" {
 		return model.Run{}, fmt.Errorf("%w: %s", errRunIsAlreadyTerminal, state)
+	}
+	if leaseToken != token {
+		return model.Run{}, errRunLeaseUnavailable
 	}
 	var plan []string
 	if err := json.Unmarshal(planJSON, &plan); err != nil {
@@ -237,7 +338,7 @@ func (s *Store) Finish(ctx context.Context, id string) (model.Run, error) {
 	}
 	if _, err := tx.Exec(
 		ctx,
-		`UPDATE analysis_run SET state=$2,finished=now(),coverage=$3 WHERE id=$1`,
+		`UPDATE analysis_run SET state=$2,finished=now(),coverage=$3,lease_token=NULL,lease_expires=NULL WHERE id=$1`,
 		id,
 		finalState,
 		encoded,
@@ -245,7 +346,17 @@ func (s *Store) Finish(ctx context.Context, id string) (model.Run, error) {
 		return model.Run{}, fmt.Errorf("Finish: update: %w", err)
 	}
 	if err := tx.Commit(ctx); err != nil {
+		// A lost commit response is ambiguous. Re-read on a fresh connection;
+		// a committed terminal run is the authoritative result.
+		readCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+		defer cancel()
+		if committed, readErr := s.Run(readCtx, id); readErr == nil &&
+			(committed.State == "complete" || committed.State == "partial") {
+			return committed, nil
+		}
 		return model.Run{}, fmt.Errorf("Finish: Commit: %w", err)
 	}
-	return s.Run(ctx, id)
+	readCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+	defer cancel()
+	return s.Run(readCtx, id)
 }

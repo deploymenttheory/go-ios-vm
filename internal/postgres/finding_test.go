@@ -63,7 +63,7 @@ func TestRevisionChainsPreserveConflictingEvidence(t *testing.T) {
 		run := model.Run{
 			ID:       model.ID("revision-test-run", string(rune('a'+i))),
 			TargetID: item.target.ID,
-			State:    "partial",
+			State:    "complete",
 			Started:  time.Now(),
 			Coverage: []model.Coverage{{Component: "tree", State: "complete"}},
 		}
