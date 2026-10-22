@@ -99,7 +99,7 @@ func TestGraphBrowserInteractions(t *testing.T) {
 	}
 	mu.Lock()
 	defer mu.Unlock()
-	var expanded, filtered, component, large bool
+	var expanded, filtered, component, large, finding, revision, driver bool
 	for _, query := range requests {
 		if query.Get("node_id") == "opaque:device:1" {
 			expanded = true
@@ -113,9 +113,18 @@ func TestGraphBrowserInteractions(t *testing.T) {
 		if query.Get("limit") == "100" {
 			large = true
 		}
+		if query.Get("node_id") == "opaque:finding:1" {
+			finding = true
+		}
+		if query.Get("node_id") == "opaque:revision:1" {
+			revision = true
+		}
+		if query.Get("node_id") == "opaque:driver:1" {
+			driver = true
+		}
 	}
-	if !expanded || !filtered || !component || !large {
-		t.Fatalf("missing bounded graph requests: expand=%t filter=%t component=%t large=%t", expanded, filtered, component, large)
+	if !expanded || !filtered || !component || !large || !finding || !revision || !driver {
+		t.Fatalf("missing bounded graph requests: device=%t filter=%t component=%t large=%t finding=%t revision=%t driver=%t", expanded, filtered, component, large, finding, revision, driver)
 	}
 }
 
@@ -141,6 +150,29 @@ func graphBrowserNeighborhood(query url.Values) map[string]any {
 			graphBrowserEdge("device-property", "has_property", nodeID, "opaque:property:1", "observation", "obs-device", "stored_extraction"),
 		}, false)
 	}
+	if nodeID == "opaque:driver:1" {
+		center := graphBrowserNode(nodeID, "driver", "com.apple.driver.Test", target, "present", "")
+		dependency := graphBrowserNode("opaque:dependency:1", "driver_dependency", "com.apple.iokit.IOUSBHostFamily", target, "declared", "")
+		return graphBrowserData(center, []any{dependency}, []any{
+			graphBrowserEdge("driver-dependency", "declares_driver_dependency", nodeID, "opaque:dependency:1", "observation", "obs-driver", "stored_extraction"),
+		}, false)
+	}
+	if nodeID == "opaque:finding:1" {
+		center := graphBrowserNode(nodeID, "finding", "device / register", target, "", "finding-1")
+		revision := graphBrowserNode("opaque:revision:1", "revision", "inferred · present", target, "present", "")
+		return graphBrowserData(center, []any{revision}, []any{
+			graphBrowserEdge("finding-revision", "has_revision", nodeID, "opaque:revision:1", "finding_revision", "revision-1", "stored_record"),
+		}, false)
+	}
+	if nodeID == "opaque:revision:1" {
+		center := graphBrowserNode(nodeID, "revision", "inferred · present", target, "present", "")
+		observation := graphBrowserNode("opaque:observation:1", "observation", "device / register", target, "present", "obs-device")
+		evidence := graphBrowserNode("opaque:evidence:1", "evidence", "evidence-1", target, "", "")
+		return graphBrowserData(center, []any{observation, evidence}, []any{
+			graphBrowserEdge("revision-observation", "supporting_observation", nodeID, "opaque:observation:1", "observation", "obs-device", "stored_extraction"),
+			graphBrowserEdge("revision-evidence", "supporting_evidence", nodeID, "opaque:evidence:1", "observation", "obs-device", "stored_extraction"),
+		}, false)
+	}
 	if nodeID == "opaque:component:DeviceTree" {
 		center := component
 		property := graphBrowserNode("opaque:property:component", "property", "archive_member", target, "present", "")
@@ -158,7 +190,10 @@ func graphBrowserNeighborhood(query url.Values) map[string]any {
 	edges = append(edges, graphBrowserEdge("device-edge", "contains_device_tree_node", "opaque:target", "opaque:device:1", "observation", "obs-device", "stored_extraction"))
 	nodes = append(nodes, component)
 	edges = append(edges, graphBrowserEdge("component-edge", "declares_component", "opaque:target", "opaque:component:DeviceTree", "observation", "obs-component", "stored_extraction"))
-	for i := 0; i < 67; i++ {
+	driver := graphBrowserNode("opaque:driver:1", "driver", "com.apple.driver.Test", target, "present", "")
+	nodes = append(nodes, driver)
+	edges = append(edges, graphBrowserEdge("driver-edge", "declares_driver", "opaque:target", "opaque:driver:1", "observation", "obs-driver", "stored_extraction"))
+	for i := 0; i < 66; i++ {
 		id := fmt.Sprintf("opaque:device:%d", i+2)
 		nodes = append(nodes, graphBrowserNode(id, "device", fmt.Sprintf("/device-%02d", i+2), target, "present", ""))
 		edges = append(edges, graphBrowserEdge(fmt.Sprintf("device-edge-%02d", i+2), "contains_device_tree_node", "opaque:target", id, "observation", fmt.Sprintf("obs-%02d", i+2), "stored_extraction"))
@@ -218,6 +253,25 @@ window.addEventListener("load", () => {
     search.value = ""; search.dispatchEvent(new Event("input", { bubbles: true }));
     document.getElementById("graph-limit").value = "100";
     document.getElementById("graph-limit").dispatchEvent(new Event("change", { bubbles: true }));
+    await until(() => count().join() === "70,70");
+    document.querySelector('[data-node-id="opaque:finding:1"]').click();
+    document.querySelector("#graph-detail button.button-primary").click();
+    await until(() => document.getElementById("graph-scope").textContent.includes("device / register"));
+    if (!document.querySelector('#graph-detail a[href*="finding=finding-1"]')) throw new Error("expanded finding lost detail link");
+    if (!document.querySelector('.graph-lane[data-semantic="inferred"]')) throw new Error("inferred revision not distinguished");
+    document.querySelector('[data-node-id="opaque:revision:1"]').click();
+    document.querySelector("#graph-detail button.button-primary").click();
+    await until(() => document.getElementById("graph-scope").textContent.includes("inferred · present"));
+    document.querySelector("#graph-map .graph-relation").click();
+    if (!document.getElementById("graph-detail").textContent.includes("Member: tree")) throw new Error("finding basis source missing");
+    document.getElementById("graph-reset").click();
+    await until(() => count().join() === "70,70");
+    document.querySelector('[data-node-id="opaque:driver:1"]').click();
+    document.querySelector("#graph-detail button.button-primary").click();
+    await until(() => document.getElementById("graph-scope").textContent.includes("com.apple.driver.Test"));
+    document.querySelector("#graph-map .graph-relation").click();
+    if (!document.getElementById("graph-detail").textContent.includes("Declared, runtime unverified")) throw new Error("driver declaration overstated");
+    document.getElementById("graph-reset").click();
     await until(() => count().join() === "70,70");
     const device = document.querySelector('[data-node-id="opaque:device:1"]'); device.focus(); device.click();
     if (document.activeElement !== device) throw new Error("node not keyboard focusable");
