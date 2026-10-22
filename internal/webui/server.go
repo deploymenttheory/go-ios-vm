@@ -118,7 +118,7 @@ func newHandler(check func(context.Context) error, store *postgres.Store) http.H
 					"/api/v1/acquisitions/{attempt_id}/progress/events",
 					"/api/v1/runs/{run_id}/progress",
 					"/api/v1/runs/{run_id}/progress/events",
-					"/api/v1/findings", "/api/v1/observations")
+					"/api/v1/findings", "/api/v1/observations", "/api/v1/graph")
 			}
 			jsonResponse(w, r, http.StatusOK, response{
 				APIVersion: "v1", State: "ready", ReadOnly: true,
@@ -154,6 +154,9 @@ func newHandler(check func(context.Context) error, store *postgres.Store) http.H
 					return
 				}
 				if serveFindings(w, r, store) {
+					return
+				}
+				if serveGraph(w, r, store) {
 					return
 				}
 				jsonResponse(w, r, http.StatusNotFound, response{
