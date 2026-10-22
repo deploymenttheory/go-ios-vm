@@ -34,6 +34,7 @@ func TestGraphNeighborhoodUsesStoredTargetScopedRelationships(t *testing.T) {
 		ID: model.ID(artifact.ID, "0"), ArtifactID: artifact.ID,
 		Build: "18A373", Board: "n104ap", Components: map[string]string{
 			"KernelCache": "kernelcache", "DeviceTree": "tree",
+			"RestoreDeviceTree": "tree-copy",
 		},
 	}
 	other := model.Target{
@@ -72,6 +73,8 @@ func TestGraphNeighborhoodUsesStoredTargetScopedRelationships(t *testing.T) {
 		makeObs("filesystem/volume/vol-1/object/9", "content", "unexamined",
 			map[string]any{"state": "unsupported"}, "OS.dmg", "apfs-file-object",
 			"partition/1/volume/vol-1/view/1/object/9/data"),
+		makeObs("devicetree/root", "name", "present", "root", "tree-copy",
+			"decoded-payload-byte", "/root/name"),
 	}
 	run := model.Run{
 		ID: model.ID("graph-run", target.ID), TargetID: target.ID,
@@ -93,14 +96,21 @@ func TestGraphNeighborhoodUsesStoredTargetScopedRelationships(t *testing.T) {
 	if len(root.Gaps) == 0 {
 		t.Fatalf("missing incomplete coverage: %+v", root)
 	}
+	deviceRoots, err := s.GraphNeighborhood(ctx, GraphQuery{
+		TargetID: target.ID, EdgeKind: "contains_device_tree_node", Limit: 20,
+	})
+	if err != nil || len(deviceRoots.Edges) != 2 ||
+		deviceRoots.Edges[0].To == deviceRoots.Edges[1].To {
+		t.Fatalf("same device label from distinct sources collapsed: %+v %v", deviceRoots, err)
+	}
 	for _, tc := range []struct {
 		kind, key, edge string
 	}{
-		{"device", "devicetree/root", "has_property"},
-		{"driver", "com.example.A", "declares_driver_dependency"},
+		{"device", graphScopeKey(observations[1]), "has_property"},
+		{"driver", graphScopeKey(observations[3]), "declares_driver_dependency"},
 		{"driver_dependency", observations[3].ID + "/com.example.B", "declared_by_driver"},
 		{"apfs_path", observations[4].ID, "resolves_to_apfs_object"},
-		{"apfs_file", observations[4].Subject, "has_property"},
+		{"apfs_file", observations[4].ID, "has_property"},
 		{"property", observations[2].ID, "records_observation"},
 	} {
 		graph, err := s.GraphNeighborhood(ctx, GraphQuery{
@@ -134,7 +144,7 @@ func TestGraphNeighborhoodUsesStoredTargetScopedRelationships(t *testing.T) {
 	// to reach this target's nodes.
 	if _, err := s.GraphNeighborhood(ctx, GraphQuery{
 		TargetID: other.ID,
-		NodeID:   GraphID(target.ID, "device", "devicetree/root"), Limit: 10,
+		NodeID:   GraphID(target.ID, "device", graphScopeKey(observations[1])), Limit: 10,
 	}); !errors.Is(err, ErrInvalidGraphRequest) {
 		t.Fatalf("cross-target node accepted: %v", err)
 	}

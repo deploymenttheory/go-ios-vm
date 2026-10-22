@@ -163,6 +163,14 @@ func (s *Store) graphObservations(ctx context.Context, target, predicate, key st
 		"subject":   "o.document->>'subject'=$2",
 		"member":    "o.document #>> '{source,member}'=$2",
 		"evidence":  "o.evidence_id=$2",
+		"subject_scope": `(o.document->>'subject')=($2::jsonb->>'subject')
+		 AND (o.document #>> '{source,member}')=($2::jsonb->>'member')
+		 AND (o.document #>> '{source,entry}')=($2::jsonb->>'entry')`,
+		"file_scope": `(o.document->>'subject')=($2::jsonb->>'subject')
+		 AND (o.document #>> '{source,member}')=($2::jsonb->>'member')
+		 AND (o.document #>> '{source,entry}')=($2::jsonb->>'entry')
+		 AND left(o.document #>> '{source,selector}',length($2::jsonb->>'selector_prefix')+1)
+		 = ($2::jsonb->>'selector_prefix')||'/'`,
 	}
 	where, ok := allowed[predicate]
 	if !ok {
@@ -183,8 +191,15 @@ func (s *Store) graphObservations(ctx context.Context, target, predicate, key st
 	selectClause := "SELECT " + projection + ",o.id"
 	order := " ORDER BY o.id"
 	if distinctSubject {
-		selectClause = "SELECT DISTINCT ON (o.document->>'subject') " + projection + ",o.id"
-		order = " ORDER BY o.document->>'subject',o.id"
+		if predicate == "device" || predicate == "driver" {
+			selectClause = `SELECT DISTINCT ON (o.document->>'subject',
+			 o.document #>> '{source,member}',o.document #>> '{source,entry}') ` + projection + ",o.id"
+			order = ` ORDER BY o.document->>'subject',o.document #>> '{source,member}',
+			 o.document #>> '{source,entry}',o.id`
+		} else {
+			selectClause = "SELECT DISTINCT ON (o.document->>'subject') " + projection + ",o.id"
+			order = " ORDER BY o.document->>'subject',o.id"
+		}
 	}
 	query := selectClause + " FROM observation o WHERE o.target_id=$1 AND " + where + order + " LIMIT $3"
 	rows, err := s.pool.Query(ctx, query, target, key, limit+1)
@@ -254,6 +269,33 @@ func graphValuePath(raw json.RawMessage) string {
 		return ""
 	}
 	return v.Path
+}
+
+type graphSourceScope struct {
+	Subject        string `json:"subject"`
+	Member         string `json:"member"`
+	Entry          int    `json:"entry"`
+	SelectorPrefix string `json:"selector_prefix,omitempty"`
+}
+
+func graphScopeKey(o model.Observation) string {
+	b, _ := json.Marshal(graphSourceScope{
+		Subject: o.Subject, Member: o.Source.Member, Entry: o.Source.Entry,
+	})
+	return string(b)
+}
+
+func parseGraphScope(key string) (graphSourceScope, bool) {
+	var scope graphSourceScope
+	if json.Unmarshal([]byte(key), &scope) != nil || scope.Subject == "" ||
+		scope.Member == "" || scope.Entry < 0 || scope.SelectorPrefix != "" {
+		return graphSourceScope{}, false
+	}
+	canonical, _ := json.Marshal(scope)
+	if string(canonical) != key {
+		return graphSourceScope{}, false
+	}
+	return scope, true
 }
 
 func (s *Store) graphCoverage(ctx context.Context, b *graphBuilder) error {
@@ -409,7 +451,8 @@ func (s *Store) graphTarget(ctx context.Context, b *graphBuilder, record TargetR
 			continue
 		}
 		remaining := max(1, b.limit-len(b.out.Edges))
-		items, more, err := s.graphObservations(ctx, b.target, group.predicate, "", remaining, true)
+		items, more, err := s.graphObservations(ctx, b.target, group.predicate, "", remaining,
+			group.kind != "apfs_path")
 		if err != nil {
 			return fmt.Errorf("graph projection: %w", err)
 		}
@@ -422,11 +465,11 @@ func (s *Store) graphTarget(ctx context.Context, b *graphBuilder, record TargetR
 				key = strings.TrimPrefix(o.Subject, "component/")
 				label = key
 			case "device":
-				key = o.Subject
-				label = strings.TrimPrefix(key, "devicetree")
+				key = graphScopeKey(o)
+				label = strings.TrimPrefix(o.Subject, "devicetree")
 			case "driver":
-				key = strings.TrimPrefix(o.Subject, "driver/")
-				label = key
+				key = graphScopeKey(o)
+				label = strings.TrimPrefix(o.Subject, "driver/")
 			case "apfs_path":
 				key = o.ID
 				label = graphValuePath(o.Value)
@@ -468,10 +511,12 @@ func (s *Store) graphTarget(ctx context.Context, b *graphBuilder, record TargetR
 	return nil
 }
 
+//nolint:gocyclo // Each structural node kind validates its source scope before its bounded read.
 func (s *Store) graphSubject(ctx context.Context, b *graphBuilder,
 	kind, key string, record TargetRecord,
 ) error {
 	var subject string
+	predicate := "subject"
 	switch kind {
 	case "component":
 		if _, ok := record.Target.Components[key]; !ok {
@@ -479,12 +524,17 @@ func (s *Store) graphSubject(ctx context.Context, b *graphBuilder,
 		}
 		subject = "component/" + key
 	case "device":
-		if !strings.HasPrefix(key, "devicetree/") {
+		scope, ok := parseGraphScope(key)
+		if !ok || !strings.HasPrefix(scope.Subject, "devicetree/") {
 			return ErrInvalidGraphRequest
 		}
-		subject = key
+		subject, predicate = key, "subject_scope"
 	case "driver":
-		subject = "driver/" + key
+		scope, ok := parseGraphScope(key)
+		if !ok || !strings.HasPrefix(scope.Subject, "driver/") {
+			return ErrInvalidGraphRequest
+		}
+		subject, predicate = key, "subject_scope"
 	case "apfs_path":
 		o, err := s.ObservationForTarget(ctx, b.target, key)
 		if err != nil {
@@ -504,17 +554,30 @@ func (s *Store) graphSubject(ctx context.Context, b *graphBuilder,
 			return fmt.Errorf("graph projection: %w", err)
 		}
 		b.add("resolves_to_apfs_object", b.out.Center,
-			b.node("apfs_file", o.Subject, o.Subject, o.Presence),
+			b.node("apfs_file", o.ID, path, o.Presence),
 			graphObservationBasis(o, runs))
 		return nil
 	case "apfs_file":
-		if !strings.HasPrefix(key, "filesystem/volume/") ||
-			!strings.Contains(key, "/object/") {
+		metadata, err := s.ObservationForTarget(ctx, b.target, key)
+		if err != nil {
+			return fmt.Errorf("graph projection: %w", err)
+		}
+		if metadata.Property != "metadata" ||
+			!strings.HasPrefix(metadata.Subject, "filesystem/volume/") ||
+			!strings.Contains(metadata.Subject, "/object/") ||
+			!strings.HasSuffix(metadata.Source.Selector, "/metadata") {
 			return ErrInvalidGraphRequest
 		}
-		subject = key
+		scope := graphSourceScope{
+			Subject: metadata.Subject, Member: metadata.Source.Member,
+			Entry:          metadata.Source.Entry,
+			SelectorPrefix: strings.TrimSuffix(metadata.Source.Selector, "/metadata"),
+		}
+		encoded, _ := json.Marshal(scope)
+		subject, predicate = string(encoded), "file_scope"
+		b.out.Center.Label = graphValuePath(metadata.Value)
 	}
-	items, more, err := s.graphObservations(ctx, b.target, "subject", subject, b.limit, false)
+	items, more, err := s.graphObservations(ctx, b.target, predicate, subject, b.limit, false)
 	if err != nil {
 		return fmt.Errorf("graph projection: %w", err)
 	}
@@ -522,7 +585,13 @@ func (s *Store) graphSubject(ctx context.Context, b *graphBuilder,
 		return pgx.ErrNoRows
 	}
 	b.out.Truncated = b.out.Truncated || more
-	b.out.Center.Label = key
+	switch kind {
+	case "component":
+		b.out.Center.Label = key
+	case "device", "driver":
+		scope, _ := parseGraphScope(key)
+		b.out.Center.Label = scope.Subject
+	}
 	for _, item := range items {
 		o := item.Observation
 		property := b.node("property", o.ID, o.Property, o.Presence)
@@ -595,7 +664,7 @@ func (s *Store) graphDriverDependency(ctx context.Context, b *graphBuilder, key 
 		return fmt.Errorf("graph projection: %w", err)
 	}
 	b.add("declared_by_driver", b.out.Center,
-		b.node("driver", strings.TrimPrefix(o.Subject, "driver/"),
+		b.node("driver", graphScopeKey(o),
 			strings.TrimPrefix(o.Subject, "driver/"), "observed"),
 		graphObservationBasis(o, runs))
 	return nil
