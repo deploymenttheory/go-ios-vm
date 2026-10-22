@@ -1,0 +1,43 @@
+name: go | Contract tests
+on:
+  pull_request:
+    paths: ['**/*.go', 'go.mod', 'go.sum', 'internal/postgres/migrations/**', '.github/workflows/go-test.yml']
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  unit:
+    strategy:
+      matrix:
+        os: [macos-15, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      - uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5
+        with:
+          go-version-file: go.mod
+      - run: go test -race ./...
+      - run: go vet ./...
+  postgres:
+    runs-on: ubuntu-24.04-arm
+    services:
+      postgres:
+        image: postgres:17.7-bookworm
+        env:
+          POSTGRES_USER: goiosvm
+          POSTGRES_DB: goiosvm
+          POSTGRES_PASSWORD: ephemeral-ci-only
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd 'pg_isready -U goiosvm -d goiosvm'
+          --health-interval 2s --health-timeout 2s --health-retries 20
+    env:
+      GOIOSVM_TEST_DATABASE_URL: postgres://goiosvm:ephemeral-ci-only@127.0.0.1:5432/goiosvm?sslmode=disable
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      - uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5
+        with:
+          go-version-file: go.mod
+      - run: go test -race ./...

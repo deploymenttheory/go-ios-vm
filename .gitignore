@@ -48,3 +48,9 @@ __pycache__/
 *.exe
 *.dylib
 *.so
+# Firmware, local database configuration and generated data
+*.ipsw
+*.dmg
+.env
+.cache/
+*.sarif
