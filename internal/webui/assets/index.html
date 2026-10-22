@@ -3,29 +3,82 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>go-ios-vm · Inspection</title>
+  <title>Inspection · go-ios-vm</title>
   <link rel="stylesheet" href="/assets/style.css">
   <script defer src="/assets/app.js"></script>
 </head>
 <body>
-  <main class="shell">
-    <header>
-      <p class="eyebrow">go-ios-vm</p>
-      <h1>Inspection</h1>
-      <p class="intro">Explore retained firmware evidence on this computer.</p>
-    </header>
-    <section class="panel" aria-labelledby="status-title">
-      <div class="panel-heading">
-        <h2 id="status-title">Evidence database</h2>
-        <span class="badge" id="status" role="status" aria-live="polite">Checking…</span>
+  <a class="skip-link" href="#main">Skip to results</a>
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="brand"><span class="brand-mark" aria-hidden="true">⌘</span><span>go-ios-vm <small>Inspection</small></span></div>
+      <div class="connection"><span id="status-dot" class="status-dot" aria-hidden="true"></span><span id="status" role="status" aria-live="polite">Checking evidence database…</span></div>
+    </div>
+  </header>
+  <main id="main" class="shell">
+    <div class="page-heading">
+      <div><p class="eyebrow">Retained evidence</p><h1>Explore an inspection</h1><p class="lede">Choose an exact firmware identity, then browse its runs, findings, and source evidence.</p></div>
+      <span class="read-only">Read only</span>
+    </div>
+    <div id="global-error" class="notice notice-error" role="alert" hidden></div>
+    <div class="layout">
+      <aside class="sidebar" aria-label="Firmware identity selection">
+        <section class="panel" aria-labelledby="target-search-title">
+          <div class="section-title"><span class="step">01</span><h2 id="target-search-title">Select target</h2></div>
+          <form id="target-form" class="field-grid">
+            <label>Product <input id="product" name="product" type="search" placeholder="iPhone12,1" autocomplete="off"></label>
+            <label>Build <input id="build" name="build" type="search" placeholder="18A373" autocomplete="off"></label>
+            <label>Identity index <input id="identity" name="identity" type="number" min="0" inputmode="numeric" placeholder="Any"></label>
+            <button class="button button-primary" type="submit">Find targets</button>
+          </form>
+          <div id="target-results" class="result-region" aria-live="polite"></div>
+          <div id="target-pages" class="pagination" hidden></div>
+        </section>
+        <section id="selected-panel" class="panel selected-panel" aria-labelledby="selected-title" hidden>
+          <div class="section-title"><span class="step">02</span><h2 id="selected-title">Selected identity</h2></div>
+          <div id="selected-target"></div>
+        </section>
+      </aside>
+      <div class="content">
+        <section id="welcome" class="panel welcome" aria-labelledby="welcome-title">
+          <span class="welcome-icon" aria-hidden="true">◎</span>
+          <h2 id="welcome-title">Start with a firmware target</h2>
+          <p>Search by exact product and build, then choose the identity from the results. Findings are kept separate for each identity, even when their names match.</p>
+        </section>
+        <div id="workspace" hidden>
+          <section class="panel" aria-labelledby="runs-title">
+            <div class="section-title"><span class="step">03</span><div><h2 id="runs-title">Inspection runs</h2><p class="section-subtitle">Only committed checkpoints are shown as progress.</p></div></div>
+            <form id="run-form" class="inline-form">
+              <label>Run state <select id="run-state" name="run-state"><option value="">All states</option><option>running</option><option>interrupted</option><option>partial</option><option>complete</option><option>failed</option><option>cancelled</option></select></label>
+              <button class="button" type="submit">Filter runs</button>
+            </form>
+            <div id="run-results" class="result-region" aria-live="polite"></div>
+            <div id="run-pages" class="pagination" hidden></div>
+            <div id="run-detail" class="run-detail" aria-live="polite"></div>
+          </section>
+          <section class="panel" aria-labelledby="browse-title">
+            <div class="section-title"><span class="step">04</span><div><h2 id="browse-title" tabindex="-1">Browse results</h2><p class="section-subtitle">Search stays within the selected target.</p></div></div>
+            <nav class="tabs" aria-label="Result type"><a id="findings-tab" href="?view=findings">Findings</a><a id="observations-tab" href="?view=observations">Observations</a></nav>
+            <form id="result-form" class="filter-grid">
+              <label>Subject prefix <input id="subject" name="subject" type="search" placeholder="device/"></label>
+              <label>Property prefix <input id="property" name="property" type="search" placeholder="register"></label>
+              <label>Component <select id="component" name="component"><option value="">All components</option></select></label>
+              <label class="finding-filter">Basis <select id="basis" name="basis"><option value="">Any basis</option><option>observed</option><option>inferred</option><option>unknown</option></select></label>
+              <label class="finding-filter">Assessment <select id="assessment" name="assessment"><option value="">Any assessment</option><option>unreviewed</option><option>accepted</option><option>rejected</option><option>disputed</option><option>stale</option></select></label>
+              <button class="button button-primary" type="submit">Search results</button>
+            </form>
+            <p id="result-scope" class="hint"></p>
+            <div id="result-list" class="result-region" aria-live="polite"></div>
+            <div id="result-pages" class="pagination" hidden></div>
+          </section>
+          <section id="detail-panel" class="panel detail-panel" aria-labelledby="detail-title" hidden>
+            <div class="section-title"><span class="step">05</span><h2 id="detail-title" tabindex="-1">Result detail</h2></div>
+            <div id="result-detail" aria-live="polite"></div>
+          </section>
+        </div>
       </div>
-      <p id="status-detail">Checking the local connection.</p>
-    </section>
-    <section class="panel" aria-labelledby="work-title">
-      <h2 id="work-title">Inspection workspace</h2>
-      <p>Run inspections in another terminal. This local app is ready for read-only result browsing.</p>
-      <p class="hint">The current API is available at <code>/api/v1</code>.</p>
-    </section>
+    </div>
+    <footer>Local, read-only view of PostgreSQL evidence. The source IPSW cache may be absent.</footer>
   </main>
 </body>
 </html>
