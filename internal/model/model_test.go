@@ -40,3 +40,23 @@ func TestBorrowedEvidenceMutationAndRangeOverflow(t *testing.T) {
 		t.Fatal("overflowing byte range accepted")
 	}
 }
+
+func TestObservationPresenceHasDistinctIdentity(t *testing.T) {
+	target := Target{ID: "target"}
+	loc := Location{ArtifactID: "artifact", Member: "OS.dmg", Coordinate: "apfs-file-object"}
+	blob := NewBlob([]byte("searched path"))
+	present, err := NewObservation(target, "file", "search", "path", loc, blob, "fixture")
+	if err != nil {
+		t.Fatal(err)
+	}
+	absent, err := NewObservationWithPresence(target, "file", "search", "absent", "path", loc, blob, "fixture")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if present.ID == absent.ID || absent.Presence != "absent" {
+		t.Fatal("present and absent readings collapsed")
+	}
+	if _, err := NewObservationWithPresence(target, "file", "search", "unsupported", "path", loc, blob, "fixture"); err == nil {
+		t.Fatal("unsupported presence accepted")
+	}
+}

@@ -9,6 +9,7 @@ import (
 	"io"
 	"math"
 	"os"
+	"strings"
 
 	"github.com/deploymenttheory/go-apfs-v3/apfs"
 	"github.com/deploymenttheory/go-apfs-v3/diskimage"
@@ -147,18 +148,30 @@ func (a *Archive) readDiskMember(ctx context.Context, member *zip.File) (diskMem
 func (a *Archive) inspectDisk(
 	ctx context.Context,
 	t model.Target,
-) (_ []model.Observation, resultErr error) {
+	inspectContent bool,
+) (_ []model.Observation, contentObservations []model.Observation, filesystemCoverage model.Coverage, resultErr error) {
+	filesystemCoverage = model.Coverage{
+		Component: "filesystem-content",
+		State:     "unexamined",
+		Reason:    "OS filesystem not inspected",
+	}
+	defer func() {
+		if resultErr != nil && filesystemCoverage.State == "unexamined" {
+			filesystemCoverage.State = "partial"
+			filesystemCoverage.Reason = resultErr.Error()
+		}
+	}()
 	name, ok := t.Components["OS"]
 	if !ok {
-		return nil, errOSDiskImageNotDeclared
+		return nil, nil, filesystemCoverage, errOSDiskImageNotDeclared
 	}
 	index, ok := a.members[name]
 	if !ok {
-		return nil, errOSDiskMemberIsMissing
+		return nil, nil, filesystemCoverage, errOSDiskMemberIsMissing
 	}
 	read, err := a.readDiskMember(ctx, a.ZIP.File[index])
 	if err != nil {
-		return nil, err
+		return nil, nil, filesystemCoverage, err
 	}
 	if read.staged != nil {
 		defer func() {
@@ -173,7 +186,7 @@ func (a *Archive) inspectDisk(
 	source := read.source
 	image, err := diskimage.New(source)
 	if err != nil {
-		return nil, fmt.Errorf("inspectDisk: diskimage.New: %w", err)
+		return nil, nil, filesystemCoverage, fmt.Errorf("inspectDisk: diskimage.New: %w", err)
 	}
 	defer image.Close()
 	type item struct {
@@ -193,9 +206,13 @@ func (a *Archive) inspectDisk(
 		},
 	}
 	var gap error
+	var contentGaps []string
+	omittedContentGaps := 0
+	contentBudget := &filesystemBudget{}
+	foundAPFS := false
 	for _, part := range image.Partitions {
 		if err := ctx.Err(); err != nil {
-			return nil, fmt.Errorf("inspectDisk: Err: %w", err)
+			return nil, contentObservations, filesystemCoverage, fmt.Errorf("inspectDisk: Err: %w", err)
 		}
 		view, err := image.Partition(part.Index)
 		if err != nil {
@@ -216,10 +233,69 @@ func (a *Archive) inspectDisk(
 			gap = err
 			break
 		}
+		foundAPFS = true
 		items = append(
 			items,
 			item{fmt.Sprintf("disk/OS/partition/%d", part.Index), "apfs", container},
 		)
+		if !inspectContent {
+			continue
+		}
+		base := model.Location{
+			ArtifactID: t.ArtifactID,
+			Member:     name,
+			Entry:      index,
+			Transforms: []string{"zip-member", "go-apfs-v3@v0.1.0"},
+		}
+		if read.staged != nil {
+			base.Transforms[0] = "zip-deflate-member"
+		} else {
+			base.Transforms[0] = "zip-stored-member"
+		}
+		observed, gaps, inspectErr := inspectAPFSContent(
+			ctx,
+			t,
+			base,
+			part.Index,
+			container,
+			contentBudget,
+		)
+		contentObservations = append(contentObservations, observed...)
+		for _, reason := range gaps {
+			if len(contentGaps) < 16 {
+				contentGaps = append(contentGaps, reason)
+			} else {
+				omittedContentGaps++
+			}
+		}
+		if inspectErr != nil {
+			gap = fmt.Errorf("inspectDisk: inspectAPFSContent: %w", inspectErr)
+			break
+		}
+	}
+	if omittedContentGaps > 0 {
+		contentGaps = append(contentGaps, fmt.Sprintf(
+			"%d further filesystem gaps",
+			omittedContentGaps,
+		))
+	}
+	if inspectContent {
+		switch {
+		case foundAPFS:
+			filesystemCoverage.State = "partial"
+			filesystemCoverage.Reason = "bounded firmware/driver paths and selected file formats only; filesystem-wide absence is unexamined"
+			if len(contentGaps) > 0 {
+				filesystemCoverage.Reason += "; " + strings.Join(contentGaps, "; ")
+			}
+		case gap != nil:
+			filesystemCoverage.State = "partial"
+			filesystemCoverage.Reason = gap.Error()
+		default:
+			filesystemCoverage.Reason = "no APFS partition identified in selected OS image"
+		}
+		if gap != nil && foundAPFS {
+			filesystemCoverage.Reason += "; " + gap.Error()
+		}
 	}
 	loc := model.Location{
 		ArtifactID: t.ArtifactID,
@@ -240,10 +316,10 @@ func (a *Archive) inspectDisk(
 			Ranges []readRange `json:"ranges"`
 		}{"encoded-disk-read-ranges/v1", source.ranges})
 		if err != nil {
-			return nil, fmt.Errorf("inspectDisk: json.Marshal: %w", err)
+			return nil, contentObservations, filesystemCoverage, fmt.Errorf("inspectDisk: json.Marshal: %w", err)
 		}
 	}
-	out := []model.Observation{}
+	var out []model.Observation
 	blob := model.NewBlob(evidence)
 	for _, item := range items {
 		loc.Selector = item.subject + "/" + item.property
@@ -257,9 +333,9 @@ func (a *Archive) inspectDisk(
 			"go-ios-vm/disk-v1;go-apfs-v3=v0.1.0",
 		)
 		if err != nil {
-			return out, fmt.Errorf("inspectDisk: model.NewObservation: %w", err)
+			return out, contentObservations, filesystemCoverage, fmt.Errorf("inspectDisk: model.NewObservation: %w", err)
 		}
 		out = append(out, o)
 	}
-	return out, gap
+	return out, contentObservations, filesystemCoverage, gap
 }
