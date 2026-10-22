@@ -151,6 +151,39 @@ func newCommand(stdout, stderr io.Writer) *cobra.Command {
 		Short: "Discover and acquire Apple restore firmware",
 	}
 	root.AddCommand(firmware)
+	var listProduct, listSearch string
+	list := command(firmware, "list", "List and search unverified restore IPSW locators", func(c *cobra.Command, _ []string) error {
+		if listProduct == "" {
+			return errors.New("firmware list requires --product")
+		}
+		return withDB(c.Context(), func(s *postgres.Store) error {
+			fmt.Fprintln(stderr, "Reading restore catalogs…")
+			responses := acquisition.NewClient().List(c.Context(), listProduct)
+			for _, response := range responses {
+				if err := s.Acquisition(c.Context(), response.Source,
+					map[string]any{"selection": acquisition.Request{Product: listProduct}, "search": listSearch, "diagnostic": response.Error},
+					response.Status, response.Data); err != nil {
+					return err
+				}
+			}
+			if err := c.Context().Err(); err != nil {
+				return err
+			}
+			listing := acquisition.BuildListing(responses, listProduct, listSearch)
+			state := listingState(listing)
+			if cfg.Format == "text" {
+				printFirmwareListing(stdout, state, listing)
+			} else if err := emit(state, listing); err != nil {
+				return err
+			}
+			if state == "partial" {
+				return &partialError{}
+			}
+			return nil
+		})
+	})
+	list.Flags().StringVar(&listProduct, "product", "", "Exact product identifier, e.g. iPhone12,1")
+	list.Flags().StringVar(&listSearch, "search", "", "Case-insensitive version or build substring")
 	for _, mode := range []string{"discover", "probe", "fetch"} {
 		var req acquisition.Request
 		short := map[string]string{
@@ -482,4 +515,44 @@ func newCommand(stdout, stderr io.Writer) *cobra.Command {
 	c.Flags().
 		BoolVar(&apply, "apply", false, "Delete listed managed images after acquiring exclusive cache lease")
 	return root
+}
+
+func printFirmwareListing(w io.Writer, state string, listing acquisition.Listing) {
+	fmt.Fprintf(w, "%s: restore IPSW catalog locators for %s\n", strings.ToUpper(state), listing.Product)
+	if listing.Query != "" {
+		fmt.Fprintf(w, "Search: %q\n", listing.Query)
+	}
+	for _, source := range listing.Sources {
+		if source.Status == "failed" {
+			fmt.Fprintf(w, "Source failed: %s (%s)\n", source.Source, source.Error)
+		}
+	}
+	if len(listing.Restores) == 0 {
+		fmt.Fprintln(w, "No matching restore IPSW locators found in the sources that responded.")
+		return
+	}
+	for _, row := range listing.Restores {
+		fmt.Fprintf(w, "%s %s  %s", row.Version, row.Build, row.Status)
+		if row.Size > 0 {
+			fmt.Fprintf(w, "  %d bytes", row.Size)
+		}
+		if row.SHA1 != "" {
+			fmt.Fprintf(w, "  SHA-1 %s", row.SHA1)
+		}
+		fmt.Fprintln(w)
+		fmt.Fprintf(w, "  source: %s\n  URL: %s\n", strings.Join(row.Sources, ", "), row.URL)
+		if row.NextCommand != "" {
+			fmt.Fprintf(w, "  next: go-ios-vm %s\n", row.NextCommand)
+		}
+	}
+	fmt.Fprintln(w, "Catalog locators are unverified; fetch checks the full archive and BuildManifest.")
+}
+
+func listingState(listing acquisition.Listing) string {
+	for _, source := range listing.Sources {
+		if source.Status == "failed" {
+			return "partial"
+		}
+	}
+	return "complete"
 }

@@ -22,6 +22,12 @@ historical-index fallback now supplies Apple-hosted URL locators. When run with
 PostgreSQL, the CLI retains the response with source attribution; an Apple CDN
 byte-range probe checks actual ZIP BuildManifest identity before any full download.
 
+The CLI can now list and search restore IPSW locators for a product before an
+exact fetch. A live `firmware list --product iPhone12,1 --search 14.0` check on
+2026-10-22 returned two restore rows, including public build `18A373`, with
+all three sources responding. These are unverified catalog locators; the list
+also reports source failures and ambiguous exact selections explicitly.
+
 Both public builds were probed successfully: 14.0/`18A373` and
 15.0/`19A346`. The exact URLs, declared checksums, measured sizes, manifest
 digests, boards, identities and source limitations are in the

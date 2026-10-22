@@ -128,6 +128,16 @@ func matches(r Request, c Candidate) bool {
 }
 
 func (c *Client) Discover(ctx context.Context, r Request) []Response {
+	return c.discover(ctx, r, r.Product != "" && (r.Version != "" || r.Build != ""))
+}
+
+// List discovers all restore locators for one product, including the historical
+// device index. Catalog rows do not prove archive identity.
+func (c *Client) List(ctx context.Context, product string) []Response {
+	return c.discover(ctx, Request{Product: product}, true)
+}
+
+func (c *Client) discover(ctx context.Context, r Request, includeHistorical bool) []Response {
 	out := make([]Response, 0, 3)
 	for _, endpoint := range []string{c.PMVURL, c.RestoreURL} {
 		item := Response{Source: endpoint, Status: "complete", Candidates: []Candidate{}}
@@ -149,7 +159,7 @@ func (c *Client) Discover(ctx context.Context, r Request) []Response {
 		}
 		out = append(out, item)
 	}
-	if r.Product != "" && (r.Version != "" || r.Build != "") && !hasExactRestore(out, r) {
+	if r.Product != "" && includeHistorical {
 		endpoint := c.HistoricalURL + url.PathEscape(r.Product) + "?type=ipsw"
 		item := Response{Source: endpoint, Status: "complete", Candidates: []Candidate{}}
 		b, err := c.read(ctx, endpoint)
@@ -166,17 +176,6 @@ func (c *Client) Discover(ctx context.Context, r Request) []Response {
 		out = append(out, item)
 	}
 	return out
-}
-
-func hasExactRestore(responses []Response, r Request) bool {
-	for _, response := range responses {
-		for _, candidate := range response.Candidates {
-			if candidate.Kind == "restore_ipsw" && matches(r, candidate) {
-				return true
-			}
-		}
-	}
-	return false
 }
 
 func parsePMV(b []byte, r Request, source string) ([]Candidate, error) {
@@ -256,7 +255,7 @@ func parseRestore(b []byte, r Request, source string) ([]Candidate, error) {
 					v.Build = key
 				}
 				id := product + "/" + v.Build + "/" + v.URL
-				if matches(r, v) && !seen[id] && AppleURL(v.URL) == nil {
+				if matches(r, v) && !seen[id] && isAppleRestoreIPSW(v.URL) {
 					out = append(out, v)
 					seen[id] = true
 				}
@@ -278,14 +277,31 @@ func Select(responses []Response, r Request) (Candidate, error) {
 		return Candidate{}, errIncompleteSelection
 	}
 	var candidates []Candidate
+	seen := map[string]int{}
+	conflicting := false
 	for _, res := range responses {
 		for _, c := range res.Candidates {
-			if c.Kind == "restore_ipsw" && matches(r, c) {
+			if c.Kind == "restore_ipsw" && matches(r, c) && isAppleRestoreIPSW(c.URL) {
+				key := c.Product + "\x00" + c.Version + "\x00" + c.Build + "\x00" + c.URL
+				if index, ok := seen[key]; ok {
+					prior := &candidates[index]
+					if conflictingDeclarations(*prior, c) {
+						conflicting = true
+					}
+					if prior.SHA1 == "" {
+						prior.SHA1 = c.SHA1
+					}
+					if prior.Size == 0 {
+						prior.Size = c.Size
+					}
+					continue
+				}
+				seen[key] = len(candidates)
 				candidates = append(candidates, c)
 			}
 		}
 	}
-	if len(candidates) != 1 {
+	if len(candidates) != 1 || conflicting {
 		return Candidate{}, fmt.Errorf(
 			"%w: resolved %d; inspected catalogs are not a complete historical archive",
 			errExpectedOneExactRestoreIPSW,
