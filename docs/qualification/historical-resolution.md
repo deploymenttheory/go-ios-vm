@@ -30,7 +30,7 @@ go run ./cmd/go-ios-vm --format json firmware probe --product iPhone12,1 --versi
 go run ./cmd/go-ios-vm --format json firmware probe --product iPhone12,1 --version 15.0 --build 19A346
 ```
 
-These checks verify the *retrieved manifest bytes and CDN response behavior*. They do not verify the index SHA-1, compute a full-archive SHA-256, pin an IPSW, establish signing status, or demonstrate bootability. The full archive verification and exact `n104ap` identity selection belong to the two image-qualification issues, [iOS 14](https://github.com/deploymenttheory/go-ios-vm/issues/10) and [iOS 15](https://github.com/deploymenttheory/go-ios-vm/issues/11). The original catalog response and probed manifest are retained in PostgreSQL when the CLI commands run.
+These bounded checks verify the *retrieved manifest bytes and CDN response behavior*. By themselves, they do not verify the index SHA-1, compute a full-archive SHA-256, pin an IPSW, establish signing status, or demonstrate bootability. The [iOS 14 qualification](iphone12-1-ios14.md) subsequently verified that complete archive and selected `n104ap` identity; the [iOS 15 qualification issue](https://github.com/deploymenttheory/go-ios-vm/issues/11) still requires a complete archive. The original catalog response and probed manifest are retained in PostgreSQL when the CLI commands run.
 
 ## Full-image transfer constraint
 
@@ -49,3 +49,9 @@ available), a whole-image SHA-256 and a local BuildManifest identity check befor
 publishing a completed IPSW. Resume makes a long transfer durable; it does not
 make the network faster. Only one image should be acquired at a time within the
 8 GiB cache and the configured disk reserve.
+
+The later full iOS 14 fetch resumed an ETag-pinned partial and completed after a
+progressing-stream timeout fix. Its independent archive SHA-256 is
+`a30f2fa8d4dbdcd2a8cf0f1644de3879019ba6f8be8fba49806a9c82dec09759`;
+the [qualification record](iphone12-1-ios14.md) contains the checks and partial
+inspection results. The iOS 15 candidate remains a bounded probe.

@@ -15,13 +15,13 @@ The first inspection workflow is: open an IPSW, select a device identity, explor
 
 PostgreSQL stores findings, provenance, and retained supporting evidence, including binary data. Disposable decoded files and bulk traces are subject to bounded retention. IPSWs are acquired on demand using GDMF discovery plus Apple-owned restore catalogs as needed, and held in a managed local cache. When those current feeds lack an exact historical release, a historical index can locate an Apple-hosted restore URL; its claim is checked against the archive's BuildManifest and is not treated as a verified image. Development includes a dedicated local PostgreSQL instance; its connection is configurable through Viper for local or remote use. Findings inform a reviewed, versioned machine profile consumed by the runner.
 
-Usable-VM acceptance includes an interactive iOS UI, input, persistence, restart, and operation with SIP enabled. Exact hardware and image builds remain to be selected for this project. The wider Weave product family remains unchanged.
+Usable-VM acceptance includes an interactive iOS UI, input, persistence, restart, and operation with SIP enabled. The first inspection image is pinned; runner hardware and image builds remain to be selected. The wider Weave product family remains unchanged.
 
 This is a fresh implementation. The previous project may be consulted for a specific question; its code, reports, image assets, and architecture are not a migration baseline. No historical material has been imported.
 
 ## Current stage
 
-The design interview is accepted. The first CLI implementation is merged into `main`; the full first-tooling release is **not yet qualified on real iOS images**. No VM runner has been implemented.
+The design interview is accepted. The first CLI implementation is merged into `main`. The [exact iPhone12,1 iOS 14.0 image](docs/qualification/iphone12-1-ios14.md) has been verified and inspected on macOS and Linux with **partial coverage**; the full first-tooling release is not yet accepted. No VM runner has been implemented.
 
 Implemented: Apple catalog discovery, bounded verified downloads, explicit BuildManifest identity selection, source-addressable device-tree and prelinked kernel/driver metadata, read-only disk/APFS metadata through `go-apfs-v3`, PostgreSQL publication/retrieval, run comparison and leased cache cleanup. Unsupported components produce partial coverage. Retained evidence includes the bytes needed to inspect findings after source-cache deletion.
 
