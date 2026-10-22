@@ -374,6 +374,15 @@ func newCommand(stdout, stderr io.Writer) *cobra.Command {
 					return imageInput(err)
 				}
 				defer a.Close()
+				if resumeID != "" {
+					prior, err := s.Run(c.Context(), resumeID)
+					if err != nil {
+						return classified("invalid_selection", err)
+					}
+					if prior.InputSHA256 != a.Artifact.SHA256 || prior.InputSize != a.Artifact.Size {
+						return classified("changed_input", workflow.ErrResumeInputMismatch)
+					}
+				}
 				if identity < 0 || identity >= len(a.Targets) {
 					return classified("invalid_selection", errors.New("identity index is outside the BuildManifest"))
 				}
