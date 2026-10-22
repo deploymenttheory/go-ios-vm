@@ -30,8 +30,9 @@ var (
 )
 
 const (
-	PMV            = "https://gdmf.apple.com/v2/pmv"
-	RestoreCatalog = "https://itunes.apple.com/WebObjects/MZStore.woa/wa/com.apple.jingle.appserver.client.MZITunesClientCheck/version/"
+	PMV               = "https://gdmf.apple.com/v2/pmv"
+	RestoreCatalog    = "https://itunes.apple.com/WebObjects/MZStore.woa/wa/com.apple.jingle.appserver.client.MZITunesClientCheck/version/"
+	HistoricalCatalog = "https://api.ipsw.me/v4/device/"
 )
 
 type Request struct {
@@ -46,7 +47,9 @@ type Candidate struct {
 	Kind    string `json:"kind"`
 	URL     string `json:"url,omitempty"`
 	SHA1    string `json:"sha1,omitempty"`
+	ETag    string `json:"etag,omitempty"`
 	Source  string `json:"source"`
+	Size    int64  `json:"size,omitempty"`
 }
 type Response struct {
 	Source     string      `json:"source"`
@@ -56,9 +59,10 @@ type Response struct {
 	Error      string      `json:"error,omitempty"`
 }
 type Client struct {
-	HTTP       *http.Client
-	PMVURL     string
-	RestoreURL string
+	HTTP          *http.Client
+	PMVURL        string
+	RestoreURL    string
+	HistoricalURL string
 }
 
 func NewClient() *Client {
@@ -72,8 +76,9 @@ func NewClient() *Client {
 				return AppleURL(r.URL.String())
 			},
 		},
-		PMVURL:     PMV,
-		RestoreURL: RestoreCatalog,
+		PMVURL:        PMV,
+		RestoreURL:    RestoreCatalog,
+		HistoricalURL: HistoricalCatalog,
 	}
 }
 
@@ -123,7 +128,7 @@ func matches(r Request, c Candidate) bool {
 }
 
 func (c *Client) Discover(ctx context.Context, r Request) []Response {
-	out := make([]Response, 0, 2)
+	out := make([]Response, 0, 3)
 	for _, endpoint := range []string{c.PMVURL, c.RestoreURL} {
 		item := Response{Source: endpoint, Status: "complete", Candidates: []Candidate{}}
 		b, err := c.read(ctx, endpoint)
@@ -144,7 +149,34 @@ func (c *Client) Discover(ctx context.Context, r Request) []Response {
 		}
 		out = append(out, item)
 	}
+	if r.Product != "" && (r.Version != "" || r.Build != "") && !hasExactRestore(out, r) {
+		endpoint := c.HistoricalURL + url.PathEscape(r.Product) + "?type=ipsw"
+		item := Response{Source: endpoint, Status: "complete", Candidates: []Candidate{}}
+		b, err := c.read(ctx, endpoint)
+		item.Data = b
+		if err == nil {
+			item.Candidates, err = parseHistorical(b, r, endpoint)
+		}
+		if err != nil {
+			item.Status = "failed"
+			item.Error = err.Error()
+		} else if len(item.Candidates) == 0 {
+			item.Status = "no_match"
+		}
+		out = append(out, item)
+	}
 	return out
+}
+
+func hasExactRestore(responses []Response, r Request) bool {
+	for _, response := range responses {
+		for _, candidate := range response.Candidates {
+			if candidate.Kind == "restore_ipsw" && matches(r, candidate) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func parsePMV(b []byte, r Request, source string) ([]Candidate, error) {
