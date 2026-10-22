@@ -9,6 +9,20 @@ Checked 2026-10-22 for the agreed exact requests, iOS 14.0 and 15.0. The current
 
 Apple CDN `HEAD` responses supplied the stated lengths, strong ETags and `Accept-Ranges: bytes`. An ETag-fenced request for the first 1 KiB returned HTTP 206 with the exact content range. A bounded ZIP range probe then read each `BuildManifest.plist` directly from Apple's archive: 21 requests/65,535 bytes for iOS 14.0 and 22 requests/73,511 bytes for iOS 15.0. Both manifests claim the requested product, version and build. Both list board identities `n104ap` and `n841ap` and the customer erase/upgrade and research customer erase/upgrade variants. The probe returns each board and variant **paired with its identity index**; the manifest's global product list does not by itself map a product to one board.
 
+Both builds expose the same identity-index layout. The proposed `n104ap`
+Customer Erase Install inspection target is **identity index 1** in each image;
+this selection uses the separate pinned hardware profile, since the manifest's
+global product list alone does not prove the product-to-board mapping.
+
+| Index | Board | Install variant |
+| ---: | --- | --- |
+| 0 | `n104ap` | Research Customer Upgrade |
+| 1 | `n104ap` | Customer Erase |
+| 2 | `n841ap` | Customer Erase |
+| 3 | `n104ap` | Research Customer Erase |
+| 4 | `n104ap` | Customer Upgrade |
+| 5 | `n841ap` | Customer Upgrade |
+
 With PostgreSQL configured, repeat the bounded check using:
 
 ```sh
