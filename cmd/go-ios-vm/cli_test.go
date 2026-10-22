@@ -6,11 +6,12 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
-	"github.com/jackc/pgx/v5"
 	"net/url"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/jackc/pgx/v5"
 
 	"github.com/deploymenttheory/go-ios-vm/internal/model"
 	"github.com/deploymenttheory/go-ios-vm/internal/testfixture"
@@ -30,6 +31,7 @@ func TestHelpAndConfigDoNotNeedDatabase(t *testing.T) {
 		}
 	}
 }
+
 func TestPersistRestartCompareAndRemoveSource(t *testing.T) {
 	dsn := os.Getenv("GOIOSVM_TEST_DATABASE_URL")
 	if dsn == "" {
@@ -104,7 +106,12 @@ func TestPersistRestartCompareAndRemoveSource(t *testing.T) {
 	if err = json.Unmarshal(b, &findings); err != nil || len(findings) == 0 {
 		t.Fatal(err)
 	}
-	if _, err = invoke("finding", "show", "--evidence", findings[0].Observation.EvidenceID); err != nil {
+	if _, err = invoke(
+		"finding",
+		"show",
+		"--evidence",
+		findings[0].Observation.EvidenceID,
+	); err != nil {
 		t.Fatal("source removal destroyed retained evidence", err)
 	}
 	if _, err = invoke("compare", "--left", runs[0].ID, "--right", runs[1].ID); err != nil {

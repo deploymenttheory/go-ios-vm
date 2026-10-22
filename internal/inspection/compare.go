@@ -2,8 +2,9 @@ package inspection
 
 import (
 	"bytes"
-	"github.com/deploymenttheory/go-ios-vm/internal/model"
 	"sort"
+
+	"github.com/deploymenttheory/go-ios-vm/internal/model"
 )
 
 // Compare matches exact semantic subject/property identities, never filenames.
@@ -32,7 +33,7 @@ func Compare(left, right []model.Finding) []model.Change {
 		sorted = append(sorted, k)
 	}
 	sort.Strings(sorted)
-	out := []model.Change{}
+	out := make([]model.Change, 0, len(sorted))
 	for _, k := range sorted {
 		a, b := l[k], r[k]
 		c := model.Change{State: "unexamined"}

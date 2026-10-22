@@ -27,8 +27,8 @@ issues:
   # Also catch anything in new or modified files, even outside the diff hunk.
   whole-files: true
 
-  # Automatically apply any fixable issues (like gofmt/goimports).
-  fix: true
+  # Report findings in CI; run golangci-lint fmt explicitly to apply formatting.
+  fix: false
 
 
 linters:
@@ -67,6 +67,10 @@ linters:
 
   # 3) Per-linter configuration
   settings:
+    tagliatelle:
+      case:
+        rules:
+          json: snake
     nakedret:
       max-func-lines: 40
 

@@ -4,12 +4,32 @@ import (
 	"archive/zip"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"math"
 
 	"github.com/deploymenttheory/go-apfs-v3/apfs"
 	"github.com/deploymenttheory/go-apfs-v3/diskimage"
 	"github.com/deploymenttheory/go-ios-vm/internal/model"
+)
+
+var (
+	errDiskMetadataCaptureExceeds32MiB = errors.New(
+		"disk metadata capture exceeds 32 MiB",
+	)
+	errOSDiskImageNotDeclared = errors.New(
+		"OS disk image not declared",
+	)
+	errOSDiskMemberIsMissing = errors.New(
+		"OS disk member is missing",
+	)
+	errCompressedDiskUnsupported = errors.New(
+		"disk image is ZIP-compressed; bounded staging adapter is not implemented",
+	)
+	errDiskMemberOutsideSource = errors.New(
+		"disk member outside source",
+	)
 )
 
 type readRange struct {
@@ -26,14 +46,14 @@ type captureSource struct {
 
 func (s *captureSource) ReadAt(p []byte, offset int64) (int, error) {
 	if err := s.ctx.Err(); err != nil {
-		return 0, err
+		return 0, fmt.Errorf("disk read cancelled: %w", err)
 	}
 	if old, ok := s.seen[offset]; ok && len(old) >= len(p) {
 		copy(p, old)
 		return len(p), nil
 	}
 	if len(p) > 32<<20-s.used {
-		return 0, fmt.Errorf("disk metadata capture exceeds 32 MiB")
+		return 0, errDiskMetadataCaptureExceeds32MiB
 	}
 	n, err := s.SectionReader.ReadAt(p, offset)
 	if n > 0 {
@@ -42,43 +62,63 @@ func (s *captureSource) ReadAt(p []byte, offset int64) (int, error) {
 		s.seen[offset] = b
 		s.used += n
 	}
-	return n, err
+	return n, err //nolint:wrapcheck // io.ReaderAt requires the original io.EOF sentinel.
 }
+
 func (a *Archive) inspectDisk(ctx context.Context, t model.Target) ([]model.Observation, error) {
 	name, ok := t.Components["OS"]
 	if !ok {
-		return nil, fmt.Errorf("OS disk image not declared")
+		return nil, errOSDiskImageNotDeclared
 	}
 	index, ok := a.members[name]
 	if !ok {
-		return nil, fmt.Errorf("OS disk member is missing")
+		return nil, errOSDiskMemberIsMissing
 	}
 	member := a.ZIP.File[index]
 	if member.Method != zip.Store {
-		return nil, fmt.Errorf("disk image is ZIP-compressed; bounded staging adapter is not implemented")
+		return nil, errCompressedDiskUnsupported
 	}
 	offset, err := member.DataOffset()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("inspectDisk: DataOffset: %w", err)
 	}
-	if member.UncompressedSize64 > uint64(a.Artifact.Size) || offset < 0 || uint64(offset) > uint64(a.Artifact.Size)-member.UncompressedSize64 {
-		return nil, fmt.Errorf("disk member outside source")
+	if member.UncompressedSize64 > math.MaxInt64 {
+		return nil, errDiskMemberOutsideSource
 	}
-	source := &captureSource{ctx: ctx, SectionReader: io.NewSectionReader(a.file, offset, int64(member.UncompressedSize64)), seen: map[int64][]byte{}}
+	memberSize := int64(member.UncompressedSize64)
+	if offset < 0 || memberSize > a.Artifact.Size || offset > a.Artifact.Size-memberSize {
+		return nil, errDiskMemberOutsideSource
+	}
+	source := &captureSource{
+		ctx:           ctx,
+		SectionReader: io.NewSectionReader(a.file, offset, memberSize),
+		seen:          map[int64][]byte{},
+	}
 	image, err := diskimage.New(source)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("inspectDisk: diskimage.New: %w", err)
 	}
 	defer image.Close()
 	type item struct {
 		subject, property string
 		value             any
 	}
-	items := []item{{"disk/OS", "layout", map[string]any{"format": image.Format, "partition_map": image.PartitionMap, "size": image.Size(), "partitions": image.Partitions}}}
+	items := []item{
+		{
+			"disk/OS",
+			"layout",
+			map[string]any{
+				"format":        image.Format,
+				"partition_map": image.PartitionMap,
+				"size":          image.Size(),
+				"partitions":    image.Partitions,
+			},
+		},
+	}
 	var gap error
 	for _, part := range image.Partitions {
 		if err := ctx.Err(); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("inspectDisk: Err: %w", err)
 		}
 		view, err := image.Partition(part.Index)
 		if err != nil {
@@ -99,23 +139,40 @@ func (a *Archive) inspectDisk(ctx context.Context, t model.Target) ([]model.Obse
 			gap = err
 			break
 		}
-		items = append(items, item{fmt.Sprintf("disk/OS/partition/%d", part.Index), "apfs", container})
+		items = append(
+			items,
+			item{fmt.Sprintf("disk/OS/partition/%d", part.Index), "apfs", container},
+		)
 	}
 	evidence, err := json.Marshal(struct {
 		Schema string      `json:"schema"`
 		Ranges []readRange `json:"ranges"`
 	}{"encoded-disk-read-ranges/v1", source.ranges})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("inspectDisk: json.Marshal: %w", err)
 	}
-	loc := model.Location{ArtifactID: t.ArtifactID, Member: name, Entry: index, Coordinate: "zip-member-byte-ranges", Transforms: []string{"zip-stored-member", "go-apfs-v3@v0.1.0"}}
+	loc := model.Location{
+		ArtifactID: t.ArtifactID,
+		Member:     name,
+		Entry:      index,
+		Coordinate: "zip-member-byte-ranges",
+		Transforms: []string{"zip-stored-member", "go-apfs-v3@v0.1.0"},
+	}
 	out := []model.Observation{}
 	blob := model.NewBlob(evidence)
 	for _, item := range items {
 		loc.Selector = item.subject + "/" + item.property
-		o, err := model.NewObservation(t, item.subject, item.property, exactJSON(item.value), loc, blob, "go-ios-vm/disk-v1;go-apfs-v3=v0.1.0")
+		o, err := model.NewObservation(
+			t,
+			item.subject,
+			item.property,
+			exactJSON(item.value),
+			loc,
+			blob,
+			"go-ios-vm/disk-v1;go-apfs-v3=v0.1.0",
+		)
 		if err != nil {
-			return out, err
+			return out, fmt.Errorf("inspectDisk: model.NewObservation: %w", err)
 		}
 		out = append(out, o)
 	}

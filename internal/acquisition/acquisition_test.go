@@ -19,14 +19,39 @@ type roundTrip func(*http.Request) (*http.Response, error)
 func (f roundTrip) RoundTrip(r *http.Request) (*http.Response, error) { return f(r) }
 func TestDiscoverySeparatesReleaseAndRestore(t *testing.T) {
 	request := Request{Product: "iPhone12,1", Version: "14.0"}
-	releases, err := parsePMV([]byte(`{"PublicAssetSets":{"iOS":[{"ProductVersion":"14.0","Build":"18A373","SupportedDevices":["iPhone12,1"]}]}}`), request, PMV)
+	releases, err := parsePMV(
+		[]byte(
+			`{"PublicAssetSets":{"iOS":[{"ProductVersion":"14.0","Build":"18A373","SupportedDevices":["iPhone12,1"]}]}}`,
+		),
+		request,
+		PMV,
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(releases) != 1 || releases[0].Kind != "release" || releases[0].URL != "" {
 		t.Fatal(releases)
 	}
-	data, _ := plist.Marshal(map[string]any{"MobileDeviceSoftwareVersionsByVersion": map[string]any{"1": map[string]any{"MobileDeviceSoftwareVersions": map[string]any{"iPhone12,1": map[string]any{"18A373": map[string]any{"Restore": map[string]string{"ProductVersion": "14.0", "BuildVersion": "18A373", "FirmwareURL": "https://updates.cdn-apple.com/fixture.ipsw"}}}}}}}, plist.XMLFormat)
+	data, _ := plist.Marshal(
+		map[string]any{
+			"MobileDeviceSoftwareVersionsByVersion": map[string]any{
+				"1": map[string]any{
+					"MobileDeviceSoftwareVersions": map[string]any{
+						"iPhone12,1": map[string]any{
+							"18A373": map[string]any{
+								"Restore": map[string]string{
+									"ProductVersion": "14.0",
+									"BuildVersion":   "18A373",
+									"FirmwareURL":    "https://updates.cdn-apple.com/fixture.ipsw",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		plist.XMLFormat,
+	)
 	restores, err := parseRestore(data, request, RestoreCatalog)
 	if err != nil {
 		t.Fatal(err)
@@ -44,20 +69,33 @@ func TestDiscoverySeparatesReleaseAndRestore(t *testing.T) {
 		t.Fatal("invalid source accepted")
 	}
 }
+
 func TestFailedVerificationAndCancellationLeaveNoPublishedImage(t *testing.T) {
 	for _, cancelled := range []bool{false, true} {
 		t.Run(map[bool]string{false: "identity", true: "cancelled"}[cancelled], func(t *testing.T) {
 			cache := Cache{Dir: t.TempDir(), Limit: 1024}
 			client := NewClient()
-			client.HTTP = &http.Client{Transport: roundTrip(func(r *http.Request) (*http.Response, error) {
-				return &http.Response{StatusCode: 200, ContentLength: 4, Body: io.NopCloser(bytes.NewReader([]byte("data"))), Header: http.Header{}}, nil
-			})}
+			client.HTTP = &http.Client{
+				Transport: roundTrip(func(r *http.Request) (*http.Response, error) {
+					return &http.Response{
+						StatusCode:    200,
+						ContentLength: 4,
+						Body:          io.NopCloser(bytes.NewReader([]byte("data"))),
+						Header:        http.Header{},
+					}, nil
+				}),
+			}
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 			if cancelled {
 				cancel()
 			}
-			_, err := client.Fetch(ctx, Candidate{URL: "https://updates.cdn-apple.com/a.ipsw"}, cache, func(context.Context, string, Candidate) error { return io.ErrUnexpectedEOF })
+			_, err := client.Fetch(
+				ctx,
+				Candidate{URL: "https://updates.cdn-apple.com/a.ipsw"},
+				cache,
+				func(context.Context, string, Candidate) error { return io.ErrUnexpectedEOF },
+			)
 			if err == nil {
 				t.Fatal("expected verification/cancellation failure")
 			}
@@ -74,12 +112,13 @@ func TestFailedVerificationAndCancellationLeaveNoPublishedImage(t *testing.T) {
 		})
 	}
 }
+
 func TestLeasePreventsPruneAndExternalFilesSurvive(t *testing.T) {
 	cache := Cache{Dir: t.TempDir(), Limit: 4096}
 	managed := filepath.Join(cache.Dir, strings.Repeat("a", 64)+".ipsw")
 	outside := filepath.Join(cache.Dir, "original.ipsw")
 	for _, p := range []string{managed, outside} {
-		if err := os.WriteFile(p, []byte("image"), 0600); err != nil {
+		if err := os.WriteFile(p, []byte("image"), 0o600); err != nil {
 			t.Fatal(err)
 		}
 	}

@@ -4,8 +4,21 @@ import "testing"
 
 func TestBorrowedEvidenceMutationAndRangeOverflow(t *testing.T) {
 	data := []byte("source")
-	source := Location{ArtifactID: "artifact", Member: "tree", Coordinate: "decoded-payload-byte", Length: 6}
-	o, err := NewObservation(Target{ID: "target"}, "node", "property", 0, source, NewBlob(data), "fixture")
+	source := Location{
+		ArtifactID: "artifact",
+		Member:     "tree",
+		Coordinate: "decoded-payload-byte",
+		Length:     6,
+	}
+	o, err := NewObservation(
+		Target{ID: "target"},
+		"node",
+		"property",
+		0,
+		source,
+		NewBlob(data),
+		"fixture",
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -15,7 +28,15 @@ func TestBorrowedEvidenceMutationAndRangeOverflow(t *testing.T) {
 	}
 	source.Offset = ^uint64(0)
 	source.Length = 2
-	if _, err = NewObservation(Target{ID: "target"}, "node", "property", 0, source, NewBlob(data), "fixture"); err == nil {
+	if _, err = NewObservation(
+		Target{ID: "target"},
+		"node",
+		"property",
+		0,
+		source,
+		NewBlob(data),
+		"fixture",
+	); err == nil {
 		t.Fatal("overflowing byte range accepted")
 	}
 }

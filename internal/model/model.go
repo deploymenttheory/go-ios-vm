@@ -5,8 +5,20 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
+)
+
+var (
+	errIncompleteObservation = errors.New(
+		"observation identity/source is incomplete",
+	)
+	errUnsupportedSourceCoordinate  = errors.New("unsupported source coordinate")
+	errSourceRangeOverflow          = errors.New("source range overflow")
+	errInvalidPresence              = errors.New("invalid presence")
+	errInvalidTypedObservationValue = errors.New("invalid typed observation value")
+	errEvidenceDigestMismatch       = errors.New("evidence digest mismatch")
 )
 
 const SchemaVersion = 1
@@ -89,45 +101,68 @@ type Blob struct {
 
 func NewBlob(data []byte) Blob { return Blob{id: Digest(data), data: data} }
 
-func NewObservation(t Target, subject, property string, value any, source Location, evidence Blob, extractor string) (Observation, error) {
+func NewObservation(
+	t Target,
+	subject, property string,
+	value any,
+	source Location,
+	evidence Blob,
+	extractor string,
+) (Observation, error) {
 	b, err := json.Marshal(value)
 	if err != nil {
-		return Observation{}, err
+		return Observation{}, fmt.Errorf("NewObservation: json.Marshal: %w", err)
 	}
-	o := Observation{TargetID: t.ID, Subject: subject, Property: property, Presence: "present", Value: b, Source: source, Extractor: extractor, EvidenceID: evidence.id, Evidence: evidence.data}
+	o := Observation{
+		TargetID:   t.ID,
+		Subject:    subject,
+		Property:   property,
+		Presence:   "present",
+		Value:      b,
+		Source:     source,
+		Extractor:  extractor,
+		EvidenceID: evidence.id,
+		Evidence:   evidence.data,
+	}
 	location, err := json.Marshal(source)
 	if err != nil {
-		return Observation{}, err
+		return Observation{}, fmt.Errorf("NewObservation: json.Marshal: %w", err)
 	}
 	o.ID = ID(t.ID, subject, property, string(b), string(location), o.EvidenceID, extractor)
 	return o, o.ValidateMetadata()
 }
+
 func (o Observation) ValidateMetadata() error {
-	if o.ID == "" || o.TargetID == "" || o.Extractor == "" || o.Subject == "" || o.Property == "" || len(o.EvidenceID) != 64 || o.Source.ArtifactID == "" || o.Source.Member == "" || o.Source.Entry < 0 {
-		return fmt.Errorf("observation identity/source is incomplete")
+	if o.ID == "" || o.TargetID == "" || o.Extractor == "" || o.Subject == "" || o.Property == "" ||
+		len(o.EvidenceID) != 64 ||
+		o.Source.ArtifactID == "" ||
+		o.Source.Member == "" ||
+		o.Source.Entry < 0 {
+		return errIncompleteObservation
 	}
 	switch o.Source.Coordinate {
 	case "plist-selector", "decoded-payload-byte", "zip-member-byte-ranges":
 	default:
-		return fmt.Errorf("unsupported source coordinate %q", o.Source.Coordinate)
+		return fmt.Errorf("%w: %q", errUnsupportedSourceCoordinate, o.Source.Coordinate)
 	}
 	if o.Source.Offset+o.Source.Length < o.Source.Offset {
-		return fmt.Errorf("source range overflow")
+		return errSourceRangeOverflow
 	}
 	if o.Presence != "present" && o.Presence != "absent" && o.Presence != "unexamined" {
-		return fmt.Errorf("invalid presence %q", o.Presence)
+		return fmt.Errorf("%w: %q", errInvalidPresence, o.Presence)
 	}
 	if !json.Valid(o.Value) {
-		return fmt.Errorf("invalid typed observation value")
+		return errInvalidTypedObservationValue
 	}
 	return nil
 }
+
 func (o Observation) Validate() error {
 	if err := o.ValidateMetadata(); err != nil {
 		return err
 	}
 	if Digest(o.Evidence) != o.EvidenceID {
-		return fmt.Errorf("evidence digest mismatch")
+		return errEvidenceDigestMismatch
 	}
 	return nil
 }

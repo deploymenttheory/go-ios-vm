@@ -5,11 +5,14 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/deploymenttheory/go-ios-vm/internal/model"
 )
+
+var errInvalidIdentity = errors.New("select an explicit valid build identity")
 
 type Repository interface {
 	Register(context.Context, model.Artifact, []model.Target) error
@@ -19,20 +22,32 @@ type Repository interface {
 }
 type InspectFunc func(context.Context) ([]model.Observation, []model.Coverage, error)
 
-func Inspect(ctx context.Context, store Repository, artifact model.Artifact, targets []model.Target, identity int, inspect InspectFunc) (model.Run, error) {
+func Inspect(
+	ctx context.Context,
+	store Repository,
+	artifact model.Artifact,
+	targets []model.Target,
+	identity int,
+	inspect InspectFunc,
+) (model.Run, error) {
 	if identity < 0 || identity >= len(targets) {
-		return model.Run{}, fmt.Errorf("select an explicit valid build identity")
+		return model.Run{}, errInvalidIdentity
 	}
 	if err := store.Register(ctx, artifact, targets); err != nil {
-		return model.Run{}, err
+		return model.Run{}, fmt.Errorf("Inspect: Register: %w", err)
 	}
 	var nonce [16]byte
 	if _, err := rand.Read(nonce[:]); err != nil {
-		return model.Run{}, err
+		return model.Run{}, fmt.Errorf("Inspect: rand.Read: %w", err)
 	}
-	run := model.Run{ID: hex.EncodeToString(nonce[:]), TargetID: targets[identity].ID, State: "running", Started: time.Now().UTC()}
+	run := model.Run{
+		ID:       hex.EncodeToString(nonce[:]),
+		TargetID: targets[identity].ID,
+		State:    "running",
+		Started:  time.Now().UTC(),
+	}
 	if err := store.Start(ctx, run); err != nil {
-		return run, err
+		return run, fmt.Errorf("Inspect: Start: %w", err)
 	}
 	observations, coverage, err := inspect(ctx)
 	run.Coverage = coverage
@@ -50,11 +65,14 @@ func Inspect(ctx context.Context, store Repository, artifact model.Artifact, tar
 		if ctx.Err() != nil {
 			run.State = "cancelled"
 		}
-		cleanup, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		cleanup, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 		defer cancel()
 		if e := store.Fail(cleanup, run.ID, run.State); e != nil {
-			return run, fmt.Errorf("%w; could not record terminal run state: %v", err, e)
+			return run, fmt.Errorf("%w; could not record terminal run state: %w", err, e)
 		}
 	}
-	return run, err
+	if err != nil {
+		return run, fmt.Errorf("inspect run: %w", err)
+	}
+	return run, nil
 }

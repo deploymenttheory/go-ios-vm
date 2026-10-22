@@ -22,10 +22,16 @@ func TestPackageDependencies(t *testing.T) {
 			t.Fatal(err)
 		}
 		for _, entry := range files {
-			if !strings.HasSuffix(entry.Name(), ".go") || strings.HasSuffix(entry.Name(), "_test.go") {
+			if !strings.HasSuffix(entry.Name(), ".go") ||
+				strings.HasSuffix(entry.Name(), "_test.go") {
 				continue
 			}
-			f, err := parser.ParseFile(token.NewFileSet(), filepath.Join("..", pkg, entry.Name()), nil, parser.ImportsOnly)
+			f, err := parser.ParseFile(
+				token.NewFileSet(),
+				filepath.Join("..", pkg, entry.Name()),
+				nil,
+				parser.ImportsOnly,
+			)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -52,10 +58,16 @@ func TestPackageDependencies(t *testing.T) {
 			t.Fatal(err)
 		}
 		for _, entry := range files {
-			if !strings.HasSuffix(entry.Name(), ".go") || strings.HasSuffix(entry.Name(), "_test.go") {
+			if !strings.HasSuffix(entry.Name(), ".go") ||
+				strings.HasSuffix(entry.Name(), "_test.go") {
 				continue
 			}
-			f, err := parser.ParseFile(token.NewFileSet(), filepath.Join("..", pkg, entry.Name()), nil, parser.ImportsOnly)
+			f, err := parser.ParseFile(
+				token.NewFileSet(),
+				filepath.Join("..", pkg, entry.Name()),
+				nil,
+				parser.ImportsOnly,
+			)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -67,7 +79,8 @@ func TestPackageDependencies(t *testing.T) {
 					}
 				}
 				for _, adapter := range []string{"acquisition", "inspection", "postgres"} {
-					if adapter != pkg && path == "github.com/deploymenttheory/go-ios-vm/internal/"+adapter {
+					if adapter != pkg &&
+						path == "github.com/deploymenttheory/go-ios-vm/internal/"+adapter {
 						t.Errorf("adapter %s depends on adapter %s", pkg, adapter)
 					}
 				}

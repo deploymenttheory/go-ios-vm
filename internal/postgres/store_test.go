@@ -57,22 +57,50 @@ func testStore(t *testing.T) *Store {
 	}
 	return store
 }
+
 func TestAtomicEvidencePublicationAndReuse(t *testing.T) {
 	s := testStore(t)
 	ctx := context.Background()
-	a := model.Artifact{ID: model.Digest([]byte("image")), SHA256: model.Digest([]byte("image")), Size: 5}
+	a := model.Artifact{
+		ID:     model.Digest([]byte("image")),
+		SHA256: model.Digest([]byte("image")),
+		Size:   5,
+	}
 	target := model.Target{ID: model.ID(a.ID, "0"), ArtifactID: a.ID}
 	if err := s.Register(ctx, a, []model.Target{target}); err != nil {
 		t.Fatal(err)
 	}
-	source := model.Location{ArtifactID: a.ID, Member: "tree", Coordinate: "decoded-payload-byte", Selector: "/device/value", Length: 1}
+	source := model.Location{
+		ArtifactID: a.ID,
+		Member:     "tree",
+		Coordinate: "decoded-payload-byte",
+		Selector:   "/device/value",
+		Length:     1,
+	}
 	evidence := []byte(strings.Repeat("supporting bytes", 100000))
-	o, err := model.NewObservation(target, "device", "value", uint64(0), source, model.NewBlob(evidence), "fixture/v1")
+	o, err := model.NewObservation(
+		target,
+		"device",
+		"value",
+		uint64(0),
+		source,
+		model.NewBlob(evidence),
+		"fixture/v1",
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
 	start := func(id string) model.Run {
-		r := model.Run{ID: id, TargetID: target.ID, Started: time.Now(), State: "partial", Coverage: []model.Coverage{{Component: "tree", State: "complete"}, {Component: "kernel", State: "unexamined"}}}
+		r := model.Run{
+			ID:       id,
+			TargetID: target.ID,
+			Started:  time.Now(),
+			State:    "partial",
+			Coverage: []model.Coverage{
+				{Component: "tree", State: "complete"},
+				{Component: "kernel", State: "unexamined"},
+			},
+		}
 		if err := s.Start(ctx, r); err != nil {
 			t.Fatal(err)
 		}
@@ -85,7 +113,9 @@ func TestAtomicEvidencePublicationAndReuse(t *testing.T) {
 		t.Fatal("wrong target published")
 	}
 	var count int
-	if err = s.pool.QueryRow(ctx, "SELECT count(*) FROM evidence_blob").Scan(&count); err != nil || count != 0 {
+	if err = s.pool.QueryRow(ctx, "SELECT count(*) FROM evidence_blob").
+		Scan(&count); err != nil ||
+		count != 0 {
 		t.Fatal("failed transaction leaked evidence", count, err)
 	}
 	if err = s.Publish(ctx, first, []model.Observation{o}); err != nil {
@@ -95,7 +125,9 @@ func TestAtomicEvidencePublicationAndReuse(t *testing.T) {
 	if err = s.Publish(ctx, second, []model.Observation{o}); err != nil {
 		t.Fatal(err)
 	}
-	if err = s.pool.QueryRow(ctx, "SELECT count(*) FROM evidence_blob").Scan(&count); err != nil || count != 1 {
+	if err = s.pool.QueryRow(ctx, "SELECT count(*) FROM evidence_blob").
+		Scan(&count); err != nil ||
+		count != 1 {
 		t.Fatal("rerun duplicated evidence", count, err)
 	}
 	retained, err := s.Evidence(ctx, o.EvidenceID)
@@ -117,7 +149,15 @@ func TestAtomicEvidencePublicationAndReuse(t *testing.T) {
 	}
 	quota := start("quota")
 	s.EvidenceLimit = int64(len(evidence))
-	other, err := model.NewObservation(target, "device", "other", 1, source, model.NewBlob([]byte("new evidence")), "fixture/v2")
+	other, err := model.NewObservation(
+		target,
+		"device",
+		"other",
+		1,
+		source,
+		model.NewBlob([]byte("new evidence")),
+		"fixture/v2",
+	)
 	if err != nil {
 		t.Fatal(err)
 	}

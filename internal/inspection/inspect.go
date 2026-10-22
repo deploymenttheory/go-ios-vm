@@ -5,19 +5,59 @@ import (
 	"context"
 	"debug/macho"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
 
 	"github.com/blacktop/ipsw/pkg/img4"
 	lzfse "github.com/blacktop/lzfse-cgo"
-	"github.com/deploymenttheory/go-ios-vm/internal/model"
 	"howett.net/plist"
+
+	"github.com/deploymenttheory/go-ios-vm/internal/model"
 )
 
-const Extractor = "go-ios-vm/static-v1;ipsw=12847a212ba1;lzfse-cgo=v1.2.0"
-const TreeLimit = 16 << 20
-const KernelLimit = 128 << 20
+var (
+	errIdentityIndexOutsideBuildManifest = errors.New(
+		"identity index outside BuildManifest",
+	)
+	errEncryptedPayload = errors.New(
+		"encrypted IM4P payload; no plaintext inspection",
+	)
+	errShortIM4PPayload = errors.New(
+		"short IM4P payload",
+	)
+	errLZFSEDecodeFailed = errors.New(
+		"LZFSE decode failed",
+	)
+	errLZFSEExceedsOutputBudget = errors.New(
+		"LZFSE exceeds output budget",
+	)
+	errLZSSAdapterIsNotQualified = errors.New(
+		"LZSS adapter is not qualified",
+	)
+	errUnsupportedIM4PCompressionDeclaration = errors.New(
+		"unsupported IM4P compression declaration",
+	)
+	errPayloadExceedsOutputBudget = errors.New(
+		"payload exceeds output budget",
+	)
+	errPrelinkedMetadataMissing = errors.New(
+		"prelinked driver metadata not found; fileset inspection is not implemented",
+	)
+	errDriverMetadataExceeds16MiB = errors.New(
+		"driver metadata exceeds 16 MiB",
+	)
+	errDriverHasNoBundleIdentity = errors.New(
+		"driver has no bundle identity",
+	)
+)
+
+const (
+	Extractor   = "go-ios-vm/static-v1;ipsw=12847a212ba1;lzfse-cgo=v1.2.0"
+	TreeLimit   = 16 << 20
+	KernelLimit = 128 << 20
+)
 
 type Result struct {
 	Observations []model.Observation
@@ -27,19 +67,41 @@ type Result struct {
 func (a *Archive) Inspect(ctx context.Context, identity int) (Result, error) {
 	result := Result{Observations: []model.Observation{}, Coverage: []model.Coverage{}}
 	if identity < 0 || identity >= len(a.Targets) {
-		return result, fmt.Errorf("identity index outside BuildManifest")
+		return result, errIdentityIndexOutsideBuildManifest
 	}
 	t := a.Targets[identity]
-	source := model.Location{ArtifactID: t.ArtifactID, Member: "BuildManifest.plist", Entry: a.members["BuildManifest.plist"], Coordinate: "plist-selector", Selector: fmt.Sprintf("/BuildIdentities/%d", identity), Length: uint64(len(a.manifest))}
+	source := model.Location{
+		ArtifactID: t.ArtifactID,
+		Member:     "BuildManifest.plist",
+		Entry:      a.members["BuildManifest.plist"],
+		Coordinate: "plist-selector",
+		Selector:   fmt.Sprintf("/BuildIdentities/%d", identity),
+		Length:     uint64(len(a.manifest)),
+	}
 	add := func(subject, property string, value any, src model.Location, evidence model.Blob) error {
 		o, e := model.NewObservation(t, subject, property, value, src, evidence, Extractor)
 		if e == nil {
 			result.Observations = append(result.Observations, o)
 		}
-		return e
+		if e != nil {
+			return fmt.Errorf("Inspect: model.NewObservation: %w", e)
+		}
+		return nil
 	}
 	manifestEvidence := model.NewBlob(a.manifest)
-	if err := add("target", "identity", map[string]any{"products": t.Products, "board": t.Board, "version": t.Version, "build": t.Build, "variant": t.Variant}, source, manifestEvidence); err != nil {
+	if err := add(
+		"target",
+		"identity",
+		map[string]any{
+			"products": t.Products,
+			"board":    t.Board,
+			"version":  t.Version,
+			"build":    t.Build,
+			"variant":  t.Variant,
+		},
+		source,
+		manifestEvidence,
+	); err != nil {
 		return result, err
 	}
 	names := make([]string, 0, len(t.Components))
@@ -49,24 +111,40 @@ func (a *Archive) Inspect(ctx context.Context, identity int) (Result, error) {
 	sort.Strings(names)
 	for _, name := range names {
 		if err := ctx.Err(); err != nil {
-			return result, err
+			return result, fmt.Errorf("Inspect: Err: %w", err)
 		}
 		path := t.Components[name]
 		src := source
 		src.Selector += "/Manifest/" + escape(name) + "/Info/Path"
 		_, exists := a.members[path]
-		if err := add("component/"+name, "archive_member", map[string]any{"path": path, "present": exists}, src, manifestEvidence); err != nil {
+		if err := add(
+			"component/"+name,
+			"archive_member",
+			map[string]any{"path": path, "present": exists},
+			src,
+			manifestEvidence,
+		); err != nil {
 			return result, err
 		}
 	}
-	result.Coverage = append(result.Coverage, model.Coverage{Component: "manifest", State: "complete"})
+	result.Coverage = append(
+		result.Coverage,
+		model.Coverage{Component: "manifest", State: "complete"},
+	)
 	for _, component := range []string{"DeviceTree", "KernelCache"} {
 		if err := ctx.Err(); err != nil {
-			return result, err
+			return result, fmt.Errorf("Inspect: Err: %w", err)
 		}
 		name, ok := t.Components[component]
 		if !ok {
-			result.Coverage = append(result.Coverage, model.Coverage{Component: component, State: "unexamined", Reason: "component not declared by selected identity"})
+			result.Coverage = append(
+				result.Coverage,
+				model.Coverage{
+					Component: component,
+					State:     "unexamined",
+					Reason:    "component not declared by selected identity",
+				},
+			)
 			continue
 		}
 		limit := uint64(TreeLimit)
@@ -80,7 +158,13 @@ func (a *Archive) Inspect(ctx context.Context, identity int) (Result, error) {
 			var transforms []string
 			payload, transforms, err = decodePayload(raw, int(limit))
 			if err == nil {
-				src := model.Location{ArtifactID: t.ArtifactID, Member: name, Entry: index, Coordinate: "decoded-payload-byte", Transforms: transforms}
+				src := model.Location{
+					ArtifactID: t.ArtifactID,
+					Member:     name,
+					Entry:      index,
+					Coordinate: "decoded-payload-byte",
+					Transforms: transforms,
+				}
 				if component == "DeviceTree" {
 					observations, err = readTree(ctx, t, payload, raw, src)
 				} else {
@@ -104,9 +188,16 @@ func (a *Archive) Inspect(ctx context.Context, identity int) (Result, error) {
 		diskCoverage.Reason = diskErr.Error()
 	}
 	result.Coverage = append(result.Coverage, diskCoverage)
-	result.Coverage = append(result.Coverage, model.Coverage{Component: "filesystem-content", State: "unexamined", Reason: "filesystem content inspection is not implemented"})
+	result.Coverage = append(
+		result.Coverage,
+		model.Coverage{
+			Component: "filesystem-content",
+			State:     "unexamined",
+			Reason:    "filesystem content inspection is not implemented",
+		},
+	)
 	if err := ctx.Err(); err != nil {
-		return result, err
+		return result, fmt.Errorf("Inspect: Err: %w", err)
 	}
 	return result, a.Unchanged()
 }
@@ -114,34 +205,34 @@ func (a *Archive) Inspect(ctx context.Context, identity int) (Result, error) {
 func decodePayload(raw []byte, limit int) ([]byte, []string, error) {
 	p, err := img4.ParsePayload(raw)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("decodePayload: img4.ParsePayload: %w", err)
 	}
 	if p.Encrypted {
-		return nil, nil, fmt.Errorf("encrypted IM4P payload; no plaintext inspection")
+		return nil, nil, errEncryptedPayload
 	}
 	transforms := []string{"zip-member", "im4p-data"}
 	if len(p.Data) < 4 {
-		return nil, nil, fmt.Errorf("short IM4P payload")
+		return nil, nil, errShortIM4PPayload
 	}
 	if strings.HasPrefix(string(p.Data[:4]), "bvx") {
 		dst := make([]byte, limit+1)
 		n := lzfse.DecodeBufferInto(p.Data, dst)
 		if n == 0 {
-			return nil, nil, fmt.Errorf("LZFSE decode failed")
+			return nil, nil, errLZFSEDecodeFailed
 		}
 		if n > limit {
-			return nil, nil, fmt.Errorf("LZFSE exceeds %d-byte output budget", limit)
+			return nil, nil, fmt.Errorf("%w: limit %d bytes", errLZFSEExceedsOutputBudget, limit)
 		}
 		return dst[:n], append(transforms, "lzfse"), nil
 	}
 	if strings.HasPrefix(string(p.Data), "complzss") {
-		return nil, nil, fmt.Errorf("LZSS adapter is not qualified")
+		return nil, nil, errLZSSAdapterIsNotQualified
 	}
 	if p.Compression.UncompressedSize > 0 {
-		return nil, nil, fmt.Errorf("unsupported IM4P compression declaration")
+		return nil, nil, errUnsupportedIM4PCompressionDeclaration
 	}
 	if len(p.Data) > limit {
-		return nil, nil, fmt.Errorf("payload exceeds output budget")
+		return nil, nil, errPayloadExceedsOutputBudget
 	}
 	return p.Data, transforms, nil
 }
@@ -149,7 +240,7 @@ func decodePayload(raw []byte, limit int) ([]byte, []string, error) {
 func readKernel(t model.Target, data, raw []byte, src model.Location) ([]model.Observation, error) {
 	f, err := macho.NewFile(bytes.NewReader(data))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("readKernel: macho.NewFile: %w", err)
 	}
 	defer f.Close()
 	out := []model.Observation{}
@@ -159,9 +250,17 @@ func readKernel(t model.Target, data, raw []byte, src model.Location) ([]model.O
 	if f.Magic == macho.Magic32 {
 		src.Length = 28
 	}
-	o, err := model.NewObservation(t, "kernel", "mach_header", f.FileHeader, src, evidence, Extractor)
+	o, err := model.NewObservation(
+		t,
+		"kernel",
+		"mach_header",
+		f.FileHeader,
+		src,
+		evidence,
+		Extractor,
+	)
 	if err != nil {
-		return out, err
+		return out, fmt.Errorf("readKernel: model.NewObservation: %w", err)
 	}
 	out = append(out, o)
 	var section *macho.Section
@@ -172,21 +271,21 @@ func readKernel(t model.Target, data, raw []byte, src model.Location) ([]model.O
 		}
 	}
 	if section == nil {
-		return out, fmt.Errorf("prelinked driver metadata not found; fileset inspection is not implemented")
+		return out, errPrelinkedMetadataMissing
 	}
 	if section.Size > 16<<20 {
-		return out, fmt.Errorf("driver metadata exceeds 16 MiB")
+		return out, errDriverMetadataExceeds16MiB
 	}
 	b, err := section.Data()
 	if err != nil {
-		return out, err
+		return out, fmt.Errorf("readKernel: Data: %w", err)
 	}
 	b = bytes.TrimRight(b, "\x00")
 	var info struct {
 		Drivers []map[string]any `plist:"_PrelinkInfoDictionary"`
 	}
 	if _, err = plist.Unmarshal(b, &info); err != nil {
-		return out, err
+		return out, fmt.Errorf("readKernel: plist.Unmarshal: %w", err)
 	}
 	src.Offset = uint64(section.Offset)
 	src.Length = uint64(len(b))
@@ -194,15 +293,23 @@ func readKernel(t model.Target, data, raw []byte, src model.Location) ([]model.O
 	for i, d := range info.Drivers {
 		id, _ := d["CFBundleIdentifier"].(string)
 		if id == "" {
-			return out, fmt.Errorf("driver %d has no bundle identity", i)
+			return out, fmt.Errorf("%w: index %d", errDriverHasNoBundleIdentity, i)
 		}
 		for _, key := range []string{"CFBundleIdentifier", "CFBundleVersion", "OSBundleLibraries", "IOKitPersonalities"} {
 			if value, ok := d[key]; ok {
 				loc := src
 				loc.Selector += fmt.Sprintf("/_PrelinkInfoDictionary/%d/%s", i, key)
-				o, err := model.NewObservation(t, "driver/"+id, key, exactJSON(value), loc, evidence, Extractor)
+				o, err := model.NewObservation(
+					t,
+					"driver/"+id,
+					key,
+					exactJSON(value),
+					loc,
+					evidence,
+					Extractor,
+				)
 				if err != nil {
-					return out, err
+					return out, fmt.Errorf("readKernel: model.NewObservation: %w", err)
 				}
 				out = append(out, o)
 			}
@@ -241,4 +348,9 @@ func exactJSON(value any) any {
 	}
 	return walk(v)
 }
-func escape(s string) string { return strings.ReplaceAll(strings.ReplaceAll(s, "~", "~0"), "/", "~1") }
+
+func escape(
+	s string,
+) string {
+	return strings.ReplaceAll(strings.ReplaceAll(s, "~", "~0"), "/", "~1")
+}
