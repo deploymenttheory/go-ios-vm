@@ -6,6 +6,8 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -257,5 +259,50 @@ func TestInterruptedFetchResumesOnlyMatchingObject(t *testing.T) {
 	entries, err = cache.Entries()
 	if err != nil || len(entries) != 1 || !strings.HasSuffix(entries[0].Path, ".ipsw") {
 		t.Fatal("partial not replaced by verified image", entries, err)
+	}
+}
+
+func TestProgressingImageDownloadOutlivesClientTimeout(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("ETag", `"stable"`)
+		w.Header().Set("Content-Length", "4")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("da"))
+		w.(http.Flusher).Flush()
+		time.Sleep(80 * time.Millisecond)
+		_, _ = w.Write([]byte("ta"))
+	}))
+	defer server.Close()
+	localURL, err := url.Parse(server.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	client := NewClient()
+	client.HTTP.Timeout = 20 * time.Millisecond
+	client.HTTP.Transport = roundTrip(func(r *http.Request) (*http.Response, error) {
+		local := r.Clone(r.Context())
+		local.URL.Scheme = localURL.Scheme
+		local.URL.Host = localURL.Host
+		local.Host = localURL.Host
+		return http.DefaultTransport.RoundTrip(local)
+	})
+	cache := Cache{Dir: t.TempDir(), Limit: 1024}
+	artifact, err := client.Fetch(
+		context.Background(),
+		Candidate{URL: "https://updates.cdn-apple.com/a.ipsw", Size: 4, ETag: `"stable"`},
+		cache,
+		func(_ context.Context, path string, _ Candidate) error {
+			data, readErr := os.ReadFile(path)
+			if readErr != nil {
+				return readErr
+			}
+			if string(data) != "data" {
+				return io.ErrUnexpectedEOF
+			}
+			return nil
+		},
+	)
+	if err != nil || artifact.Size != 4 {
+		t.Fatalf("progressing download failed after short client timeout: %+v, %v", artifact, err)
 	}
 }
