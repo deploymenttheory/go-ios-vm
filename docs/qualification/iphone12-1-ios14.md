@@ -130,3 +130,25 @@ byte-for-byte with source members; the decoded payload coordinates were not
 independently replayed for every property. There is no disk finding or disk
 evidence to recover while the UDIF decoder refuses the chunk. No firmware or
 extracted payload is committed to this repository.
+
+## IDREF decoder follow-up — 2026-10-22
+
+The bounded IOKit XML decoder in [issue #25](https://github.com/deploymenttheory/go-ios-vm/issues/25)
+resolved both integer and string `IDREF` objects from this same verified archive.
+The new macOS and Linux binaries used Go 1.27.1 and the same source snapshot.
+Each run retained the selected identity and 3,592 earlier findings, then added
+938 prelinked driver findings across 246 bundle identifiers:
+
+| Host | Run ID | Total findings | KernelCache coverage |
+| --- | --- | ---: | --- |
+| macOS arm64 | `50b8ca73b4098faa7a5764ade7ced655` | 4,530 | complete |
+| Linux arm64 | `4547bead025371cf4ca33b87fdb995df` | 4,530 | complete |
+
+The driver properties comprise 246 `CFBundleIdentifier`, 246
+`CFBundleVersion`, 238 `OSBundleLibraries`, and 208 `IOKitPersonalities`
+findings on each host. All 4,530 observation IDs match across hosts. Every
+driver finding retains a `decoded-payload-byte` coordinate for
+`kernelcache.release.iphone12b` and the same raw kernel evidence ID shown above.
+On both hosts, `finding show` recovered 15,680,196 bytes for that ID; the
+retrieved bytes hash to its recorded SHA-256. Disk metadata remains partial at
+UDIF LZFSE chunk `0x80000007`, and filesystem content remains unexamined.

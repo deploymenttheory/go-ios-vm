@@ -12,7 +12,6 @@ import (
 
 	"github.com/blacktop/ipsw/pkg/img4"
 	lzfse "github.com/blacktop/lzfse-cgo"
-	"howett.net/plist"
 
 	"github.com/deploymenttheory/go-ios-vm/internal/model"
 )
@@ -273,7 +272,7 @@ func readKernel(t model.Target, data, raw []byte, src model.Location) ([]model.O
 	if section == nil {
 		return out, errPrelinkedMetadataMissing
 	}
-	if section.Size > 16<<20 {
+	if section.Size > prelinkSectionLimit {
 		return out, errDriverMetadataExceeds16MiB
 	}
 	b, err := section.Data()
@@ -281,16 +280,29 @@ func readKernel(t model.Target, data, raw []byte, src model.Location) ([]model.O
 		return out, fmt.Errorf("readKernel: Data: %w", err)
 	}
 	b = bytes.TrimRight(b, "\x00")
-	var info struct {
-		Drivers []map[string]any `plist:"_PrelinkInfoDictionary"`
+	info, err := parsePrelink(b)
+	if err != nil {
+		return out, fmt.Errorf("readKernel: parsePrelink: %w", err)
 	}
-	if _, err = plist.Unmarshal(b, &info); err != nil {
-		return out, fmt.Errorf("readKernel: plist.Unmarshal: %w", err)
+	drivers, ok := info["_PrelinkInfoDictionary"].([]any)
+	if !ok {
+		return out, fmt.Errorf(
+			"readKernel: %w: driver dictionary is missing or invalid",
+			errInvalidPrelink,
+		)
 	}
 	src.Offset = uint64(section.Offset)
 	src.Length = uint64(len(b))
 	src.Selector = "__PRELINK_INFO/__info"
-	for i, d := range info.Drivers {
+	for i, driver := range drivers {
+		d, ok := driver.(map[string]any)
+		if !ok {
+			return out, fmt.Errorf(
+				"readKernel: %w: driver %d is not a dictionary",
+				errInvalidPrelink,
+				i,
+			)
+		}
 		id, _ := d["CFBundleIdentifier"].(string)
 		if id == "" {
 			return out, fmt.Errorf("%w: index %d", errDriverHasNoBundleIdentity, i)
