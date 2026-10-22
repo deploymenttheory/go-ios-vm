@@ -5,6 +5,7 @@ const route = new URLSearchParams(window.location.search);
 const selectedTargetID = route.get("target") || "";
 const selectedRunID = route.get("run") || "";
 const view = route.get("view") === "observations" || route.has("observation") ? "observations" : "findings";
+const screen = route.get("screen") === "monitor" ? "monitor" : "browse";
 
 class ExactInteger {
   constructor(text) { this.text = text; }
@@ -531,7 +532,261 @@ function wireForms() {
     assessment: byId("assessment").value, view, result_cursor: "", finding: "", observation: "", evidence: "",
   }));
 }
+
+function monitorURL(changes = {}) {
+  const next = new URLSearchParams();
+  next.set("screen", "monitor");
+  const values = {
+    monitor_kind: route.get("monitor_kind"), active_cursor: route.get("active_cursor"),
+    history_cursor: route.get("history_cursor"), operation: route.get("operation"),
+    operation_kind: route.get("operation_kind"), ...changes,
+  };
+  for (const [key, value] of Object.entries(values)) {
+    if (value !== "" && value !== null && value !== undefined) next.set(key, String(value));
+  }
+  return `/?${next.toString()}`;
+}
+
+function monitorCard(item) {
+  const progress = item.progress;
+  const card = node("article", "monitor-card");
+  const link = node("a", "card-link");
+  link.href = monitorURL({ operation: progress.id, operation_kind: progress.kind });
+  const title = progress.kind === "acquisition"
+    ? `${safeLabel(item.product, "Firmware")} · ${safeLabel(item.version, "version unknown")} · ${safeLabel(item.build, "build unknown")}`
+    : `Inspection · ${shortID(progress.id)}`;
+  const top = node("div", "card-top");
+  add(top, node("strong", "card-title", title), pill(item.effective_state));
+  add(link, top, node("div", "card-subtitle", `${safeLabel(progress.phase)}${progress.component ? ` · ${progress.component}` : ""} · Updated ${dateLabel(progress.updated)}`));
+  card.append(link);
+  if (progress.kind === "acquisition") card.append(node("p", "hint", `${progress.completed_bytes} transferred · ${progress.verified_bytes} verified bytes`));
+  else card.append(node("p", "hint", `${progress.completed_units} components · ${progress.published_batches} retained batches`));
+  return card;
+}
+
+function monitorPager(id, key, cursor) {
+  const area = byId(id);
+  clear(area);
+  const current = route.get(key) || "";
+  area.hidden = !current && !cursor;
+  if (current) {
+    const first = node("a", "button", "First page");
+    first.href = monitorURL({ [key]: "" });
+    area.append(first);
+  }
+  if (cursor) {
+    const next = node("a", "button", "Next page");
+    next.href = monitorURL({ [key]: cursor });
+    area.append(next);
+  }
+}
+
+const monitorListSignatures = new Map();
+function renderMonitorPage(areaID, page, empty) {
+  const area = byId(areaID);
+  const signature = page.items.map((item) => `${item.progress.id}:${item.progress.version}:${item.effective_state}`).join("|");
+  if (monitorListSignatures.get(areaID) === signature) return;
+  monitorListSignatures.set(areaID, signature);
+  const focusedHref = area.contains(document.activeElement) ? document.activeElement.href : "";
+  clear(area);
+  if (!page.items.length) message(area, empty);
+  else for (const item of page.items) area.append(monitorCard(item));
+  if (focusedHref) {
+    const sameLink = Array.from(area.querySelectorAll("a")).find((link) => link.href === focusedHref);
+    if (sameLink) sameLink.focus({ preventScroll: true });
+  }
+}
+
+async function loadMonitorLists(initial = false) {
+  const kind = route.get("monitor_kind") || "";
+  if (initial) {
+    message(byId("monitor-active"), "Loading active operations…");
+    message(byId("monitor-history"), "Loading recent history…");
+  }
+  try {
+    const [active, history] = await Promise.all([
+      api(queryURL("/api/v1/progress", { kind, state: "running", cursor: route.get("active_cursor"), limit: 25 })),
+      api(queryURL("/api/v1/progress", { kind, state: "terminal", cursor: route.get("history_cursor"), limit: 25 })),
+    ]);
+    for (const [areaID, page, empty] of [
+      ["monitor-active", active, "No active operations are retained."],
+      ["monitor-history", history, "No finished operations are retained."],
+    ]) {
+      renderMonitorPage(areaID, page, empty);
+    }
+    monitorPager("monitor-active-pages", "active_cursor", active.next_cursor);
+    monitorPager("monitor-pages", "history_cursor", history.next_cursor);
+    byId("monitor-connection").textContent = "Showing committed database state";
+  } catch (error) {
+    if (initial) {
+      message(byId("monitor-active"), error.message, true);
+      message(byId("monitor-history"), error.message, true);
+    }
+    byId("monitor-connection").textContent = "Connection lost; last committed view retained";
+  }
+}
+
+function monitorMeasure(parent, label, completed, total, state) {
+  const section = node("div", "measure");
+  const known = total !== undefined && total !== null;
+  const text = known ? `${completed} of ${total}` : `${completed}; total unknown`;
+  section.append(node("strong", "", `${label}: ${text}`));
+  if (known) {
+    const bar = node("progress");
+    bar.max = Number(total) || 1;
+    bar.value = Number(completed);
+    bar.setAttribute("aria-label", `${label}: ${text}`);
+    section.append(bar);
+  } else if (state === "running") {
+    const bar = node("progress");
+    bar.setAttribute("aria-label", `${label}: ${text}`);
+    section.append(bar);
+  }
+  parent.append(section);
+}
+
+function monitorCoverage(parent, run, targetID) {
+  if (!run) return;
+  const final = run.final_coverage_available;
+  const coverage = final ? run.final_coverage : run.committed_checkpoints;
+  const section = node("section", "subsection");
+  section.append(node("h3", "", final ? "Final component coverage" : "Committed checkpoints so far"));
+  if (!coverage || !coverage.length) {
+    section.append(node("p", "message", "No component coverage has been retained yet."));
+  } else {
+    const grid = node("div", "coverage-grid");
+    for (const item of coverage) {
+      const card = node("div", "coverage-item");
+      const head = node("div", "card-top");
+      add(head, node("strong", "", item.component), pill(item.state));
+      card.append(head);
+      if (item.reason) card.append(node("p", "", item.reason));
+      if (targetID) {
+        const link = node("a", "button coverage-link", "Browse evidence");
+        link.href = `/?${new URLSearchParams({ target: targetID, run: run.id, view: "observations", component: item.component })}`;
+        card.append(link);
+      }
+      grid.append(card);
+    }
+    section.append(grid);
+  }
+  parent.append(section);
+}
+
+let monitorVersion = "";
+let monitorCursor = "0";
+const monitorEventSequences = new Set();
+function renderMonitorSnapshot(snapshot) {
+  const p = snapshot.progress;
+  const fingerprint = `${p.version}:${snapshot.effective_state}:${snapshot.run && snapshot.run.final_coverage_available}`;
+  if (monitorVersion === fingerprint) return;
+  monitorVersion = fingerprint;
+  const area = byId("monitor-detail");
+  clear(area);
+  const head = node("div", "card-top");
+  add(head, node("strong", "", `${p.kind === "acquisition" ? "Acquisition attempt" : "Inspection run"} ${shortID(p.id)}`), pill(snapshot.effective_state));
+  area.append(head);
+  if (snapshot.stale) area.append(node("p", "notice notice-warning", "The inspection lease expired. This is the last committed progress; recovery has not marked the run terminal."));
+  if (p.state === "interrupted") area.append(node("p", "notice notice-warning", "The worker stopped before this operation completed."));
+  if (p.state === "partial") area.append(node("p", "notice notice-warning", "This operation completed with partial coverage. Review each component below."));
+  const facts = [
+    ["Operation ID", p.id], ["Phase", p.phase], ["State", snapshot.effective_state],
+    ["Current component", p.component || "None"], ["Started", dateLabel(p.started)],
+    ["Last committed", dateLabel(p.updated)], ["Finished", dateLabel(p.finished)],
+    ["Diagnostic code", p.diagnostic_code || "None"],
+  ];
+  if (p.input_sha256) facts.push(["Input SHA-256", p.input_sha256]);
+  area.append(metadata(facts));
+  const measurements = node("div", "measure-grid");
+  if (p.kind === "acquisition") {
+    monitorMeasure(measurements, "Transferred bytes", p.completed_bytes, p.total_bytes, snapshot.effective_state);
+    monitorMeasure(measurements, "Verified bytes", p.verified_bytes, p.total_bytes, snapshot.effective_state);
+  } else {
+    monitorMeasure(measurements, "Completed components", p.completed_units, p.total_units, snapshot.effective_state);
+    measurements.append(node("p", "hint", `${p.published_batches} retained batches`));
+  }
+  area.append(measurements);
+  if (snapshot.run) {
+    const run = snapshot.run;
+    const link = node("a", "button", "Browse this exact run");
+    link.href = `/?${new URLSearchParams({ target: run.target_id, run: run.id })}`;
+    area.append(link);
+    monitorCoverage(area, run, run.target_id);
+  }
+}
+
+function renderMonitorEvents(page) {
+  const area = byId("monitor-events");
+  if (page.gap) {
+    byId("monitor-gap").hidden = false;
+    byId("monitor-gap").textContent = `Earlier phase events expired from retention. Oldest retained sequence: ${page.oldest_sequence}.`;
+    clear(area);
+    monitorEventSequences.clear();
+  }
+  for (const event of page.events) {
+    if (area.querySelector(":scope > .message")) clear(area);
+    const sequence = String(event.sequence);
+    if (monitorEventSequences.has(sequence)) continue;
+    monitorEventSequences.add(sequence);
+    const row = node("div", "history-item");
+    add(row, node("strong", "", `${event.phase} · ${event.state}`),
+      node("div", "", `${dateLabel(event.created)}${event.component ? ` · ${event.component}` : ""}${event.diagnostic_code ? ` · ${event.diagnostic_code}` : ""}`));
+    area.append(row);
+  }
+  if (page.events.length) monitorCursor = page.next_cursor;
+  if (!area.children.length) message(area, "No retained phase events yet.");
+}
+
+let monitorPolling = false;
+async function pollMonitorDetail(initial = false) {
+  const operation = route.get("operation");
+  const kind = route.get("operation_kind");
+  if (!operation || !["acquisition", "inspection"].includes(kind)) return;
+  if (monitorPolling) return;
+  monitorPolling = true;
+  try {
+    const resource = kind === "acquisition" ? "acquisitions" : "runs";
+    const page = await api(queryURL(`/api/v1/${resource}/${encodeURIComponent(operation)}/progress/events`, { since: monitorCursor, limit: 64 }));
+    if (page.snapshot.progress.id !== operation || page.snapshot.progress.kind !== kind) throw new Error("Operation identity changed.");
+    renderMonitorSnapshot(page.snapshot);
+    renderMonitorEvents(page);
+    byId("monitor-detail-status").textContent = `Connected · last committed ${dateLabel(page.snapshot.progress.updated)}`;
+    if (initial) byId("monitor-detail-title").focus({ preventScroll: true });
+    if (page.has_more) setTimeout(() => pollMonitorDetail(), 0);
+  } catch (error) {
+    byId("monitor-detail-status").textContent = `Connection lost; last committed detail retained. ${error.message}`;
+  } finally { monitorPolling = false; }
+}
+
+function startMonitor() {
+  document.title = "Monitor work · go-ios-vm";
+  byId("page-title").textContent = "Monitor local work";
+  byId("page-lede").textContent = "Watch committed acquisition and inspection progress, then revisit its phase history and coverage.";
+  byId("browse-layout").hidden = true;
+  byId("monitor-workspace").hidden = false;
+  byId("monitor-nav").setAttribute("aria-current", "page");
+  byId("monitor-kind").value = route.get("monitor_kind") || "";
+  byId("monitor-filter").addEventListener("submit", (event) => {
+    event.preventDefault();
+    window.location.assign(monitorURL({ monitor_kind: byId("monitor-kind").value, active_cursor: "", history_cursor: "" }));
+  });
+  loadMonitorLists(true);
+  setInterval(() => loadMonitorLists(), 5000);
+  if (route.get("operation")) {
+    byId("monitor-detail-panel").hidden = false;
+    pollMonitorDetail(true);
+    setInterval(() => pollMonitorDetail(), 2000);
+  }
+}
+
 async function start() {
+  if (screen === "monitor") {
+    checkHealth();
+    setInterval(checkHealth, 10000);
+    startMonitor();
+    return;
+  }
+  byId("browse-nav").setAttribute("aria-current", "page");
   for (const [id, key] of [["product", "product"], ["build", "build"], ["identity", "identity"],
     ["run-state", "run_state"], ["subject", "subject"], ["property", "property"],
     ["basis", "basis"], ["assessment", "assessment"]]) setFormValue(id, key);
