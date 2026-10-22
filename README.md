@@ -96,6 +96,7 @@ bin/go-ios-vm finding assess --finding FINDING_ID --revision REVISION_ID \
   --basis inferred --state accepted --reviewer REVIEWER --reason 'Checked retained source' \
   --if-current 0
 bin/go-ios-vm compare --left FIRST_RUN_ID --right SECOND_RUN_ID
+bin/go-ios-vm resources status
 bin/go-ios-vm cache status
 bin/go-ios-vm cache prune         # preview
 bin/go-ios-vm cache prune --apply
@@ -106,6 +107,8 @@ Choose the identity index from `target list`; `0` is only an example. Inspection
 Viper accepts `--config FILE`, flags, and `GOIOSVM_` environment variables; prefer `GOIOSVM_DATABASE_URL` over passing credentials on the command line. Defaults: 8 GiB image-cache budget, 2 GiB free-disk reserve, 2 GiB distinct retained source bytes in PostgreSQL. The evidence budget excludes database/index/WAL overhead. These limits are configurable using `--cache-limit`, `--disk-reserve`, and `--evidence-limit` (bytes). Credentials and firmware images are ignored by Git.
 
 `finding assess` records an accepted, rejected, or disputed decision for the exact finding, revision, and basis, with a reviewer and reason. Use `--if-current 0` for the first decision, then use the current `assessment_id` from `finding show`; a stale ID reports `assessment_conflict`. `finding show` includes the full assessment history. New conflicting readings, explicit contradictory revisions, and changed supporting revisions mark prior decisions `needs_review` while preserving the original decisions and leaving successor revisions unreviewed. Migrated legacy assessments are marked `needs_review` because their original reviewer reasons were not retained. Assessment receipts use `schema_version: 2`.
+
+`resources status` reports configured budgets, current managed-cache usage and free space without a database connection. Fetch prints a pinned remaining-byte estimate before transfer; inspection prints a temporary-space estimate before staging a Deflate OS member. One inspection per cache directory runs at a time. See the [pinned-image resource measurements and remaining limits](docs/resource-budgets.md).
 
 ZIP Deflate OS members are staged in a disposable temporary directory for read-only disk inspection. Staging requires the declared expanded size to fit within 8 GiB and available space after a 2 GiB reserve; both size and free space are checked again as bytes are written. Disk observations need replayable source evidence. Because a Deflate member has no direct physical mapping from decoded reads, the full encoded member is retained only when it fits the existing 32 MiB disk source-capture cap. Larger compressed members get explicit partial disk coverage without disk findings. The staging file is removed when inspection finishes or fails; the original IPSW is unaffected.
 
