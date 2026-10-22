@@ -88,7 +88,7 @@ func TestBrowseAPIsKeepIdentityScopeAndSecretsSeparate(t *testing.T) {
 	run := model.Run{
 		ID: "ui-browse-run", TargetID: targets[0].ID, State: "running",
 		Started: time.Now().UTC(), Planned: []string{"manifest", "disk-metadata"},
-		Extractor: "fixture/v1",
+		Extractor: "fixture/v1", LeaseToken: "ui-browse-fixture",
 	}
 	if err := store.Start(ctx, run); err != nil {
 		t.Fatal(err)

@@ -148,9 +148,9 @@ func TestBrowseRunsKeepsCheckpointsSeparateFromFinalCoverage(t *testing.T) {
 			finished = &finish
 		}
 		_, err := s.pool.Exec(ctx, `INSERT INTO analysis_run
- (id,target_id,state,started,finished,coverage,input_sha256,input_size,extractor,planned_components)
- VALUES($1,$2,$3,$4,$5,'[]',$6,$7,'fixture/v1','["manifest","disk-metadata"]')`,
-			id, targets[0].ID, state, started, finished, a.SHA256, a.Size)
+ (id,target_id,state,started,coverage,input_sha256,input_size,extractor,planned_components)
+ VALUES($1,$2,'running',$3,'[]',$4,$5,'fixture/v1','["manifest","disk-metadata"]')`,
+			id, targets[0].ID, started, a.SHA256, a.Size)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -169,6 +169,11 @@ func TestBrowseRunsKeepsCheckpointsSeparateFromFinalCoverage(t *testing.T) {
 			}
 			if _, err := s.pool.Exec(ctx, `INSERT INTO run_coverage(run_id,component,state,reason)
  VALUES($1,'manifest','complete',''),($1,'disk-metadata',$2,$3)`, id, coverageState, reason); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if finished != nil {
+			if _, err := s.pool.Exec(ctx, `UPDATE analysis_run SET state=$2,finished=$3 WHERE id=$1`, id, state, finished); err != nil {
 				t.Fatal(err)
 			}
 		}
