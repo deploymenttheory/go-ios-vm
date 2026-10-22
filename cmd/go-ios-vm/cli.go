@@ -554,6 +554,32 @@ func newCommand(stdout, stderr io.Writer) *cobra.Command {
 		StringSliceVar(&contradictObservations, "contradict-observation", nil, "Contradicting observation ID (repeatable)")
 	c.Flags().
 		StringSliceVar(&contradictRevisions, "contradict-revision", nil, "Contradicting revision ID (repeatable)")
+	var assessment model.AssessmentDraft
+	c = command(finding, "assess", "Review one exact finding revision and its evidence basis", func(c *cobra.Command, _ []string) error {
+		if err := assessment.Validate(); err != nil {
+			return classified("invalid_invocation", err)
+		}
+		return withDB(c.Context(), func(s *postgres.Store) error {
+			event, err := s.ReviewRevision(c.Context(), assessment)
+			if errors.Is(err, postgres.ErrAssessmentConflict) {
+				return classified("assessment_conflict", err)
+			}
+			if errors.Is(err, postgres.ErrAssessmentOwnership) {
+				return classified("invalid_selection", err)
+			}
+			if err != nil {
+				return classified("storage_failure", err)
+			}
+			return emitWithVersion(2, "complete", event)
+		})
+	})
+	c.Flags().StringVar(&assessment.FindingID, "finding", "", "Stable finding ID")
+	c.Flags().StringVar(&assessment.RevisionID, "revision", "", "Exact revision ID")
+	c.Flags().StringVar(&assessment.Basis, "basis", "", "Revision basis: observed, inferred or unknown")
+	c.Flags().StringVar(&assessment.State, "state", "", "Review state: accepted, rejected or disputed")
+	c.Flags().StringVar(&assessment.Reviewer, "reviewer", "", "Reviewer identity")
+	c.Flags().StringVar(&assessment.Reason, "reason", "", "Reviewer reason")
+	c.Flags().Int64Var(&assessment.ExpectedID, "if-current", 0, "Current assessment event ID; 0 for an unreviewed revision")
 	var left, right string
 	c = command(
 		root,

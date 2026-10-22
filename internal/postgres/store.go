@@ -461,7 +461,11 @@ func (s *Store) Acquisition(
 func (s *Store) Findings(ctx context.Context, target, run string) ([]model.Finding, error) {
 	rows, err := s.pool.Query(
 		ctx,
-		`SELECT DISTINCT f.id,f.basis,f.assessment,o.document FROM finding_revision f JOIN observation o ON o.id=f.observation_id JOIN run_observation ro ON ro.observation_id=o.id WHERE ($1='' OR o.target_id=$1) AND ($2='' OR ro.run_id=$2) ORDER BY f.id`,
+		`SELECT DISTINCT f.id,f.basis,COALESCE((SELECT e.state FROM finding_assessment_event e
+		 WHERE e.revision_id=f.id ORDER BY e.id DESC LIMIT 1),'unreviewed'),o.document
+		 FROM finding_revision f JOIN observation o ON o.id=f.observation_id
+		 JOIN run_observation ro ON ro.observation_id=o.id
+		 WHERE ($1='' OR o.target_id=$1) AND ($2='' OR ro.run_id=$2) ORDER BY f.id`,
 		target,
 		run,
 	)

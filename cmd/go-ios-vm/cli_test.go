@@ -201,6 +201,35 @@ func TestPersistRestartCompareAndRemoveSource(t *testing.T) {
 	if !linked {
 		t.Fatal("revision did not link to earlier reading")
 	}
+	b, err = invoke("finding", "assess", "--finding", receipt.FindingID,
+		"--revision", receipt.RevisionID, "--basis", "inferred", "--state", "accepted",
+		"--reviewer", "fixture-reviewer", "--reason", "retained source checked")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var assessment model.AssessmentEvent
+	if err = json.Unmarshal(b, &assessment); err != nil || assessment.ID == 0 ||
+		assessment.RevisionID != receipt.RevisionID || lastSchemaVersion != 2 {
+		t.Fatal("assessment receipt missing exact revision", err)
+	}
+	if _, err = invoke("finding", "assess", "--finding", receipt.FindingID,
+		"--revision", receipt.RevisionID, "--basis", "inferred", "--state", "disputed",
+		"--reviewer", "second-reviewer", "--reason", "needs another source"); err == nil || classify(err) != "assessment_conflict" {
+		t.Fatalf("stale review did not report conflict: %v", err)
+	}
+	b, err = invoke("finding", "show", "--finding", receipt.FindingID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = json.Unmarshal(b, &revised); err != nil {
+		t.Fatal(err)
+	}
+	for _, r := range revised.Revisions {
+		if r.ID == receipt.RevisionID && (r.Assessment != "accepted" ||
+			len(r.AssessmentHistory) != 1 || r.AssessmentHistory[0].ID != assessment.ID) {
+			t.Fatalf("assessment history not browsable: %+v", r)
+		}
+	}
 	if _, err = invoke("finding", "show", "--finding", findings[0].ID); err != nil {
 		t.Fatal("finding show failed", err)
 	}

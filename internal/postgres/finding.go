@@ -19,7 +19,7 @@ func publishObservedRevision(ctx context.Context, tx pgx.Tx, o model.Observation
 		return fmt.Errorf("finding: %w", err)
 	}
 	revisionID := model.ID("finding", o.ID)
-	_, err = tx.Exec(ctx,
+	tag, err := tx.Exec(ctx,
 		`INSERT INTO finding_revision(id,finding_id,observation_id,basis,rationale,presence,value)
 		 VALUES($1,$2,$3,'observed','Direct extraction; not a claim of emulated behavior',$4,$5)
 		 ON CONFLICT DO NOTHING`,
@@ -32,6 +32,15 @@ func publishObservedRevision(ctx context.Context, tx pgx.Tx, o model.Observation
 		 VALUES($1,'supporting',$2) ON CONFLICT DO NOTHING`, revisionID, o.ID)
 	if err != nil {
 		return fmt.Errorf("basis: %w", err)
+	}
+	if tag.RowsAffected() == 1 {
+		seeds, err := conflictingObserved(ctx, tx, findingID, revisionID)
+		if err != nil {
+			return err
+		}
+		if err := invalidateAssessments(ctx, tx, revisionID, seeds); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -130,6 +139,25 @@ func (s *Store) AddRevision(
 			return model.RevisionReceipt{}, fmt.Errorf("AddRevision: reference: %w", err)
 		}
 	}
+	seeds := []string{}
+	if draft.Supersedes != "" {
+		seeds = append(seeds, draft.Supersedes)
+	}
+	for _, ref := range refs {
+		if ref.Role == "contradicting" && ref.RevisionID != "" {
+			seeds = append(seeds, ref.RevisionID)
+		}
+	}
+	if draft.Basis == "observed" {
+		conflicts, err := conflictingObserved(ctx, tx, id, revisionID)
+		if err != nil {
+			return model.RevisionReceipt{}, fmt.Errorf("AddRevision: conflicts: %w", err)
+		}
+		seeds = append(seeds, conflicts...)
+	}
+	if err := invalidateAssessments(ctx, tx, revisionID, seeds); err != nil {
+		return model.RevisionReceipt{}, fmt.Errorf("AddRevision: assessments: %w", err)
+	}
 	if err := tx.Commit(ctx); err != nil {
 		return model.RevisionReceipt{}, fmt.Errorf("AddRevision: Commit: %w", err)
 	}
@@ -193,7 +221,7 @@ func (s *Store) findingChains(
 	rows, err = s.pool.Query(
 		ctx,
 		`SELECT r.id,r.finding_id,r.basis,r.presence,r.value,r.rationale,r.author,
-	 r.created,r.supersedes,r.assessment,o.document
+	 r.created,r.supersedes,o.document
 	 FROM finding_revision r LEFT JOIN observation o ON o.id=r.observation_id
 	 WHERE r.finding_id=ANY($1) ORDER BY r.created,r.id`,
 		ids,
@@ -208,7 +236,7 @@ func (s *Store) findingChains(
 		var value, observation []byte
 		var supersedes *string
 		if err = rows.Scan(&r.ID, &fid, &r.Basis, &r.Presence, &value, &r.Rationale,
-			&r.Author, &r.Created, &supersedes, &r.Assessment, &observation); err != nil {
+			&r.Author, &r.Created, &supersedes, &observation); err != nil {
 			rows.Close()
 			return nil, fmt.Errorf("FindingChains: revision Scan: %w", err)
 		}
@@ -225,6 +253,8 @@ func (s *Store) findingChains(
 			r.Observation = &o
 		}
 		r.References = []model.BasisReference{}
+		r.Assessment = "unreviewed"
+		r.AssessmentHistory = []model.AssessmentEvent{}
 		i := indices[fid]
 		j := len(chains[i].Revisions)
 		chains[i].Revisions = append(chains[i].Revisions, r)
@@ -249,12 +279,12 @@ func (s *Store) findingChains(
 	if err != nil {
 		return nil, fmt.Errorf("FindingChains: basis: %w", err)
 	}
-	defer rows.Close()
 	for rows.Next() {
 		var id, role string
 		var oid, rid *string
 		var document []byte
 		if err = rows.Scan(&id, &role, &oid, &rid, &document); err != nil {
+			rows.Close()
 			return nil, fmt.Errorf("FindingChains: basis Scan: %w", err)
 		}
 		ref := model.BasisReference{Role: role}
@@ -263,12 +293,14 @@ func (s *Store) findingChains(
 			ref.ObservationID = *oid
 			var o model.Observation
 			if err = json.Unmarshal(document, &o); err != nil {
+				rows.Close()
 				return nil, fmt.Errorf("FindingChains: basis observation: %w", err)
 			}
 			ref.Observation = &o
 		case rid != nil:
 			ref.RevisionID = *rid
 		default:
+			rows.Close()
 			return nil, errBasisReferenceMissing
 		}
 		at := revisionIndex[id]
@@ -277,8 +309,43 @@ func (s *Store) findingChains(
 			ref,
 		)
 	}
-	if err := rows.Err(); err != nil {
+	err = rows.Err()
+	rows.Close()
+	if err != nil {
 		return nil, fmt.Errorf("FindingChains: basis Err: %w", err)
+	}
+	rows, err = s.pool.Query(ctx, `SELECT id,finding_id,revision_id,basis,state,reviewer,
+	 reason,previous_id,cause_revision_id,created FROM finding_assessment_event
+	 WHERE revision_id=ANY($1) ORDER BY revision_id,id`, revisionIDs)
+	if err != nil {
+		return nil, fmt.Errorf("FindingChains: assessments: %w", err)
+	}
+	for rows.Next() {
+		var event model.AssessmentEvent
+		var previous *int64
+		var cause *string
+		if err := rows.Scan(&event.ID, &event.FindingID, &event.RevisionID, &event.Basis,
+			&event.State, &event.Reviewer, &event.Reason, &previous, &cause,
+			&event.Created); err != nil {
+			rows.Close()
+			return nil, fmt.Errorf("FindingChains: assessment Scan: %w", err)
+		}
+		if previous != nil {
+			event.PreviousID = *previous
+		}
+		if cause != nil {
+			event.CauseRevisionID = *cause
+		}
+		at := revisionIndex[event.RevisionID]
+		r := &chains[at[0]].Revisions[at[1]]
+		r.AssessmentHistory = append(r.AssessmentHistory, event)
+		r.Assessment = event.State
+		r.AssessmentID = event.ID
+	}
+	err = rows.Err()
+	rows.Close()
+	if err != nil {
+		return nil, fmt.Errorf("FindingChains: assessment Err: %w", err)
 	}
 	return chains, nil
 }
