@@ -47,7 +47,7 @@ entry was published only after full checksum and local manifest verification.
 ## Real-image adapter limits
 
 - The 5,574,812,591-byte iOS 14 restore archive completed the managed fetch and independent SHA-1/SHA-256/BuildManifest checks. Synthetic failure, cancellation, identity-mismatch, and lease tests still cover the refusal paths.
-- The device-tree adapter produced 3,520 direct findings on the selected real image. The kernel adapter retained a Mach-O header finding, then stopped on IOKit `IDREF` object references in prelink metadata; [issue #25](https://github.com/deploymenttheory/go-ios-vm/issues/25) owns that parser gap. LZFSE payload decompression uses upstream `DecodeBufferInto` with a fixed output cap.
+- The device-tree adapter produced 3,520 direct findings on the selected real image. A follow-up bounded IOKit `IDREF` decoder recovered 938 driver findings across 246 bundles on macOS and Linux, with matching observation IDs and KernelCache coverage `complete`; see the [qualification follow-up](qualification/iphone12-1-ios14.md). LZFSE payload decompression uses upstream `DecodeBufferInto` with a fixed output cap.
 - Disk/APFS metadata uses `go-apfs-v3 v0.1.0` through a borrowed read-only ZIP member view. Stored OS members are read directly. Deflate OS members now use bounded disposable staging, with the full encoded member retained as evidence when it fits the existing 32 MiB disk source-capture cap. Larger compressed members report partial disk coverage without findings. Local iOS 14 inspection reaches unsupported LZFSE UDIF chunk kind `0x80000007` before any disk finding is emitted; [go-apfs-v3 #146](https://github.com/deploymenttheory/go-apfs-v3/issues/146) owns that decoder. Filesystem decompression is a separate layer, and physical extent provenance for decoded APFS file contents is not claimed.
 
 ## Remaining contract gaps
@@ -65,7 +65,7 @@ The first-tooling release is not complete:
 ## Next work, in order
 
 1. Acquire and verify the exact iOS 15 candidate in full within the current free-disk budget. Its bounded manifest probe is not a full archive pin.
-2. Advance the iOS 14 disk and kernel adapters through [go-apfs-v3 #146](https://github.com/deploymenttheory/go-apfs-v3/issues/146) and [go-ios-vm #25](https://github.com/deploymenttheory/go-ios-vm/issues/25), then check for further format gaps. [Issue #13](https://github.com/deploymenttheory/go-ios-vm/issues/13) owns filesystem content.
+2. Advance the iOS 14 disk adapter through [go-apfs-v3 #146](https://github.com/deploymenttheory/go-apfs-v3/issues/146), then check for further format gaps. [Issue #13](https://github.com/deploymenttheory/go-ios-vm/issues/13) owns filesystem content. Requalify kernel metadata on the iOS 15 image when acquired.
 3. Complete the remaining finding/publication contracts and compare the matching-hardware pair after cache cleanup and database restore. This is the first-tooling acceptance gate.
 4. Design the bounded whole-machine profile and complete lifecycle contracts, then implement the Hypervisor.framework runner. Static observations alone do not choose runtime behavior.
 
