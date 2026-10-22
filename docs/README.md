@@ -2,6 +2,7 @@
 
 - [Scope and current stage](../README.md)
 - [Implementation status and next work](implementation-status.md)
+- [Essential references retained before legacy deletion](research/retired-spike-notes.md)
 - [Glossary](../GLOSSARY.md)
 - [Fresh implementation with on-demand historical reference](adr/0001-fresh-implementation.md)
 - [Disk-image and filesystem codec ownership](adr/0002-codec-capabilities-in-go-apfs.md)
