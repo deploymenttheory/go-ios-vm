@@ -1,4 +1,4 @@
-name: go | Linter
+name: go | golangci-lint
 
 on:
   workflow_dispatch:
