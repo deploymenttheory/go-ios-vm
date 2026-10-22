@@ -109,6 +109,36 @@ func TestCLICancelledNativeDecodeKeepsRunInterrupted(t *testing.T) {
 		t.Fatalf("cancelled run published as complete: %s, checkpoints=%d, coverage=%d",
 			state, checkpoints, coverage)
 	}
+	// A worker-side resource failure is a retained partial component, while
+	// cancellation above leaves the run interrupted without final coverage.
+	t.Setenv("GOIOSVM_NATIVE_TEST_MODE", "resource")
+	stdout.Reset()
+	stderr.Reset()
+	if code := runCLI(context.Background(), []string{
+		"--format", "json", "inspect", "--image", path, "--identity", "0",
+	}, &stdout, &stderr); code != 2 {
+		t.Fatalf("resource failure exit %d: %s", code, stderr.String())
+	}
+	var response struct {
+		State   string    `json:"state"`
+		Results model.Run `json:"results"`
+	}
+	if err := json.Unmarshal(stdout.Bytes(), &response); err != nil {
+		t.Fatal(err)
+	}
+	if response.State != "partial" || response.Results.State != "partial" {
+		t.Fatalf("worker failure reported complete: %+v", response)
+	}
+	foundResource := false
+	for _, c := range response.Results.Coverage {
+		if c.Component == "DeviceTree" && c.State == "partial" &&
+			bytes.Contains([]byte(c.Reason), []byte("worker resource limit")) {
+			foundResource = true
+		}
+	}
+	if !foundResource {
+		t.Fatalf("worker failure lost coverage reason: %+v", response.Results.Coverage)
+	}
 }
 
 func makeCompressedTreeIPSW(t *testing.T, path string) {

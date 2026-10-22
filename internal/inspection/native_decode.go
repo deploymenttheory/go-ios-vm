@@ -24,7 +24,8 @@ const (
 	nativeWorkerTestEnv   = "GOIOSVM_NATIVE_TEST_MODE"
 	nativeDecodeTimeout   = 30 * time.Second
 	nativeWorkerWaitDelay = 2 * time.Second
-	nativeAddressLimit    = 512 << 20
+	nativeAddressLimit    = 2 << 30
+	nativeResidentLimit   = 512 << 20
 	nativeCPULimitSeconds = 31
 	nativeRSSPollInterval = 10 * time.Millisecond
 )
@@ -171,23 +172,30 @@ func runNativeWorker() int {
 
 func boundNativeMemory() error {
 	if runtime.GOOS == "linux" {
+		// The Go 1.27 runtime reserves more than 1 GiB of virtual address
+		// space before the decoder allocates a byte. Cap virtual mappings
+		// separately from the worker's measured resident budget.
 		if err := syscall.Setrlimit(syscall.RLIMIT_AS, &syscall.Rlimit{
 			Cur: nativeAddressLimit, Max: nativeAddressLimit,
 		}); err != nil {
 			return fmt.Errorf("native address limit: %w", err)
 		}
-		return nil
-	}
-	if runtime.GOOS != "darwin" {
+	} else if runtime.GOOS != "darwin" {
 		return errNativeWorkerResource
 	}
 	// Darwin rejects RLIMIT_AS and RLIMIT_DATA with EINVAL. A dedicated Go
-	// thread samples the worker's peak RSS while the decoder runs in C.
+	// thread samples peak RSS on both supported hosts while decoding runs in C.
 	go func() {
 		for {
 			var usage syscall.Rusage
-			if err := syscall.Getrusage(syscall.RUSAGE_SELF, &usage); err != nil ||
-				usage.Maxrss > nativeAddressLimit {
+			if err := syscall.Getrusage(syscall.RUSAGE_SELF, &usage); err != nil {
+				os.Exit(12)
+			}
+			peakBytes := usage.Maxrss
+			if runtime.GOOS == "linux" {
+				peakBytes *= 1024
+			}
+			if peakBytes > nativeResidentLimit {
 				os.Exit(12)
 			}
 			time.Sleep(nativeRSSPollInterval)

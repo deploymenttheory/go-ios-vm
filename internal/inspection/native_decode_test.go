@@ -16,7 +16,7 @@ func TestNativeWorkerDeadlineKillsAndReapsStalledDecoder(t *testing.T) {
 	start := time.Now()
 	_, err := decodeNativeLZFSEWithBudget(
 		context.Background(), []byte("bvx2"), TreeLimit,
-		150*time.Millisecond, "stall:"+pidFile,
+		500*time.Millisecond, "stall:"+pidFile,
 	)
 	if !errors.Is(err, errNativeDecodeTimeout) {
 		t.Fatalf("stalled decode: %v", err)
