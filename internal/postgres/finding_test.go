@@ -348,6 +348,10 @@ func TestMigrationBackfillsLegacyObservedRevision(t *testing.T) {
 	if err = tx.Commit(ctx); err != nil {
 		t.Fatal(err)
 	}
+	if _, err = s.pool.Exec(ctx, `UPDATE finding_revision SET assessment='accepted'
+	 WHERE id='legacy-revision'`); err != nil {
+		t.Fatal(err)
+	}
 	if err = s.Migrate(ctx); err != nil {
 		t.Fatal(err)
 	}
@@ -359,7 +363,9 @@ func TestMigrationBackfillsLegacyObservedRevision(t *testing.T) {
 	if legacy.ID != "legacy-revision" || legacy.Observation == nil ||
 		legacy.Observation.ID != o.ID ||
 		len(legacy.References) != 1 ||
-		legacy.References[0].ObservationID != o.ID {
+		legacy.References[0].ObservationID != o.ID ||
+		legacy.Assessment != "needs_review" || len(legacy.AssessmentHistory) != 2 ||
+		legacy.AssessmentHistory[0].State != "accepted" {
 		t.Fatal("legacy direct evidence link lost", legacy)
 	}
 	retained, err := s.Evidence(ctx, o.EvidenceID)

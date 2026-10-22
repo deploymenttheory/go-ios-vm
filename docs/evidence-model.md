@@ -103,7 +103,7 @@ The logical records above map to a small relational schema. Names are proposed; 
 | `evidence_blob`, `evidence_chunk`, `blob_chunk` | Blob identity, expected byte length and completion state; digest-addressed bounded binary chunks; ordered chunk membership and offsets |
 | `observation`, `run_observation` | Source location, value/presence, extraction identity and supporting blob references; run associations permit reuse without claiming new independent evidence |
 | `finding`, `finding_revision`, `finding_basis` | Stable target/subject/property question; versioned answers and rationale; typed supporting or contradicting observation/revision references |
-| `finding_assessment` | Review state for an exact revision and basis, with reason; acceptance does not propagate silently to replacements |
+| `finding_assessment_event` | Append-only review decision or needs-review invalidation for an exact revision and basis, with reviewer reason, predecessor and changed-revision cause; acceptance does not propagate to replacements |
 
 Use UUID-like record identities independent of paths and typed digest identities for bytes. Enforce foreign keys, uniqueness for canonical source/target identities, and valid state transitions. Keep structured extensions versioned rather than treating arbitrary JSON as a substitute for relational ownership. Store full unsigned addresses without signed-integer overflow or JSON floating-point conversion. Format-specific source selectors must validate their coordinate kinds and bounds.
 

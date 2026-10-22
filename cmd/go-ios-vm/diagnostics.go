@@ -169,6 +169,11 @@ func printSummary(w io.Writer, state string, result any) error {
 	case model.RevisionReceipt:
 		fmt.Fprintf(&b, "%s: revision %s recorded for finding %s\n", label, v.RevisionID, v.FindingID)
 		fmt.Fprintf(&b, "  next: go-ios-vm finding show --finding %s\n", v.FindingID)
+	case model.AssessmentEvent:
+		fmt.Fprintf(&b, "%s: %s assessment %d for revision %s (%s)\n",
+			label, v.State, v.ID, v.RevisionID, v.Basis)
+		fmt.Fprintf(&b, "  reason: %s\n", v.Reason)
+		fmt.Fprintf(&b, "  next: go-ios-vm finding show --finding %s\n", v.FindingID)
 	case []acquisition.Entry:
 		fmt.Fprintf(&b, "%s: %d managed cache entries\n", label, len(v))
 		for _, entry := range v {
@@ -231,6 +236,10 @@ func printFindingChainSummary(w io.Writer, finding model.FindingChain, detail bo
 		finding.Subject, finding.Property, finding.ID, finding.TargetID, len(finding.Revisions))
 	for _, revision := range finding.Revisions {
 		fmt.Fprintf(w, "    %s: %s %s", revision.ID, revision.Basis, revision.Presence)
+		fmt.Fprintf(w, "; assessment %s", revision.Assessment)
+		if revision.AssessmentID != 0 {
+			fmt.Fprintf(w, " (event %d)", revision.AssessmentID)
+		}
 		if revision.Supersedes != "" {
 			fmt.Fprintf(w, "; supersedes %s", revision.Supersedes)
 		}
@@ -252,6 +261,10 @@ func printFindingChainSummary(w io.Writer, finding model.FindingChain, detail bo
 			} else {
 				fmt.Fprintf(w, "      %s revision %s\n", ref.Role, ref.RevisionID)
 			}
+		}
+		for _, event := range revision.AssessmentHistory {
+			fmt.Fprintf(w, "      review %d: %s by %s: %s\n",
+				event.ID, event.State, event.Reviewer, event.Reason)
 		}
 	}
 }
