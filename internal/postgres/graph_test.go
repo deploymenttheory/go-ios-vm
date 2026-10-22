@@ -201,6 +201,7 @@ func TestGraphNeighborhoodUsesStoredTargetScopedRelationships(t *testing.T) {
 		!graphHasEdge(revision, "supporting_evidence") ||
 		!graphHasEdge(revision, "contradicting_revision") ||
 		!graphHasEdge(revision, "supersedes_revision") ||
+		!graphHasEdge(revision, "belongs_to_finding") ||
 		!graphHasEdge(revision, "assessed_as") {
 		t.Fatalf("revision basis: %+v %v", revision, err)
 	}

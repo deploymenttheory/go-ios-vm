@@ -350,6 +350,7 @@ func (s *Store) GraphNeighborhood(ctx context.Context, q GraphQuery) (GraphNeigh
 			"declares_driver_dependency": true, "declared_by_driver": true,
 			"resolves_to_apfs_object": true, "records_observation": true,
 			"has_revision": true, "supersedes_revision": true,
+			"belongs_to_finding":     true,
 			"supporting_observation": true, "contradicting_observation": true,
 			"supporting_evidence": true, "contradicting_evidence": true,
 			"supporting_revision": true, "contradicting_revision": true,
@@ -713,16 +714,19 @@ func (s *Store) graphFinding(ctx context.Context, b *graphBuilder, id string) er
 }
 
 func (s *Store) graphRevision(ctx context.Context, b *graphBuilder, id string) error {
-	var basis, presence string
+	var basis, presence, findingID, subject, property string
 	var supersedes *string
-	if err := s.pool.QueryRow(ctx, `SELECT r.basis,r.presence,r.supersedes
+	if err := s.pool.QueryRow(ctx, `SELECT r.basis,r.presence,r.supersedes,f.id,f.subject,f.property
 	 FROM finding_revision r JOIN finding f ON f.id=r.finding_id
 	 WHERE r.id=$1 AND f.target_id=$2`, id, b.target).
-		Scan(&basis, &presence, &supersedes); err != nil {
+		Scan(&basis, &presence, &supersedes, &findingID, &subject, &property); err != nil {
 		return fmt.Errorf("graph projection: %w", err)
 	}
 	b.out.Center.Label = basis + " · " + presence
 	b.out.Center.State = presence
+	b.add("belongs_to_finding", b.out.Center,
+		b.node("finding", findingID, subject+" / "+property, ""),
+		GraphBasis{RecordKind: "finding_revision", RecordID: id, Origin: "stored_record"})
 	if supersedes != nil {
 		b.add("supersedes_revision", b.out.Center,
 			b.node("revision", *supersedes, *supersedes, ""),
