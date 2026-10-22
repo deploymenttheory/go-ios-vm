@@ -45,6 +45,8 @@ type BatchInspectFunc func(
 // InspectBatched durably publishes bounded slices and only finalizes coverage
 // after every component checkpoint exists. Resume is explicit and always
 // checks the full archive identity established by inspection.Open.
+//
+//nolint:gocyclo // The run lifecycle keeps lease, cancellation and publication handling in one place.
 func InspectBatched(
 	ctx context.Context,
 	store BatchRepository,
@@ -55,6 +57,7 @@ func InspectBatched(
 	extractor string,
 	plan []string,
 	inspect BatchInspectFunc,
+	onStart ...func(model.Run) error,
 ) (model.Run, error) {
 	if identity < 0 || identity >= len(targets) {
 		return model.Run{}, errInvalidIdentity
@@ -68,6 +71,11 @@ func InspectBatched(
 	}
 	if run.State == "complete" || run.State == "partial" {
 		return run, nil
+	}
+	if len(onStart) > 0 && onStart[0] != nil {
+		if err := onStart[0](run); err != nil {
+			return run, fmt.Errorf("InspectBatched: start observer: %w", err)
+		}
 	}
 	workerCtx, stopWorker := context.WithCancel(ctx)
 	heartbeatDone := make(chan struct{})

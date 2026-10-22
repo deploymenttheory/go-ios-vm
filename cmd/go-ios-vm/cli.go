@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -234,7 +235,34 @@ func newCommand(stdout, stderr io.Writer) *cobra.Command {
 			if mode != "discover" && (req.Product == "" || (req.Version == "" && req.Build == "")) {
 				return classified("missing_input", errors.New("probe and fetch require --product and --version or --build"))
 			}
-			return withDB(c.Context(), func(s *postgres.Store) error {
+			return withDB(c.Context(), func(s *postgres.Store) (commandErr error) {
+				var progressID string
+				if mode == "fetch" {
+					progressID, commandErr = s.StartAcquisitionProgress(
+						c.Context(), req.Product, req.Version, req.Build)
+					if commandErr != nil {
+						return classified("storage_failure", commandErr)
+					}
+					fmt.Fprintf(stderr, "Acquisition attempt %s\n", progressID)
+					defer func() {
+						if commandErr == nil {
+							return
+						}
+						state := "failed"
+						if classify(commandErr) == "cancelled" {
+							state = "cancelled"
+						}
+						cleanup, cancel := context.WithTimeout(context.WithoutCancel(c.Context()), 5*time.Second)
+						defer cancel()
+						if err := s.AdvanceAcquisitionProgress(cleanup, progressID,
+							postgres.AcquisitionProgressUpdate{
+								Phase: state, State: state, DiagnosticCode: classify(commandErr),
+							}); err != nil {
+							commandErr = classified("storage_failure",
+								fmt.Errorf("%w; persist terminal progress: %v", commandErr, err))
+						}
+					}()
+				}
 				client := acquisition.NewClient()
 				fmt.Fprintln(stderr, "Reading restore catalogs…")
 				responses := client.Discover(c.Context(), req)
@@ -271,6 +299,12 @@ func newCommand(stdout, stderr io.Writer) *cobra.Command {
 				if err != nil {
 					return classified("invalid_selection", err)
 				}
+				if mode == "fetch" {
+					if err := s.AdvanceAcquisitionProgress(c.Context(), progressID,
+						postgres.AcquisitionProgressUpdate{Phase: "probing"}); err != nil {
+						return classified("storage_failure", err)
+					}
+				}
 				fmt.Fprintln(
 					stderr,
 					"Probing BuildManifest for",
@@ -304,6 +338,17 @@ func newCommand(stdout, stderr io.Writer) *cobra.Command {
 				info := remote.Info()
 				selected.Size = info.Size
 				selected.ETag = info.ETag
+				if mode == "fetch" {
+					fingerprint := model.Digest([]byte(fmt.Sprintf("%s\x00%s\x00%d",
+						selected.URL, selected.ETag, selected.Size)))
+					if err := s.AdvanceAcquisitionProgress(c.Context(), progressID,
+						postgres.AcquisitionProgressUpdate{
+							Phase: "selected", TotalBytes: &selected.Size,
+							SourceFingerprint: fingerprint,
+						}); err != nil {
+						return classified("storage_failure", err)
+					}
+				}
 				if err := s.Acquisition(
 					c.Context(),
 					selected.URL,
@@ -344,8 +389,18 @@ func newCommand(stdout, stderr io.Writer) *cobra.Command {
 						defer image.Close()
 						return image.Verify(selected.Product, selected.Version, selected.Build)
 					},
+					func(ctx context.Context, p acquisition.FetchProgress) error {
+						return classified("storage_failure", s.AdvanceAcquisitionProgress(ctx,
+							progressID, postgres.AcquisitionProgressUpdate{
+								Phase: p.Phase, CompletedBytes: &p.DownloadedBytes,
+								VerifiedBytes: &p.VerifiedBytes, TotalBytes: &p.TotalBytes,
+							}))
+					},
 				)
 				if err != nil {
+					if classify(err) == "storage_failure" {
+						return err
+					}
 					return classified("acquisition_failure", err)
 				}
 				receipt, _ := json.Marshal(
@@ -358,6 +413,10 @@ func newCommand(stdout, stderr io.Writer) *cobra.Command {
 					"verified",
 					receipt,
 				); err != nil {
+					return classified("storage_failure", err)
+				}
+				if err := s.AdvanceAcquisitionProgress(c.Context(), progressID,
+					postgres.AcquisitionProgressUpdate{Phase: "complete", State: "complete"}); err != nil {
 					return classified("storage_failure", err)
 				}
 				return emit("complete", a)
@@ -440,6 +499,7 @@ func newCommand(stdout, stderr io.Writer) *cobra.Command {
 						fmt.Fprintln(stderr, "OS staging will report partial coverage:", stagePlan.Reason)
 					}
 				}
+				var activeRun model.Run
 				run, err := workflow.InspectBatched(
 					c.Context(),
 					s,
@@ -450,8 +510,12 @@ func newCommand(stdout, stderr io.Writer) *cobra.Command {
 					inspection.RunPlanVersion,
 					inspection.Components,
 					func(ctx context.Context, done map[string]bool, emit func(string, []model.Observation, model.Coverage) error) error {
-						return a.InspectEach(ctx, identity, done, emit)
+						return a.InspectEach(ctx, identity, done, emit, func(component string) error {
+							return classified("storage_failure",
+								s.InspectionPhase(ctx, activeRun.ID, activeRun.LeaseToken, component))
+						})
 					},
+					func(started model.Run) error { activeRun = started; return nil },
 				)
 				if err != nil {
 					return fmt.Errorf("run %s: %w", run.ID, err)

@@ -20,9 +20,11 @@ func recoveryFixture(t *testing.T, s *Store, id string, plan []string) (model.Ru
 	if err := s.Register(ctx, artifact, []model.Target{target}); err != nil {
 		t.Fatal(err)
 	}
-	run := model.Run{ID: id, TargetID: target.ID, Started: time.Now(),
+	run := model.Run{
+		ID: id, TargetID: target.ID, Started: time.Now(),
 		InputSHA256: artifact.SHA256, InputSize: artifact.Size, Extractor: "fixture/v1",
-		Planned: plan, LeaseToken: "first-worker"}
+		Planned: plan, LeaseToken: "first-worker",
+	}
 	if err := s.Start(ctx, run); err != nil {
 		t.Fatal(err)
 	}
@@ -209,6 +211,11 @@ func TestBatchedCancellationRemainsDistinctFromCoverage(t *testing.T) {
 	stored, err := s.Run(context.Background(), run.ID)
 	if err != nil || stored.State != "cancelled" || len(stored.Coverage) != 0 {
 		t.Fatalf("cancellation invented final coverage: %+v %v", stored, err)
+	}
+	p, err := s.Progress(context.Background(), run.ID)
+	if err != nil || p.State != "cancelled" || p.CompletedUnits != 1 ||
+		p.PublishedBatches != 1 || p.DiagnosticCode != "cancelled" {
+		t.Fatalf("cancellation progress was not durable: %+v %v", p, err)
 	}
 	checkpoints, err := s.Checkpoints(context.Background(), run.ID)
 	if err != nil || checkpoints["manifest"].State != "complete" {

@@ -18,6 +18,8 @@ queries = [
     "SELECT row_to_json(x)::text FROM (SELECT * FROM finding_revision ORDER BY id) x",
     "SELECT row_to_json(x)::text FROM (SELECT * FROM finding_basis ORDER BY revision_id,role,observation_id,reference_revision_id) x",
     "SELECT row_to_json(x)::text FROM (SELECT * FROM finding_assessment_event ORDER BY revision_id,id) x",
+    "SELECT row_to_json(x)::text FROM (SELECT * FROM operation_progress ORDER BY id) x",
+    "SELECT row_to_json(x)::text FROM (SELECT * FROM operation_progress_event ORDER BY operation_id,sequence) x",
     "SELECT row_to_json(x)::text FROM (SELECT * FROM run_observation ORDER BY run_id,observation_id) x",
 ]
 subprocess.run(prefix + ["createdb", "-U", "goiosvm", name], check=True)

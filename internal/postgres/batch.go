@@ -44,6 +44,11 @@ func (s *Store) Resume(ctx context.Context, id, token string) error {
 	); err != nil {
 		return fmt.Errorf("Resume: update: %w", err)
 	}
+	if err := advanceProgress(ctx, tx, id, progressUpdate{
+		phase: "resumed", state: "running",
+	}); err != nil {
+		return fmt.Errorf("Resume: progress: %w", err)
+	}
 	if err := tx.Commit(ctx); err != nil {
 		return fmt.Errorf("Resume: Commit: %w", err)
 	}
@@ -70,15 +75,49 @@ func (s *Store) Heartbeat(ctx context.Context, id, token string) error {
 // ReconcileStale marks expired running claims as interrupted. Completed
 // batches and input identity are retained for a later verified resume.
 func (s *Store) ReconcileStale(ctx context.Context) ([]model.Run, error) {
-	_, err := s.pool.Exec(
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("ReconcileStale: Begin: %w", err)
+	}
+	defer rollback(ctx, tx)
+	rows, err := tx.Query(ctx, `SELECT id FROM analysis_run
+	 WHERE state='running' AND lease_expires<now() ORDER BY id FOR UPDATE`)
+	if err != nil {
+		return nil, fmt.Errorf("ReconcileStale: expired: %w", err)
+	}
+	expiredIDs := []string{}
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			rows.Close()
+			return nil, fmt.Errorf("ReconcileStale: expired ID: %w", err)
+		}
+		expiredIDs = append(expiredIDs, id)
+	}
+	err = rows.Err()
+	rows.Close()
+	if err != nil {
+		return nil, fmt.Errorf("ReconcileStale: expired rows: %w", err)
+	}
+	_, err = tx.Exec(
 		ctx,
 		`UPDATE analysis_run SET state='interrupted',lease_token=NULL,lease_expires=NULL
-		 WHERE state='running' AND lease_expires<now()`,
+		 WHERE id=ANY($1)`, expiredIDs,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("ReconcileStale: update: %w", err)
 	}
-	rows, err := s.pool.Query(ctx, `SELECT id FROM analysis_run
+	for _, id := range expiredIDs {
+		if err := advanceProgress(ctx, tx, id, progressUpdate{
+			phase: "interrupted", state: "interrupted", diagnostic: "worker_lost",
+		}); err != nil {
+			return nil, fmt.Errorf("ReconcileStale: progress: %w", err)
+		}
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("ReconcileStale: Commit: %w", err)
+	}
+	rows, err = s.pool.Query(ctx, `SELECT id FROM analysis_run
 	 WHERE state IN ('interrupted','failed','cancelled') ORDER BY started DESC`)
 	if err != nil {
 		return nil, fmt.Errorf("ReconcileStale: Query: %w", err)
@@ -116,7 +155,12 @@ func (s *Store) FailBatched(ctx context.Context, id, state, token string) error 
 	if state != "failed" && state != "cancelled" {
 		return errInvalidPublicationState
 	}
-	tag, err := s.pool.Exec(ctx, `UPDATE analysis_run
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("FailBatched: Begin: %w", err)
+	}
+	defer rollback(ctx, tx)
+	tag, err := tx.Exec(ctx, `UPDATE analysis_run
 	 SET state=$3,finished=now(),lease_token=NULL,lease_expires=NULL
 	 WHERE id=$1 AND lease_token=$2 AND state='running'`, id, token, state)
 	if err != nil {
@@ -124,6 +168,14 @@ func (s *Store) FailBatched(ctx context.Context, id, state, token string) error 
 	}
 	if tag.RowsAffected() != 1 {
 		return errRunLeaseUnavailable
+	}
+	if err := advanceProgress(ctx, tx, id, progressUpdate{
+		phase: state, state: state, diagnostic: state,
+	}); err != nil {
+		return fmt.Errorf("FailBatched: progress: %w", err)
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("FailBatched: Commit: %w", err)
 	}
 	return nil
 }
@@ -250,6 +302,22 @@ func (s *Store) PublishBatch(
 			return fmt.Errorf("PublishBatch: checkpoint: %w", err)
 		}
 	}
+	var completedUnits *int64
+	phase := "batch_published"
+	if batch.Final != nil {
+		phase = "checkpoint_published"
+		var count int64
+		if err := tx.QueryRow(ctx, `SELECT count(*) FROM run_checkpoint WHERE run_id=$1`,
+			run.ID).Scan(&count); err != nil {
+			return fmt.Errorf("PublishBatch: checkpoint count: %w", err)
+		}
+		completedUnits = &count
+	}
+	if err := advanceProgress(ctx, tx, run.ID, progressUpdate{
+		phase: phase, component: batch.Component, units: completedUnits, batches: 1,
+	}); err != nil {
+		return fmt.Errorf("PublishBatch: progress: %w", err)
+	}
 	if err := tx.Commit(ctx); err != nil {
 		return fmt.Errorf("PublishBatch: Commit: %w", err)
 	}
@@ -344,6 +412,12 @@ func (s *Store) Finish(ctx context.Context, id, token string) (model.Run, error)
 		encoded,
 	); err != nil {
 		return model.Run{}, fmt.Errorf("Finish: update: %w", err)
+	}
+	completed := int64(len(checkpoints))
+	if err := advanceProgress(ctx, tx, id, progressUpdate{
+		phase: "finalized", state: finalState, units: &completed,
+	}); err != nil {
+		return model.Run{}, fmt.Errorf("Finish: progress: %w", err)
 	}
 	if err := tx.Commit(ctx); err != nil {
 		// A lost commit response is ambiguous. Re-read on a fresh connection;
