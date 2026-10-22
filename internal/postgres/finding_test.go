@@ -147,8 +147,10 @@ func TestRevisionChainsPreserveConflictingEvidence(t *testing.T) {
 	foundObservedCorrection := false
 	for _, revision := range observed.Revisions {
 		if revision.Supersedes == correction.ID && revision.Basis == "observed" {
-			foundObservedCorrection = revision.Observation != nil && revision.Observation.ID == o2.ID &&
-				string(revision.Value) == string(o2.Value) && revision.Presence == o2.Presence
+			foundObservedCorrection = revision.Observation != nil &&
+				revision.Observation.ID == o2.ID &&
+				string(revision.Value) == string(o2.Value) &&
+				revision.Presence == o2.Presence
 		}
 	}
 	if !foundObservedCorrection {
@@ -309,7 +311,14 @@ func TestMigrationBackfillsLegacyObservedRevision(t *testing.T) {
 		ID: "legacy-run", TargetID: target.ID, Started: time.Now(), State: "partial",
 		Coverage: []model.Coverage{{Component: "tree", State: "complete"}},
 	}
-	if err = s.Start(ctx, run); err != nil {
+	if _, err = s.pool.Exec(
+		ctx,
+		"INSERT INTO analysis_run(id,target_id,state,started,coverage) VALUES($1,$2,'running',$3,$4)",
+		run.ID,
+		run.TargetID,
+		run.Started,
+		`[]`,
+	); err != nil {
 		t.Fatal(err)
 	}
 	document, err := json.Marshal(o)
@@ -347,7 +356,8 @@ func TestMigrationBackfillsLegacyObservedRevision(t *testing.T) {
 		t.Fatal("legacy chain not backfilled", err)
 	}
 	legacy := chains[0].Revisions[0]
-	if legacy.ID != "legacy-revision" || legacy.Observation == nil || legacy.Observation.ID != o.ID ||
+	if legacy.ID != "legacy-revision" || legacy.Observation == nil ||
+		legacy.Observation.ID != o.ID ||
 		len(legacy.References) != 1 ||
 		legacy.References[0].ObservationID != o.ID {
 		t.Fatal("legacy direct evidence link lost", legacy)

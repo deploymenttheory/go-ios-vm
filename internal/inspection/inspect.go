@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"sort"
 	"strings"
 
 	"github.com/blacktop/ipsw/pkg/img4"
@@ -65,140 +64,17 @@ type Result struct {
 
 func (a *Archive) Inspect(ctx context.Context, identity int) (Result, error) {
 	result := Result{Observations: []model.Observation{}, Coverage: []model.Coverage{}}
-	if identity < 0 || identity >= len(a.Targets) {
-		return result, errIdentityIndexOutsideBuildManifest
-	}
-	t := a.Targets[identity]
-	source := model.Location{
-		ArtifactID: t.ArtifactID,
-		Member:     "BuildManifest.plist",
-		Entry:      a.members["BuildManifest.plist"],
-		Coordinate: "plist-selector",
-		Selector:   fmt.Sprintf("/BuildIdentities/%d", identity),
-		Length:     uint64(len(a.manifest)),
-	}
-	add := func(subject, property string, value any, src model.Location, evidence model.Blob) error {
-		o, e := model.NewObservation(t, subject, property, value, src, evidence, Extractor)
-		if e == nil {
-			result.Observations = append(result.Observations, o)
-		}
-		if e != nil {
-			return fmt.Errorf("Inspect: model.NewObservation: %w", e)
-		}
-		return nil
-	}
-	manifestEvidence := model.NewBlob(a.manifest)
-	if err := add(
-		"target",
-		"identity",
-		map[string]any{
-			"products": t.Products,
-			"board":    t.Board,
-			"version":  t.Version,
-			"build":    t.Build,
-			"variant":  t.Variant,
-		},
-		source,
-		manifestEvidence,
-	); err != nil {
-		return result, err
-	}
-	names := make([]string, 0, len(t.Components))
-	for name := range t.Components {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-	for _, name := range names {
-		if err := ctx.Err(); err != nil {
-			return result, fmt.Errorf("Inspect: Err: %w", err)
-		}
-		path := t.Components[name]
-		src := source
-		src.Selector += "/Manifest/" + escape(name) + "/Info/Path"
-		_, exists := a.members[path]
-		if err := add(
-			"component/"+name,
-			"archive_member",
-			map[string]any{"path": path, "present": exists},
-			src,
-			manifestEvidence,
-		); err != nil {
-			return result, err
-		}
-	}
-	result.Coverage = append(
-		result.Coverage,
-		model.Coverage{Component: "manifest", State: "complete"},
-	)
-	for _, component := range []string{"DeviceTree", "KernelCache"} {
-		if err := ctx.Err(); err != nil {
-			return result, fmt.Errorf("Inspect: Err: %w", err)
-		}
-		name, ok := t.Components[component]
-		if !ok {
-			result.Coverage = append(
-				result.Coverage,
-				model.Coverage{
-					Component: component,
-					State:     "unexamined",
-					Reason:    "component not declared by selected identity",
-				},
-			)
-			continue
-		}
-		limit := uint64(TreeLimit)
-		if component == "KernelCache" {
-			limit = KernelLimit
-		}
-		raw, index, err := a.Read(ctx, name, limit)
-		var observations []model.Observation
-		if err == nil {
-			var payload []byte
-			var transforms []string
-			payload, transforms, err = decodePayload(raw, int(limit))
-			if err == nil {
-				src := model.Location{
-					ArtifactID: t.ArtifactID,
-					Member:     name,
-					Entry:      index,
-					Coordinate: "decoded-payload-byte",
-					Transforms: transforms,
-				}
-				if component == "DeviceTree" {
-					observations, err = readTree(ctx, t, payload, raw, src)
-				} else {
-					observations, err = readKernel(t, payload, raw, src)
-				}
-			}
-		}
-		c := model.Coverage{Component: component, State: "complete"}
-		if err != nil {
-			c.State = "partial"
-			c.Reason = err.Error()
-		}
-		result.Observations = append(result.Observations, observations...)
-		result.Coverage = append(result.Coverage, c)
-	}
-	diskObservations, diskErr := a.inspectDisk(ctx, t)
-	result.Observations = append(result.Observations, diskObservations...)
-	diskCoverage := model.Coverage{Component: "disk-metadata", State: "complete"}
-	if diskErr != nil {
-		diskCoverage.State = "partial"
-		diskCoverage.Reason = diskErr.Error()
-	}
-	result.Coverage = append(result.Coverage, diskCoverage)
-	result.Coverage = append(
-		result.Coverage,
-		model.Coverage{
-			Component: "filesystem-content",
-			State:     "unexamined",
-			Reason:    "filesystem content inspection is not implemented",
+	err := a.InspectEach(
+		ctx,
+		identity,
+		nil,
+		func(_ string, observations []model.Observation, coverage model.Coverage) error {
+			result.Observations = append(result.Observations, observations...)
+			result.Coverage = append(result.Coverage, coverage)
+			return nil
 		},
 	)
-	if err := ctx.Err(); err != nil {
-		return result, fmt.Errorf("Inspect: Err: %w", err)
-	}
-	return result, a.Unchanged()
+	return result, err
 }
 
 func decodePayload(raw []byte, limit int) ([]byte, []string, error) {

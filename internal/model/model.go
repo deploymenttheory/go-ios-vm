@@ -21,7 +21,10 @@ var (
 	errEvidenceDigestMismatch       = errors.New("evidence digest mismatch")
 )
 
-const SchemaVersion = 1
+const (
+	SchemaVersion           = 1
+	MaxObservationsPerBatch = 128
+)
 
 type Artifact struct {
 	ID     string `json:"id"`
@@ -67,12 +70,22 @@ type Coverage struct {
 	State     string `json:"state"`
 	Reason    string `json:"reason,omitempty"`
 }
+type ObservationBatch struct {
+	Component    string        `json:"component"`
+	Ordinal      int           `json:"ordinal"`
+	Observations []Observation `json:"observations"`
+	Final        *Coverage     `json:"final,omitempty"`
+}
 type Run struct {
-	ID       string     `json:"id"`
-	TargetID string     `json:"target_id"`
-	State    string     `json:"state"`
-	Started  time.Time  `json:"started"`
-	Coverage []Coverage `json:"coverage"`
+	ID          string     `json:"id"`
+	TargetID    string     `json:"target_id"`
+	State       string     `json:"state"`
+	Started     time.Time  `json:"started"`
+	InputSHA256 string     `json:"input_sha256,omitempty"`
+	InputSize   int64      `json:"input_size,omitempty"`
+	Extractor   string     `json:"extractor,omitempty"`
+	Planned     []string   `json:"planned_components,omitempty"`
+	Coverage    []Coverage `json:"coverage"`
 }
 type Finding struct {
 	ID          string      `json:"id"`
