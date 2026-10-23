@@ -41,11 +41,11 @@ and iOS 15.0 `19A346` (6,959,737,743 bytes; SHA-256
 `13d574566eec7be3b9e23ec93c2374cabf7f150be63aafd7f8479d7d162480e0`)
 archives were inspected at identity 1 (`iPhone12,1`, `n104ap`) on both arm64
 hosts with this branch based on PR #53 and a local upstream go-apfs-v3 composite commit
-`52e6d48`. That composite contains [UDIF LZFSE PR #147](https://github.com/deploymenttheory/go-apfs-v3/pull/147),
-which remains open, and [decmpfs type-4 PR #149](https://github.com/deploymenttheory/go-apfs-v3/pull/149),
-which has merged. Upstream [CI limit PR #150](https://github.com/deploymenttheory/go-apfs-v3/pull/150)
-has merged; [snapshot unmount PR #151](https://github.com/deploymenttheory/go-apfs-v3/pull/151)
-remains open. These are trial measurements, not a claim that the released
+`52e6d48`. That composite contains work from [UDIF LZFSE PR #147](https://github.com/deploymenttheory/go-apfs-v3/pull/147)
+and [decmpfs type-4 PR #149](https://github.com/deploymenttheory/go-apfs-v3/pull/149).
+Upstream [CI limit PR #150](https://github.com/deploymenttheory/go-apfs-v3/pull/150)
+and [snapshot unmount PR #151](https://github.com/deploymenttheory/go-apfs-v3/pull/151)
+address native verification. These are trial measurements, not a claim that the released
 `go-apfs-v3 v0.1.0` dependency can traverse this APFS image.
 
 | Image | Host | Run ID | Wall | User CPU | System CPU | Reported peak RSS | Findings | Retained distinct bytes | PostgreSQL table/index bytes | ZIP staging |
