@@ -5,7 +5,7 @@ const route = new URLSearchParams(window.location.search);
 const selectedTargetID = route.get("target") || "";
 const selectedRunID = route.get("run") || "";
 const view = route.get("view") === "observations" || route.has("observation") ? "observations" : "findings";
-const screen = route.get("screen") === "monitor" ? "monitor" : "browse";
+const screen = ["monitor", "graph"].includes(route.get("screen")) ? route.get("screen") : "browse";
 
 class ExactInteger {
   constructor(text) { this.text = text; }
@@ -786,7 +786,8 @@ async function start() {
     startMonitor();
     return;
   }
-  byId("browse-nav").setAttribute("aria-current", "page");
+  byId(screen === "graph" ? "graph-nav" : "browse-nav").setAttribute("aria-current", "page");
+  byId("graph-nav").href = withRoute({ screen: "graph", run: "", finding: "", observation: "", evidence: "" });
   for (const [id, key] of [["product", "product"], ["build", "build"], ["identity", "identity"],
     ["run-state", "run_state"], ["subject", "subject"], ["property", "property"],
     ["basis", "basis"], ["assessment", "assessment"]]) setFormValue(id, key);
@@ -794,6 +795,14 @@ async function start() {
   checkHealth();
   setInterval(checkHealth, 10000);
   loadTargets();
+  if (screen === "graph") {
+    document.title = "Relationship graph · go-ios-vm";
+    byId("page-title").textContent = "Review firmware relationships";
+    byId("page-lede").textContent = "Follow retained components, findings, observations, and evidence within one exact firmware identity.";
+    byId("welcome").hidden = true;
+    await startGraph();
+    return;
+  }
   if (!selectedTargetID) return;
   byId("welcome").hidden = true;
   byId("workspace").hidden = false;

@@ -145,6 +145,10 @@ func newHandler(check func(context.Context) error, store *postgres.Store) http.H
 			serveAsset(w, r, static, "app.js", "text/javascript; charset=utf-8")
 		case "/assets/style.css":
 			serveAsset(w, r, static, "style.css", "text/css; charset=utf-8")
+		case "/assets/graph.js":
+			serveAsset(w, r, static, "graph.js", "text/javascript; charset=utf-8")
+		case "/assets/graph.css":
+			serveAsset(w, r, static, "graph.css", "text/css; charset=utf-8")
 		default:
 			if strings.HasPrefix(r.URL.Path, "/api/") {
 				if serveProgress(w, r, store) {
