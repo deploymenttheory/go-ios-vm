@@ -22,6 +22,20 @@ An artifact response gives its digest, size, and number of registered source loc
 
 An acquisition response gives the recorded source status, selected product/version/build when present, retained evidence ID and its completeness flag, and a URL origin when parseable. The API omits URL credentials, path, and query. A failed source includes `partial_reason` because its search scope is incomplete; an empty result from such an attempt does not establish absence.
 
+The browser uses `product`, `build`, and optional `identity` to find a target. Selecting it pins `target` in the URL; `run`, `finding`, `observation`, and `evidence` identify subsequent detail. The `view` parameter selects findings or observations. Subject and property filters are prefixes. Component, basis, and assessment filters are exact. Pagination uses a cursor in the URL and always offers a return to the first page. Finding results remain scoped to the selected target across retained runs; selecting a run narrows the observation list. Refreshing a detail URL repeats the read from PostgreSQL, so source-cache deletion does not remove retained evidence.
+
+The browser renders basis, assessment, and presence as separate labels. It shows absent, unexamined, zero, failed, and partial coverage distinctly, with recorded reasons. Source chains name the artifact, image member, coordinate and selector; a retained-byte preview is capped at 512 bytes in the browser and checked against its stored digest. The UI does not claim a completed search from an empty result list or an unfinished run.
+
+To repeat the browser smoke flow with a local Chromium binary, set `GOIOSVM_TEST_DATABASE_URL` to the development PostgreSQL URL and run:
+
+```sh
+GOIOSVM_BROWSER=/path/to/chromium \
+GOIOSVM_BROWSER_SCREENSHOT_DIR=/tmp/go-ios-vm-ui \
+go test ./internal/webui -run TestBrowserDeepLinkRetainsExactEvidence -count=1 -v
+```
+
+The test creates and removes an isolated schema. It opens a deep link after deleting the fixture archive, checks the retained evidence preview and exact uint64 display, and verifies distinct absent, zero, failed, and unsupported states plus escaped long text. The optional screenshot directory receives desktop and narrow-window PNGs.
+
 Run lists show durable run state, target, input digest/size, extractor, and planned components. A run detail adds committed component checkpoints and batch counts. `final_coverage_available` is true only when the final coverage ledger has records; `final_coverage` then gives each recorded state and reason. Running, failed, cancelled, or interrupted runs can have completed checkpoints without final coverage. Uncheckpointed work is not presented as progress, and the API does not infer a completion percentage. All run detail reads use one read-only database snapshot. Each detail caps planned components, checkpoints, coverage rows, and batch groups at 128; oversized data returns a safe service error.
 
 Progress URLs use the durable acquisition attempt ID or inspection run ID, not the numeric catalog acquisition record ID. A snapshot returns `data.progress`, `effective_state`, `stale`, and decimal-string `cursor`. Inspection snapshots also include `data.run`, with committed checkpoints and `final_coverage_available`. The progress snapshot, retained events, run ledger, and lease status are read in one read-only PostgreSQL transaction, so a server restart or second process sees the same committed state. Unknown byte and unit totals are absent, and counters do not imply that inspection succeeded. Only the final run state and coverage ledger establish a complete or partial inspection.

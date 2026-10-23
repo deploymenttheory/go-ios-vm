@@ -101,7 +101,7 @@ func TestUIServeExistingDatabaseAndShutdown(t *testing.T) {
 	data, err = io.ReadAll(resp.Body)
 	resp.Body.Close()
 	if err != nil || resp.StatusCode != http.StatusOK ||
-		!bytes.Contains(data, []byte("Inspection workspace")) {
+		!bytes.Contains(data, []byte("Explore an inspection")) {
 		t.Fatalf("shell: status=%d body=%s err=%v", resp.StatusCode, data, err)
 	}
 	var cliOut, cliErr bytes.Buffer
