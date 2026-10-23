@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Inspection · go-ios-vm</title>
   <link rel="stylesheet" href="/assets/style.css">
+  <link rel="stylesheet" href="/assets/graph.css">
+  <script defer src="/assets/graph.js"></script>
   <script defer src="/assets/app.js"></script>
 </head>
 <body>
@@ -17,11 +19,12 @@
   </header>
   <main id="main" class="shell">
     <div class="page-heading">
-      <div><p class="eyebrow">Retained evidence</p><h1>Explore an inspection</h1><p class="lede">Choose an exact firmware identity, then browse its runs, findings, and source evidence.</p></div>
+      <div><p class="eyebrow">Retained evidence</p><h1 id="page-title">Explore an inspection</h1><p id="page-lede" class="lede">Choose an exact firmware identity, then browse its runs, findings, and source evidence.</p></div>
       <span class="read-only">Read only</span>
     </div>
+    <nav class="primary-nav" aria-label="Main views"><a id="browse-nav" href="/">Browse evidence</a><a id="monitor-nav" href="/?screen=monitor">Monitor work</a><a id="graph-nav" href="/?screen=graph">Graph</a></nav>
     <div id="global-error" class="notice notice-error" role="alert" hidden></div>
-    <div class="layout">
+    <div id="browse-layout" class="layout">
       <aside class="sidebar" aria-label="Firmware identity selection">
         <section class="panel" aria-labelledby="target-search-title">
           <div class="section-title"><span class="step">01</span><h2 id="target-search-title">Select target</h2></div>
@@ -76,7 +79,24 @@
             <div id="result-detail" aria-live="polite"></div>
           </section>
         </div>
+        <section id="graph-screen" class="panel" aria-label="Firmware relationship graph" hidden></section>
       </div>
+    </div>
+    <div id="monitor-workspace" class="monitor-workspace" hidden>
+      <div class="monitor-intro"><div><p class="eyebrow">Committed progress</p><h2 id="monitor-title" tabindex="-1">Acquisition and inspection</h2><p class="hint">Status is read from PostgreSQL. A download can finish while inspection remains incomplete.</p></div><span id="monitor-connection" class="hint" role="status" aria-live="polite">Connecting…</span></div>
+      <form id="monitor-filter" class="inline-form panel" aria-label="Filter operations">
+        <label>Kind <select id="monitor-kind"><option value="">Acquisition and inspection</option><option value="acquisition">Acquisition</option><option value="inspection">Inspection</option></select></label>
+        <button class="button" type="submit">Filter operations</button>
+      </form>
+      <div class="monitor-columns">
+        <section class="panel" aria-labelledby="active-title"><div class="section-title"><span class="step">01</span><div><h2 id="active-title">Active and stale</h2><p class="section-subtitle">Running operations remain visible if the reader reconnects.</p></div></div><div id="monitor-active" class="result-region" aria-live="polite"></div><div id="monitor-active-pages" class="pagination" hidden></div></section>
+        <section class="panel" aria-labelledby="history-title"><div class="section-title"><span class="step">02</span><div><h2 id="history-title">Recent history</h2><p class="section-subtitle">Completed, partial, failed, cancelled and interrupted work.</p></div></div><div id="monitor-history" class="result-region" aria-live="polite"></div><div id="monitor-pages" class="pagination" hidden></div></section>
+      </div>
+      <section id="monitor-detail-panel" class="panel" aria-labelledby="monitor-detail-title" hidden>
+        <div class="section-title"><span class="step">03</span><div><h2 id="monitor-detail-title" tabindex="-1">Operation detail</h2><p id="monitor-detail-status" class="section-subtitle" role="status" aria-live="polite"></p></div></div>
+        <div id="monitor-detail"></div>
+        <div class="subsection"><h3>Committed phase history</h3><p id="monitor-gap" class="hint" hidden></p><div id="monitor-events" aria-live="polite"></div></div>
+      </section>
     </div>
     <footer>Local, read-only view of PostgreSQL evidence. The source IPSW cache may be absent.</footer>
   </main>

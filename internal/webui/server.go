@@ -113,7 +113,7 @@ func newHandler(check func(context.Context) error, store *postgres.Store) http.H
 			if store != nil {
 				endpoints = append(endpoints,
 					"/api/v1/artifacts", "/api/v1/targets",
-					"/api/v1/acquisitions", "/api/v1/runs",
+					"/api/v1/acquisitions", "/api/v1/runs", "/api/v1/progress",
 					"/api/v1/acquisitions/{attempt_id}/progress",
 					"/api/v1/acquisitions/{attempt_id}/progress/events",
 					"/api/v1/runs/{run_id}/progress",
@@ -145,9 +145,16 @@ func newHandler(check func(context.Context) error, store *postgres.Store) http.H
 			serveAsset(w, r, static, "app.js", "text/javascript; charset=utf-8")
 		case "/assets/style.css":
 			serveAsset(w, r, static, "style.css", "text/css; charset=utf-8")
+		case "/assets/graph.js":
+			serveAsset(w, r, static, "graph.js", "text/javascript; charset=utf-8")
+		case "/assets/graph.css":
+			serveAsset(w, r, static, "graph.css", "text/css; charset=utf-8")
 		default:
 			if strings.HasPrefix(r.URL.Path, "/api/") {
 				if serveProgress(w, r, store) {
+					return
+				}
+				if store != nil && serveProgressList(w, r, store) {
 					return
 				}
 				if store != nil && serveBrowse(w, r, store) {
