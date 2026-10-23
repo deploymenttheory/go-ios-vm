@@ -6,7 +6,7 @@ and [iOS 15](qualification/iphone12-1-ios15.md) records contain the host,
 command, run ID and digest for each measurement. Both OS members are stored ZIP
 entries and both inspections stop at the upstream UDIF LZFSE codec gap, so the
 baseline measurements do not cover real-image APFS traversal. Later trials of
-both images with the still-open upstream codec work are recorded below.
+both images with a local upstream codec composite are recorded below.
 
 | Pinned image | IPSW bytes | OS member bytes | ZIP staging | Highest observed process RSS | Representative retained source bytes |
 | --- | ---: | ---: | ---: | ---: | ---: |
@@ -41,11 +41,11 @@ and iOS 15.0 `19A346` (6,959,737,743 bytes; SHA-256
 `13d574566eec7be3b9e23ec93c2374cabf7f150be63aafd7f8479d7d162480e0`)
 archives were inspected at identity 1 (`iPhone12,1`, `n104ap`) on both arm64
 hosts with this branch based on PR #53 and a local upstream go-apfs-v3 composite commit
-`52e6d48`. That composite contains the open [UDIF LZFSE PR #147](https://github.com/deploymenttheory/go-apfs-v3/pull/147)
-and [decmpfs type-4 PR #149](https://github.com/deploymenttheory/go-apfs-v3/pull/149).
-Upstream [CI limit PR #150](https://github.com/deploymenttheory/go-apfs-v3/pull/150)
-and [snapshot unmount PR #151](https://github.com/deploymenttheory/go-apfs-v3/pull/151)
-are also open. These are trial measurements, not a claim that the released
+`52e6d48`. That composite contains [UDIF LZFSE PR #147](https://github.com/deploymenttheory/go-apfs-v3/pull/147),
+which remains open, and [decmpfs type-4 PR #149](https://github.com/deploymenttheory/go-apfs-v3/pull/149),
+which has merged. Upstream [CI limit PR #150](https://github.com/deploymenttheory/go-apfs-v3/pull/150)
+has merged; [snapshot unmount PR #151](https://github.com/deploymenttheory/go-apfs-v3/pull/151)
+remains open. These are trial measurements, not a claim that the released
 `go-apfs-v3 v0.1.0` dependency can traverse this APFS image.
 
 | Image | Host | Run ID | Wall | User CPU | System CPU | Reported peak RSS | Findings | Retained distinct bytes | PostgreSQL table/index bytes | ZIP staging |
