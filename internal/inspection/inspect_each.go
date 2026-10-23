@@ -19,7 +19,7 @@ var Components = []string{
 
 // RunPlanVersion covers component semantics that do not change the stable
 // observation extractor identity. A resume must use the same plan version.
-const RunPlanVersion = Extractor + ";filesystem=" + filesystemExtractor
+const RunPlanVersion = Extractor + ";filesystem=" + filesystemExtractor + ";native-worker=v1"
 
 // InspectEach emits one completed component at a time. The caller can commit
 // each component before parsing the next. A component marked done is never
@@ -181,7 +181,7 @@ func (a *Archive) inspectPayloadComponent(
 	if err == nil {
 		var payload []byte
 		var transforms []string
-		payload, transforms, err = decodePayload(raw, int(limit))
+		payload, transforms, err = decodePayload(ctx, raw, int(limit))
 		if err == nil {
 			src := model.Location{
 				ArtifactID: t.ArtifactID, Member: name, Entry: index,
@@ -198,6 +198,9 @@ func (a *Archive) inspectPayloadComponent(
 	if err != nil {
 		c.State = "partial"
 		c.Reason = err.Error()
+	}
+	if ctx.Err() != nil {
+		return fmt.Errorf("inspect %s: %w", component, ctx.Err())
 	}
 	if err := a.Unchanged(); err != nil {
 		return err
