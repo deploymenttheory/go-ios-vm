@@ -132,6 +132,12 @@ func TestBrowserDeepLinkRetainsExactEvidence(t *testing.T) {
 	if err != nil || len(findings) != 1 {
 		t.Fatalf("seed finding: %v, count=%d", err, len(findings))
 	}
+	if _, err := store.AddRevision(ctx, model.RevisionDraft{
+		TargetID: target.ID, Subject: "device", Property: "register",
+		Basis: "unknown", Rationale: "runtime value remains unexamined", Author: "fixture",
+	}); err != nil {
+		t.Fatalf("seed unknown revision: %v", err)
+	}
 	if err := os.Remove(cachePath); err != nil {
 		t.Fatal(err)
 	}
@@ -198,6 +204,7 @@ setInterval(() => {
 	for _, want := range []string{
 		"iPhone12,1 · 18A373", "Identity", "DeviceTree", "Committed checkpoints",
 		"device · register", "Basis: observed", "Assessment: unreviewed",
+		"Basis: unknown", "runtime value remains unexamined",
 		"18446744073709551615", "/device/value", "Digest verified",
 		"Absent: no value was recorded.", "<pre class=\"value mono\">0</pre>",
 		"unsupported codec", "data-tone=\"bad\">failed</span>",

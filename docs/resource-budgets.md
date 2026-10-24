@@ -6,7 +6,9 @@ and [iOS 15](qualification/iphone12-1-ios15.md) records contain the host,
 command, run ID and digest for each measurement. Both OS members are stored ZIP
 entries and both inspections stop at the upstream UDIF LZFSE codec gap, so the
 baseline measurements do not cover real-image APFS traversal. Later trials of
-both images with a local upstream codec composite are recorded below.
+both images with a local upstream codec composite are recorded below. The later
+[integrated UI qualification](qualification/local-ui-integration.md) used a pinned,
+unreleased `go-apfs-v3` main commit for both exact archives.
 
 | Pinned image | IPSW bytes | OS member bytes | ZIP staging | Highest observed process RSS | Representative retained source bytes |
 | --- | ---: | ---: | ---: | ---: | ---: |
@@ -104,6 +106,7 @@ The published peak RSS is an observed baseline, not a memory cap. For a
 compressed KernelCache, bounded ZIP input and decoded output can each reach
 about 128 MiB in different processes, before parser objects and runtime
 overhead. DeviceTree uses 16 MiB caps; OS Deflate staging streams through a
-1 MiB copy buffer. There is no hard whole-process RSS/CPU limit. First-tooling
-acceptance [#20](https://github.com/deploymenttheory/go-ios-vm/issues/20)
-still depends on the upstream codec work and integrated two-image UI qualification.
+1 MiB copy buffer. There is no hard whole-process RSS/CPU limit. The merged
+upstream codec fixes and integrated UI trial do not close the independent
+[resource gate #52](https://github.com/deploymenttheory/go-ios-vm/issues/52) or
+[first-tooling acceptance #20](https://github.com/deploymenttheory/go-ios-vm/issues/20).

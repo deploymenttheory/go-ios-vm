@@ -30,7 +30,8 @@ const (
 	filesystemDepthLimit = 8
 	filesystemFileLimit  = 64 << 10
 	filesystemTotalLimit = 8 << 20
-	filesystemExtractor  = "go-ios-vm/filesystem-v1;go-apfs-v3=v0.1.0"
+	goAPFSVersion        = "v0.1.1-0.20261024140912-7566f1030c62"
+	filesystemExtractor  = "go-ios-vm/filesystem-v1;go-apfs-v3=" + goAPFSVersion
 )
 
 type filesystemScan struct {

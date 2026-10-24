@@ -5,7 +5,7 @@ go 1.27.1
 require (
 	github.com/blacktop/ipsw v0.0.0-prerelease.0.20261022061526-12847a212ba1
 	github.com/blacktop/lzfse-cgo v1.2.0
-	github.com/deploymenttheory/go-apfs-v3 v0.1.0
+	github.com/deploymenttheory/go-apfs-v3 v0.1.1-0.20261024140912-7566f1030c62
 	github.com/jackc/pgx/v5 v5.11.0
 	github.com/jackc/tern/v2 v2.4.3
 	github.com/spf13/cobra v1.10.2

@@ -38,7 +38,10 @@ var (
 // Stored images already cap captured source reads at this size. A Deflate
 // member needs its complete encoded stream to replay arbitrary decoded reads;
 // a prefix cannot support a disk observation after the original is removed.
-const diskEvidenceLimit = 32 << 20
+const (
+	diskEvidenceLimit = 32 << 20
+	diskExtractor     = "go-ios-vm/disk-v1;go-apfs-v3=" + goAPFSVersion
+)
 
 type readRange struct {
 	Offset int64  `json:"offset,string"`
@@ -317,7 +320,7 @@ func (a *Archive) inspectDisk(
 			exactJSON(item.value),
 			loc,
 			blob,
-			"go-ios-vm/disk-v1;go-apfs-v3=v0.1.0",
+			diskExtractor,
 		)
 		if err != nil {
 			return out, contentObservations, filesystemCoverage,

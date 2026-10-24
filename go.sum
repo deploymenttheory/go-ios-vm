@@ -65,6 +65,8 @@ github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSs
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/deploymenttheory/go-apfs-v3 v0.1.0 h1:CoAGS2E0NFnudhF8gleHl7ja9GGl9Vs3YVS+wKO0Puw=
 github.com/deploymenttheory/go-apfs-v3 v0.1.0/go.mod h1:UMSzsfeW80C695TXi67vFFSxzTuMFRfLPyOU0Fz2GNA=
+github.com/deploymenttheory/go-apfs-v3 v0.1.1-0.20261024140912-7566f1030c62 h1:m0nBY1xjY+M05NYLkYIN8jFr6CMlXimJxFkp53lv7rA=
+github.com/deploymenttheory/go-apfs-v3 v0.1.1-0.20261024140912-7566f1030c62/go.mod h1:UMSzsfeW80C695TXi67vFFSxzTuMFRfLPyOU0Fz2GNA=
 github.com/dlclark/regexp2/v2 v2.2.1 h1:mf4KkFUj0gJuarK8P+LgiS+Lit7m9N1yAwEfPbee7R0=
 github.com/dlclark/regexp2/v2 v2.2.1/go.mod h1:avUrQvPaLz2DrFNHJF0taWAFFX2C1GMSSoeiqFjcBmU=
 github.com/dustin/go-humanize v1.1.0 h1:dbKTrvD0klcbBV/h4AWJdMuZogJACoMlvWIWZ5b2xWg=
