@@ -1,0 +1,231 @@
+{
+  "schema_version": 1,
+  "research_date": "2026-10-24",
+  "scope": "Compiler and installed SDK assessment; no app, Simulator or iOS VM execution.",
+  "toolchain": {
+    "xcode": "27.1",
+    "xcode_build": "27A9275",
+    "apple_clang": "21.0.0",
+    "apple_clang_build": "clang-2100.3.34.2",
+    "sdk_version": "27.1",
+    "source": "probe.m",
+    "source_sha256": "9376b6752a76e443326528db9528294af9354dced2c607bd012e59e2ae505c30",
+    "language": "Objective-C",
+    "flags": [
+      "-fobjc-arc",
+      "-fblocks"
+    ],
+    "module_profiles": [
+      "-fmodules with a temporary module cache",
+      "-fno-modules for textual definitions"
+    ]
+  },
+  "successful_compiler_invocations": {
+    "json_ast_modules": 8,
+    "json_ast_textual": 8,
+    "text_ast_availability": 1,
+    "object_compiles": 2,
+    "preprocessor_macros": 2
+  },
+  "objects": [
+    {
+      "platform": "iPhoneSimulator",
+      "target": "arm64-apple-ios27.1-simulator",
+      "compile_exit": 0,
+      "macros": {
+        "TARGET_OS_IOS": "1",
+        "TARGET_OS_IPHONE": "1",
+        "TARGET_OS_MAC": "1",
+        "TARGET_OS_MACCATALYST": "0",
+        "TARGET_OS_OSX": "0",
+        "TARGET_OS_SIMULATOR": "1",
+        "__arm64__": "1"
+      },
+      "stderr": "",
+      "object_sha256": "a1d7340bc822969ab3c5fcaa1b29efd6283ebbb371a366b3078065052f5db4b5",
+      "build_version": "cmd LC_BUILD_VERSION\n  cmdsize 24\n platform 7\n    minos 27.1\n      sdk 27.1\n   ntools 0"
+    },
+    {
+      "platform": "iPhoneOS",
+      "target": "arm64-apple-ios27.1",
+      "compile_exit": 0,
+      "macros": {
+        "TARGET_OS_IOS": "1",
+        "TARGET_OS_IPHONE": "1",
+        "TARGET_OS_MAC": "1",
+        "TARGET_OS_MACCATALYST": "0",
+        "TARGET_OS_OSX": "0",
+        "TARGET_OS_SIMULATOR": "0",
+        "__arm64__": "1"
+      },
+      "stderr": "",
+      "object_sha256": "bbae69df733cd9d14d5493e40ba640fb675ebf92345bbf89242dbf1928d40ce7",
+      "build_version": "cmd LC_BUILD_VERSION\n  cmdsize 24\n platform 2\n    minos 27.1\n      sdk 27.1\n   ntools 0"
+    }
+  ],
+  "module_dump_observation": {
+    "CAMetalLayer_direct_methods": 0,
+    "CAMetalLayer_direct_properties": 0,
+    "UIWindow_filter_matches_related_names": true,
+    "meaning": "A successful filtered dump of imported module references did not establish complete class-member coverage."
+  },
+  "textual_ast_definitions": [
+    {
+      "platform": "iPhoneSimulator",
+      "symbol": "UIWindow",
+      "compiler_exit": 0,
+      "direct_properties": 7,
+      "direct_methods": 24,
+      "json_documents": 75
+    },
+    {
+      "platform": "iPhoneSimulator",
+      "symbol": "MTLCreateSystemDefaultDevice",
+      "compiler_exit": 0,
+      "direct_properties": 0,
+      "direct_methods": 0,
+      "json_documents": 1
+    },
+    {
+      "platform": "iPhoneSimulator",
+      "symbol": "CAMetalLayer",
+      "compiler_exit": 0,
+      "direct_properties": 14,
+      "direct_methods": 27,
+      "json_documents": 2
+    },
+    {
+      "platform": "iPhoneOS",
+      "symbol": "UIWindow",
+      "compiler_exit": 0,
+      "direct_properties": 7,
+      "direct_methods": 24,
+      "json_documents": 75
+    },
+    {
+      "platform": "iPhoneOS",
+      "symbol": "MTLCreateSystemDefaultDevice",
+      "compiler_exit": 0,
+      "direct_properties": 0,
+      "direct_methods": 0,
+      "json_documents": 1
+    },
+    {
+      "platform": "iPhoneOS",
+      "symbol": "CAMetalLayer",
+      "compiler_exit": 0,
+      "direct_properties": 14,
+      "direct_methods": 27,
+      "json_documents": 2
+    },
+    {
+      "platform": "iPhoneSimulator",
+      "symbol": "MTLDevice",
+      "compiler_exit": 0,
+      "direct_properties": 35,
+      "direct_methods": 106
+    },
+    {
+      "platform": "iPhoneOS",
+      "symbol": "MTLDevice",
+      "compiler_exit": 0,
+      "direct_properties": 36,
+      "direct_methods": 132
+    }
+  ],
+  "selected_shape_comparison": [
+    {
+      "symbol": "UIWindow",
+      "selected_shape_equal": true,
+      "normalization": "kind/name/super/type strings/method instance and parameter types/property ownership; excludes AST IDs, source locations, availability payloads and runtime ABI"
+    },
+    {
+      "symbol": "CAMetalLayer",
+      "selected_shape_equal": true,
+      "normalization": "kind/name/super/type strings/method instance and parameter types/property ownership; excludes AST IDs, source locations, availability payloads and runtime ABI"
+    },
+    {
+      "symbol": "MTLCreateSystemDefaultDevice",
+      "selected_shape_equal": true,
+      "normalization": "kind/name/super/type strings/method instance and parameter types/property ownership; excludes AST IDs, source locations, availability payloads and runtime ABI"
+    }
+  ],
+  "metal_device_protocol_diff": {
+    "device_only_selectors": [
+      "functionHandleWithBinaryFunction:",
+      "newArchiveWithURL:error:",
+      "newArgumentTableWithDescriptor:error:",
+      "newBufferWithLength:options:placementSparsePageSize:",
+      "newCommandAllocator",
+      "newCommandAllocatorWithDescriptor:error:",
+      "newCommandBuffer",
+      "newCompilerWithDescriptor:error:",
+      "newCounterHeapWithDescriptor:error:",
+      "newIOCommandQueueWithDescriptor:error:",
+      "newIOFileHandleWithURL:compressionMethod:error:",
+      "newIOFileHandleWithURL:error:",
+      "newIOHandleWithURL:compressionMethod:error:",
+      "newIOHandleWithURL:error:",
+      "newMTL4CommandQueue",
+      "newMTL4CommandQueueWithDescriptor:error:",
+      "newPipelineDataSetSerializerWithDescriptor:",
+      "newSharedTextureWithDescriptor:",
+      "newSharedTextureWithHandle:",
+      "newTensorWithDescriptor:attachments:error:",
+      "newTensorWithDescriptor:error:",
+      "newTextureViewPoolWithDescriptor:error:",
+      "queryTimestampFrequency",
+      "sizeOfCounterHeapEntry:",
+      "supportsPlacementSparse",
+      "tensorSizeAndAlignWithDescriptor:"
+    ],
+    "simulator_only_selectors": [],
+    "method_counts_include_implicit_property_accessors": true,
+    "inherited_members_and_categories_included": false
+  },
+  "availability_observation": {
+    "json_Attribute_kind": "AvailabilityAttr",
+    "explicit_platform_or_version_fields_in_sampled_json_nodes": false,
+    "text_dump_platform_versions": {
+      "macos": "10.11",
+      "ios": "8.0"
+    }
+  },
+  "input_sha256": {
+    "iPhoneSimulator": {
+      "SDKSettings.json": "e68503e5e534e9194af5efe8c636ca8b824e2d8237c5f38ec84aa4d155bc8418",
+      "System/Library/Frameworks/UIKit.framework/Headers/UIWindow.h": "644dc5e6607caf0d074d42786e1ab85915f9e260cc87ce6901beb757a545a437",
+      "System/Library/Frameworks/Metal.framework/Headers/MTLDevice.h": "429ba41e5ed9c94addd42288a854e9e67fd7ef968e168ee9a53ef4866c67a946",
+      "System/Library/Frameworks/QuartzCore.framework/Headers/CAMetalLayer.h": "074e50fdb4981d9da5f000b979bef047a78e00ac9bea682f85388e20bf47c73f"
+    },
+    "iPhoneOS": {
+      "SDKSettings.json": "569805cc3f63c4b414a7dcc2766d9ff780caba748a5526ee6b785a56a7a0417d",
+      "System/Library/Frameworks/UIKit.framework/Headers/UIWindow.h": "644dc5e6607caf0d074d42786e1ab85915f9e260cc87ce6901beb757a545a437",
+      "System/Library/Frameworks/Metal.framework/Headers/MTLDevice.h": "1471913476898a60ea83c1fb6304f00e11d777a9b672f7001d23a15f9d3f1956",
+      "System/Library/Frameworks/QuartzCore.framework/Headers/CAMetalLayer.h": "074e50fdb4981d9da5f000b979bef047a78e00ac9bea682f85388e20bf47c73f"
+    }
+  },
+  "simulator_service_enumeration": {
+    "sandbox_attempt": "Failed to connect/access CoreSimulator services.",
+    "outside_sandbox_result": {
+      "runtimes": 0,
+      "devices": 0
+    },
+    "automatic_messages": [
+      "Install Started",
+      "Install Succeeded",
+      "Framework version (1174.9.2) does not match existing job version (1171.7); service refresh attempted."
+    ],
+    "explicit_runtime_download_or_install_requested": false,
+    "exact_automatic_installation_payload_audited": false,
+    "device_created_or_booted": false
+  },
+  "not_verified": [
+    "runtime exports or Objective-C method availability",
+    "rendering and GPU behavior",
+    "service-level behavior",
+    "arm64e ABI or pointer authentication",
+    "retail firmware or full iOS VM compatibility"
+  ],
+  "raw_outputs": "Kept in temporary storage; not committed. Raw AST IDs, locations and hashes are not deterministic comparison keys."
+}

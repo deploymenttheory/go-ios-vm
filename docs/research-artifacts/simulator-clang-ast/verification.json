@@ -1,0 +1,113 @@
+{
+  "xcode": "Xcode 27.1\nBuild version 27A9275",
+  "compiler": "Apple clang version 21.0.0 (clang-2100.3.34.2)\nTarget: arm64-apple-darwin27.0.0\nThread model: posix\nInstalledDir: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin",
+  "output_directory": "/var/folders/f_/mq__q6c979vfsbz2lxnv9q180000gn/T/go-ios-vm-ast-audit-kdu0ap2o",
+  "targets": [
+    {
+      "platform": "iPhoneSimulator",
+      "target": "arm64-apple-ios27.1-simulator",
+      "sysroot": "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator27.1.sdk",
+      "definitions": [
+        {
+          "symbol": "UIWindow",
+          "direct_properties": 7,
+          "direct_methods": 24,
+          "json_documents": 75
+        },
+        {
+          "symbol": "CAMetalLayer",
+          "direct_properties": 14,
+          "direct_methods": 27,
+          "json_documents": 2
+        },
+        {
+          "symbol": "MTLDevice",
+          "direct_properties": 35,
+          "direct_methods": 106,
+          "json_documents": 28
+        }
+      ],
+      "build_version": {
+        "platform": 7,
+        "minos": "27.1",
+        "sdk": "27.1"
+      }
+    },
+    {
+      "platform": "iPhoneOS",
+      "target": "arm64-apple-ios27.1",
+      "sysroot": "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS27.1.sdk",
+      "definitions": [
+        {
+          "symbol": "UIWindow",
+          "direct_properties": 7,
+          "direct_methods": 24,
+          "json_documents": 75
+        },
+        {
+          "symbol": "CAMetalLayer",
+          "direct_properties": 14,
+          "direct_methods": 27,
+          "json_documents": 2
+        },
+        {
+          "symbol": "MTLDevice",
+          "direct_properties": 36,
+          "direct_methods": 132,
+          "json_documents": 30
+        }
+      ],
+      "build_version": {
+        "platform": 2,
+        "minos": "27.1",
+        "sdk": "27.1"
+      }
+    }
+  ],
+  "checks": [
+    "probe digest",
+    "SDK/header digests",
+    "six direct-definition counts",
+    "available JSON document counts",
+    "exact Metal selector differences",
+    "two object build-platform/minimum/SDK versions"
+  ],
+  "selector_diff": {
+    "device_only_selectors": [
+      "functionHandleWithBinaryFunction:",
+      "newArchiveWithURL:error:",
+      "newArgumentTableWithDescriptor:error:",
+      "newBufferWithLength:options:placementSparsePageSize:",
+      "newCommandAllocator",
+      "newCommandAllocatorWithDescriptor:error:",
+      "newCommandBuffer",
+      "newCompilerWithDescriptor:error:",
+      "newCounterHeapWithDescriptor:error:",
+      "newIOCommandQueueWithDescriptor:error:",
+      "newIOFileHandleWithURL:compressionMethod:error:",
+      "newIOFileHandleWithURL:error:",
+      "newIOHandleWithURL:compressionMethod:error:",
+      "newIOHandleWithURL:error:",
+      "newMTL4CommandQueue",
+      "newMTL4CommandQueueWithDescriptor:error:",
+      "newPipelineDataSetSerializerWithDescriptor:",
+      "newSharedTextureWithDescriptor:",
+      "newSharedTextureWithHandle:",
+      "newTensorWithDescriptor:attachments:error:",
+      "newTensorWithDescriptor:error:",
+      "newTextureViewPoolWithDescriptor:error:",
+      "queryTimestampFrequency",
+      "sizeOfCounterHeapEntry:",
+      "supportsPlacementSparse",
+      "tensorSizeAndAlignWithDescriptor:"
+    ],
+    "simulator_only_selectors": []
+  },
+  "not_rechecked": [
+    "module-enabled dumps",
+    "selected-shape normalization",
+    "availability payloads",
+    "target macros",
+    "runtime behavior"
+  ]
+}

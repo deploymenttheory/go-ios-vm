@@ -1,0 +1,135 @@
+{
+  "audit_date": "2026-10-24",
+  "pmv": {
+    "url": "https://gdmf.apple.com/v2/pmv",
+    "capture_completed_utc": "2026-10-24T17:18:45.223810+00:00",
+    "bytes": 76529,
+    "sha256": "ac36c4037bf31603320b1450b8caf4cf7793ef47da7ccbbf5a6968405b971750",
+    "raw_response": "pmv-response.json",
+    "selected_entries": [
+      {
+        "set": "PublicAssetSets",
+        "platform": "iOS",
+        "matching_devices": [
+          "iPhone19,4"
+        ],
+        "ProductVersion": "27.1",
+        "Build": "24A95425",
+        "PostingDate": "2026-10-22",
+        "ExpirationDate": "2027-01-22"
+      },
+      {
+        "set": "PublicAssetSets",
+        "platform": "iOS",
+        "matching_devices": [
+          "iPhone17,3"
+        ],
+        "ProductVersion": "27.0.1",
+        "Build": "24A446",
+        "PostingDate": "2026-10-22",
+        "ExpirationDate": "2027-01-22"
+      },
+      {
+        "set": "PublicAssetSets",
+        "platform": "iOS",
+        "matching_devices": [
+          "iPhone17,3"
+        ],
+        "ProductVersion": "26.7.1",
+        "Build": "23H30",
+        "PostingDate": "2026-10-08",
+        "ExpirationDate": "2027-01-22"
+      },
+      {
+        "set": "PublicAssetSets",
+        "platform": "iOS",
+        "matching_devices": [
+          "iPhone17,3"
+        ],
+        "ProductVersion": "27.0.1",
+        "Build": "24A6446",
+        "PostingDate": "2026-10-22",
+        "ExpirationDate": "2027-01-22"
+      },
+      {
+        "set": "PublicAssetSets",
+        "platform": "iOS",
+        "matching_devices": [
+          "iPhone17,3"
+        ],
+        "ProductVersion": "26.7.1",
+        "Build": "23H6030",
+        "PostingDate": "2026-10-08",
+        "ExpirationDate": "2027-01-22"
+      },
+      {
+        "set": "PublicAssetSets",
+        "platform": "iOS",
+        "matching_devices": [
+          "iPhone19,4"
+        ],
+        "ProductVersion": "27.1",
+        "Build": "24A94425",
+        "PostingDate": "2026-10-22",
+        "ExpirationDate": "2027-01-22"
+      },
+      {
+        "set": "PublicBackgroundSecurityImprovements",
+        "platform": "iOS",
+        "matching_devices": [
+          "iPhone17,3"
+        ],
+        "ProductVersion": "26.3.1",
+        "Build": "23D771330a",
+        "ProductVersionExtra": "(a)",
+        "PrerequisiteBuild": "23D8133",
+        "PostingDate": "2026-03-17",
+        "ExpirationDate": "2027-01-22"
+      }
+    ]
+  },
+  "ipsw_me": {
+    "url": "https://api.ipsw.me/v4/device/iPhone17,3?type=ipsw",
+    "capture_completed_utc": "2026-10-24T17:18:44.566391+00:00",
+    "response_sha256": "0193f135992b83c3659b62220cad2f3a2ea35684b48300d8fe35777289dd631d",
+    "raw_response_retained": false,
+    "boards": [
+      {
+        "boardconfig": "D47AP",
+        "platform": "t8140",
+        "cpid": 33088,
+        "bdid": 8
+      }
+    ],
+    "selected_firmware": {
+      "identifier": "iPhone17,3",
+      "version": "27.0.1",
+      "buildid": "24A446",
+      "sha1sum": "06e1c76a401d9d1fc388efddbd62cdc10fc3ac0d",
+      "md5sum": "2e4f0bcef7d50eeb2da8fcabe958af75",
+      "sha256sum": "fc87bb9da8c03d0154d87531950f4a170195f6663ee5208653fa7a26bafb9469",
+      "filesize": 12343857610,
+      "url": "https://updates.cdn-apple.com/2026FallFCS/38dca0ee-bb5d-4132-ad13-62d57bcd6d32/iPhone17,3_27.0.1_24A446_Restore.ipsw",
+      "releasedate": "2026-09-28T18:54:11Z",
+      "uploaddate": "2026-09-26T23:43:05Z",
+      "signed": true
+    }
+  },
+  "apple_cdn_head": {
+    "url": "https://updates.cdn-apple.com/2026FallFCS/38dca0ee-bb5d-4132-ad13-62d57bcd6d32/iPhone17,3_27.0.1_24A446_Restore.ipsw",
+    "capture_completed_utc": "2026-10-24T17:20:36.765655+00:00",
+    "status_line": "HTTP/1.1 200 OK",
+    "selected_headers": {
+      "Content-Length": "12343857610",
+      "Date": "Mon, 19 Oct 2026 17:27:54 GMT",
+      "Last-Modified": "Sat, 26 Sep 2026 23:43:05 GMT",
+      "x-amz-meta-digest-sha256": "fc87bb9da8c03d0154d87531950f4a170195f6663ee5208653fa7a26bafb9469",
+      "Accept-Ranges": "bytes",
+      "Age": "431562"
+    },
+    "raw_headers": "apple-cdn-head.txt",
+    "firmware_payload_downloaded": false,
+    "header_file_representation": "Captured header text normalized to LF with one final newline; field values retained."
+  },
+  "scope": "Fresh audit snapshots. They do not reconstruct or authenticate the earlier unretained PMV response; CDN header digests are metadata, not locally verified firmware payload hashes."
+}

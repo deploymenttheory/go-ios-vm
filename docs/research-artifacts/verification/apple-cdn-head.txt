@@ -1,0 +1,19 @@
+HTTP/1.1 200 OK
+Content-Type: binary/octet-stream
+Content-Length: 12343857610
+Date: Mon, 19 Oct 2026 17:27:54 GMT
+Last-Modified: Sat, 26 Sep 2026 23:43:05 GMT
+x-amz-server-side-encryption: AES256
+x-amz-meta-digest-sha256: fc87bb9da8c03d0154d87531950f4a170195f6663ee5208653fa7a26bafb9469
+x-amz-version-id: mnAzwsAJng9QDOUaQgRDYns6Vo9TdKOD
+Accept-Ranges: bytes
+Server: AmazonS3
+X-Cache: hit-stale, none, hit-fresh, hit-fresh, none
+Via: http/1.1 defra2-vp-vst-002.ts.apple.com (acdn/23.17695), https/1.1 defra2-vp-vfe-003.ts.apple.com (acdn/25.17695), http/1.1 defra2-vp-vfe-003.ts.apple.com (acdn/25.17695), http/1.1 gbslo5-xdc-mx-025.ts.apple.com (acdn/25.17695), http/1.1 uklon5-edge-fx-038.ts.apple.com (acdn/25.17695), http/1.1 uklon5-edge-fx-038.ts.apple.com (acdn/25.17695)
+X-Amz-Cf-Pop: TXL50-P6
+X-Amz-Cf-Id: bnQQeA6wJGrMQ46A5jU7pAvuSaB_uyj_Q0FAyb5Z6sp6VO6NgbEdgg==
+Cache-Control: max-age=604800, public
+Etag: "291da6de8d7ea494540c817cc79a21bf-1471"
+Age: 431562
+CDNUUID: c036b0b3-2d80-4ad9-a937-3d38b9562c4c-4084168447
+Connection: keep-alive
