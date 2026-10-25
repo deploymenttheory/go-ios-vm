@@ -40,6 +40,9 @@ linters:
         - errors.Join(
         # Flag errors are reported as usage errors with the command's name.
         - (*flag.FlagSet).Parse(
+      # Errors from this module's own packages already carry context.
+      ignore-package-globs:
+        - github.com/deploymenttheory/go-ios-vm/*
     tagliatelle:
       case:
         rules:

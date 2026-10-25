@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- The VM process's entitlements, as vphone-cli's VPhoneVirtualization.entitlements
+     at b2804adb45a653ff3981f0705108975414dc8d5d. The private ones are honoured only on
+     a host whose owner has relaxed code-signing policy; see go-ios-vm host preflight. -->
+<plist version="1.0">
+<dict>
+	<key>com.apple.private.bmk.allow</key>
+	<true/>
+	<key>com.apple.private.virtualization</key>
+	<true/>
+	<key>com.apple.private.virtualization.security-research</key>
+	<true/>
+	<key>com.apple.security.get-task-allow</key>
+	<true/>
+	<key>com.apple.security.virtualization</key>
+	<true/>
+	<key>com.apple.vm.networking</key>
+	<true/>
+</dict>
+</plist>

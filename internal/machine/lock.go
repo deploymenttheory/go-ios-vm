@@ -93,3 +93,7 @@ func (o *Owner) owns(m *Machine) error {
 	}
 	return nil
 }
+
+// Check reports whether o currently owns m, so packages outside machine can
+// require ownership before changing a machine's files.
+func (o *Owner) Check(m *Machine) error { return o.owns(m) }

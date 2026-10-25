@@ -48,6 +48,8 @@ Tests opt into a tier with `testenv.Require(t, tier, prerequisites...)` (`intern
 
 Live checks also need the prerequisites each test names, typically as environment variables that point at artifacts (see `testenv.FileFromEnv`).
 
+Live checks that start a research VM need a test binary signed with `build/vm.entitlements`. `scripts/live-vm-test.sh <package> [pattern]` builds, signs and runs one. See `docs/research-vm.md`.
+
 Host preparation is manual and diagnostic. No test or command changes SIP, research-guest policy or AMFI configuration.
 
 ## Continuous integration
