@@ -257,7 +257,7 @@ func writeRootHelp(w io.Writer, d dirs) error {
 	var b strings.Builder
 	fmt.Fprintf(&b, "%s creates, restores and runs an iOS research virtual machine on an Apple Silicon Mac.\n\n", name)
 	fmt.Fprintf(&b, "Usage:\n  %s [global flags] <command> [flags] [arguments]\n  %s help [command]\n\nCommands:\n", name, name)
-	var rows [][]string
+	rows := make([][]string, 0, len(commands))
 	for _, c := range commands {
 		status := ""
 		if !c.implemented() {
@@ -272,8 +272,15 @@ func writeRootHelp(w io.Writer, d dirs) error {
 		{"--ipsw-cache dir", "IPSW cache (" + describeDefault(d.ipswCache, d.ipswCacheErr) + ")"},
 	})
 	fmt.Fprintf(&b, "\nSupported firmware pair: %s + %s\n", firmware.SupportedPair.IPhone, firmware.SupportedPair.CloudOS)
-	_, err := io.WriteString(w, b.String())
-	return err
+	return write(w, "help", b.String())
+}
+
+// write writes a command's requested output.
+func write(w io.Writer, what, s string) error {
+	if _, err := io.WriteString(w, s); err != nil {
+		return fmt.Errorf("write %s: %w", what, err)
+	}
+	return nil
 }
 
 // writeTable writes rows as left-aligned columns separated by at least gap
@@ -323,8 +330,7 @@ func writeCommandHelp(w io.Writer, c *command, d dirs) error {
 	b.WriteString("\nFlags:\n")
 	fs.SetOutput(&b)
 	fs.PrintDefaults()
-	_, err := io.WriteString(w, b.String())
-	return err
+	return write(w, "help", b.String())
 }
 
 func runVersion(_ context.Context, inv *invocation) error {
@@ -348,6 +354,5 @@ func runVersion(_ context.Context, inv *invocation) error {
 		[]string{"firmware pair:", firmware.SupportedPair.IPhone.String() + " + " + firmware.SupportedPair.CloudOS.String()},
 	)
 	writeTable(&b, "", 1, rows)
-	_, err := io.WriteString(inv.env.Stdout, b.String())
-	return err
+	return write(inv.env.Stdout, "version", b.String())
 }

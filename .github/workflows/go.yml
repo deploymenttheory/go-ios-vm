@@ -9,29 +9,28 @@ on:
 permissions:
   contents: read
 
+# Ordinary CI runs only the portable tier: it never downloads firmware,
+# requests restore tickets, changes host security policy or boots a guest.
+# Native and live tiers run on a prepared host with `make test-native` and
+# `make test-live`.
+env:
+  GO_IOS_VM_TEST_TIER: portable
+
 jobs:
-  host:
-    name: host (darwin/arm64)
+  check:
+    name: check (darwin/arm64)
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # v6.2.0
         with:
           go-version-file: go.mod
-      - name: Check formatting and module tidiness
-        run: |
-          unformatted="$(gofmt -l .)"
-          if [ -n "$unformatted" ]; then echo "$unformatted"; exit 1; fi
-          go mod tidy -diff
-      - name: Build host without cgo
-        env:
-          CGO_ENABLED: "0"
-        run: |
-          go build ./...
-          go build -tags pins ./internal/pins
-      - name: Vet
-        run: |
-          go vet ./...
-          go vet -tags pins ./internal/pins
-      - name: Test
-        run: go test ./...
+      - name: Install golangci-lint
+        uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
+        with:
+          version: v2.14.0
+          install-only: true
+      - name: Format, tidiness, no-cgo builds, vet, lint and portable tests
+        run: make check
+      - name: Race detector
+        run: make test-race
