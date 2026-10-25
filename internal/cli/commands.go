@@ -47,11 +47,11 @@ var commands = []*command{
 	},
 	{
 		path: []string{"vm", "list"}, summary: "List machines in the library",
-		ticket: "FND-02 (#73)", native: true,
+		native: true, run: runList,
 	},
 	{
 		path: []string{"vm", "info"}, args: "<name>", nargs: 1, summary: "Show a machine's identity, stages and state",
-		ticket: "FND-02 (#73)", native: true,
+		native: true, run: runInfo,
 	},
 	{
 		path: []string{"fw", "prepare"}, args: "<name>", nargs: 1, summary: "Acquire and prepare the firmware pair for a machine",

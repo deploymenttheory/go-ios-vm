@@ -49,17 +49,19 @@ const (
 
 // Evidence is the digest of an artifact that proves a stage completed.
 type Evidence struct {
-	Name   string
-	SHA256 string
+	// Name is the artifact's path relative to the machine directory.
+	Name   string `json:"name"`
+	SHA256 string `json:"sha256"`
+	Size   int64  `json:"size"`
 }
 
 // StageRecord is the durable record of one stage.
 type StageRecord struct {
-	Stage    Stage
-	Status   Status
-	Evidence []Evidence
+	Stage    Stage      `json:"stage"`
+	Status   Status     `json:"status"`
+	Evidence []Evidence `json:"evidence,omitempty"`
 	// Error describes why a failed or canceled stage stopped.
-	Error string
+	Error string `json:"error,omitempty"`
 }
 
 // ErrInvalidRecord reports a stage record that must not be persisted.

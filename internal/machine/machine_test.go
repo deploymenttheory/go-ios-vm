@@ -26,12 +26,12 @@ func TestStageRecordValidate(t *testing.T) {
 		record StageRecord
 		valid  bool
 	}{
-		{"completed with evidence", StageRecord{Stage: StageRestore, Status: StatusCompleted, Evidence: []Evidence{{"restore-log", digest}}}, true},
+		{"completed with evidence", StageRecord{Stage: StageRestore, Status: StatusCompleted, Evidence: []Evidence{{Name: "restore-log", SHA256: digest, Size: 1}}}, true},
 		{"completed without evidence", StageRecord{Stage: StageRestore, Status: StatusCompleted}, false},
-		{"completed with error", StageRecord{Stage: StagePatch, Status: StatusCompleted, Evidence: []Evidence{{"txm", digest}}, Error: "late failure"}, false},
-		{"evidence with uppercase digest", StageRecord{Stage: StagePatch, Status: StatusCompleted, Evidence: []Evidence{{"txm", strings.ToUpper(digest)}}}, false},
-		{"evidence with short digest", StageRecord{Stage: StagePatch, Status: StatusCompleted, Evidence: []Evidence{{"txm", "abcd"}}}, false},
-		{"evidence without name", StageRecord{Stage: StagePatch, Status: StatusCompleted, Evidence: []Evidence{{"", digest}}}, false},
+		{"completed with error", StageRecord{Stage: StagePatch, Status: StatusCompleted, Evidence: []Evidence{{Name: "txm", SHA256: digest, Size: 1}}, Error: "late failure"}, false},
+		{"evidence with uppercase digest", StageRecord{Stage: StagePatch, Status: StatusCompleted, Evidence: []Evidence{{Name: "txm", SHA256: strings.ToUpper(digest), Size: 1}}}, false},
+		{"evidence with short digest", StageRecord{Stage: StagePatch, Status: StatusCompleted, Evidence: []Evidence{{Name: "txm", SHA256: "abcd", Size: 1}}}, false},
+		{"evidence without name", StageRecord{Stage: StagePatch, Status: StatusCompleted, Evidence: []Evidence{{Name: "", SHA256: digest, Size: 1}}}, false},
 		{"failed with cause", StageRecord{Stage: StageInstall, Status: StatusFailed, Error: "unmount failed"}, true},
 		{"failed without cause", StageRecord{Stage: StageInstall, Status: StatusFailed}, false},
 		{"running", StageRecord{Stage: StageAcquire, Status: StatusRunning}, true},
@@ -57,7 +57,7 @@ func TestObservationKeepsStatesSeparate(t *testing.T) {
 		Native: host.StateRunning,
 		Guest:  guest.ReadinessUnknown,
 		Stages: []StageRecord{
-			{Stage: StageRestore, Status: StatusCompleted, Evidence: []Evidence{{"restore-log", digest}}},
+			{Stage: StageRestore, Status: StatusCompleted, Evidence: []Evidence{{Name: "restore-log", SHA256: digest, Size: 1}}},
 			{Stage: StageInstall, Status: StatusRunning},
 			{Stage: StageFirstBoot, Status: StatusCompleted},
 		},

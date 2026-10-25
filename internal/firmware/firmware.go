@@ -13,12 +13,12 @@ import (
 // build; a marketing version alone never selects an archive.
 type Identity struct {
 	// OS is the operating system family, for example "iOS" or "cloudOS".
-	OS string
+	OS string `json:"os"`
 	// Device is the product type the build is selected for. It is empty when
 	// the device is resolved from the archive's manifest.
-	Device  string
-	Version string
-	Build   string
+	Device  string `json:"device,omitempty"`
+	Version string `json:"version"`
+	Build   string `json:"build"`
 }
 
 func (id Identity) String() string {
@@ -32,8 +32,8 @@ func (id Identity) String() string {
 // Pair is an iPhone build and the cloudOS virtual-platform build restored
 // together into one machine.
 type Pair struct {
-	IPhone  Identity
-	CloudOS Identity
+	IPhone  Identity `json:"iphone"`
+	CloudOS Identity `json:"cloudos"`
 }
 
 // SupportedPair is the only pairing this release accepts. Other builds are
