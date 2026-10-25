@@ -255,3 +255,14 @@ func TestNativeRequestChecksBeforeSending(t *testing.T) {
 		t.Fatalf("Request without a selector = %v", err)
 	}
 }
+
+// TestNativeResearchHardwareModel records whether this process may use the
+// PV=3 research model. An unentitled test binary is expected to be refused.
+func TestNativeResearchHardwareModel(t *testing.T) {
+	requireNative(t)
+	supported, err := HardwareModelSupported(ResearchHardwareModel)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("PV=3 research hardware model supported for this process: %v", supported)
+}

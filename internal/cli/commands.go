@@ -30,7 +30,7 @@ func (c *command) implemented() bool { return c.run != nil }
 var commands = []*command{
 	{
 		path: []string{"host", "preflight"}, summary: "Check host prerequisites without changing host policy",
-		ticket: "FND-03 (#75)", native: true,
+		native: true, flags: preflightFlags, run: runPreflight,
 	},
 	{
 		path: []string{"vm", "create"}, args: "<name>", nargs: 1,
