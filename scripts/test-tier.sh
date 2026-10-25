@@ -22,7 +22,12 @@ out="$(mktemp)"
 trap 'rm -f "$out"' EXIT
 
 status=0
-GO_IOS_VM_TEST_TIER="$tier" go test -count=1 -v "$@" | tee "$out" || status=$?
+# Live checks download firmware and restore machines, so they may run for hours.
+timeout="${GO_IOS_VM_TEST_TIMEOUT:-10m}"
+if [ "$tier" = live ]; then
+	timeout="${GO_IOS_VM_TEST_TIMEOUT:-6h}"
+fi
+GO_IOS_VM_TEST_TIER="$tier" go test -count=1 -timeout "$timeout" -v "$@" | tee "$out" || status=$?
 ran="$(grep -c "testenv: running in tier $tier\$" "$out" || true)"
 
 if [ "$status" -ne 0 ]; then
