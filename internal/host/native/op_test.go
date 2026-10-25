@@ -174,6 +174,9 @@ func TestDuplicateCompletionsAreCountedNotDelivered(t *testing.T) {
 	if err := op.Wait(context.Background()); err != nil {
 		t.Fatalf("Wait = %v, want the first completion", err)
 	}
+	// Wait returns on the first completion; the later ones are still being
+	// delivered by the work item. Drain the queue before counting them.
+	q.run(func() {})
 	if n := op.Duplicates(); n != 2 {
 		t.Fatalf("Duplicates = %d, want 2", n)
 	}
