@@ -1,0 +1,224 @@
+{
+  "schema_version": 1,
+  "upstream": {
+    "repository": "https://github.com/Lakr233/vphone-cli",
+    "revision": "b2804adb45a653ff3981f0705108975414dc8d5d",
+    "license": "MIT",
+    "notice": "Copyright (c) 2026 @Lakr233"
+  },
+  "assets": [
+    {
+      "id": "openavb-rom",
+      "kind": "rom",
+      "first_release": "required",
+      "role": "Boot ROM a machine runs instead of Apple's AVPBooter.vresearch1.bin.",
+      "policy": "vendored",
+      "digest_policy": "pinned",
+      "path": "rom/OpenAVB/OpenAVB.bin",
+      "sha256": "bbcabe73fd39fb92b96fbb4c661c1a15b0f9e5d9411468f7954c4f433911cb9c",
+      "size": 460057,
+      "source": {
+        "repository": "https://github.com/owngoal-dev/OpenAVB",
+        "revision": "65a776e9ae00b2e1de22b18cbbad1359945d7277"
+      },
+      "obtained_from": {
+        "repository": "https://github.com/Lakr233/vphone-cli",
+        "revision": "b2804adb45a653ff3981f0705108975414dc8d5d",
+        "path": "VPhoneExecutable/VPhoneVirtualization/Resources/OpenAVB/OpenAVB.bin"
+      },
+      "build": "make build/OpenAVB.bin with Homebrew LLVM 23.1.3 (clang, llvm-objcopy) and LLD 23.1.3; no patches. Built by the vphone-cli maintainers; not independently rebuilt here.",
+      "license": "MIT, with the third-party notices in its LICENSE; some files built into the image are APSL-2.0",
+      "notices": [
+        "rom/OpenAVB/LICENSE",
+        "rom/OpenAVB/APSL-2.0.txt"
+      ]
+    },
+    {
+      "id": "opensep-rom",
+      "kind": "rom",
+      "first_release": "required",
+      "role": "SEP boot ROM a machine runs instead of Apple's AVPSEPBooter.vresearch1.bin.",
+      "policy": "vendored",
+      "digest_policy": "pinned",
+      "path": "rom/OpenSEP/OpenSEP.bin",
+      "sha256": "92690b9c7e900ec0054271dbbc0444ee2d8567c8d41d3a2e491ba011e2b08b12",
+      "size": 147512,
+      "source": {
+        "repository": "https://github.com/owngoal-dev/OpenSEP",
+        "revision": "8b1633f7e6606f0bc9e1422c93e8d2e056154d2f"
+      },
+      "obtained_from": {
+        "repository": "https://github.com/Lakr233/vphone-cli",
+        "revision": "b2804adb45a653ff3981f0705108975414dc8d5d",
+        "path": "VPhoneExecutable/VPhoneVirtualization/Resources/OpenSEP/OpenSEP.bin"
+      },
+      "build": "make PLATFORM=vresearch1 build/OpenSEP.bin with Homebrew LLVM 23.1.3 and LLD 23.1.3; no patches. Built by the vphone-cli maintainers; not independently rebuilt here.",
+      "license": "MIT; the image also carries public Apple data (the Apple DDI Secure Boot Root CA - G1 certificate and published iPhone14,4 SEP firmware keys)",
+      "notices": [
+        "rom/OpenSEP/LICENSE"
+      ]
+    },
+    {
+      "id": "gpu-compiler-plugin",
+      "kind": "guest-native",
+      "first_release": "required",
+      "role": "Metal shader compiler plugin (libAppleParavirtCompilerPluginIOGPUFamily.dylib) the cloudOS 23E5207q GPU bundle lacks; without it MTLCompilerService aborts and the window stays black.",
+      "policy": "build-from-source",
+      "digest_policy": "source-tree",
+      "tree_sha256": "52f7b0b2478931cb06a2db91f97ae1dcdb9f9cac138065e7fb738f4e40102d2b",
+      "source": {
+        "repository": "https://github.com/Lakr233/vphone-cli",
+        "revision": "b2804adb45a653ff3981f0705108975414dc8d5d",
+        "files": [
+          "VPhoneGuestComponents/GraphicLoader/main.mm"
+        ]
+      },
+      "origin": {
+        "repository": "https://github.com/0xjohnnydev/0xjohnnydev.github.io",
+        "revision": "0ee9decdd756526dd25aa3d987f8471a66b9bafe",
+        "path": "blog/assets/metal-patch/main.mm"
+      },
+      "build": "xcrun --sdk iphoneos clang++ -arch arm64e -miphoneos-version-min=26.1 -std=c++17 -O2 -dynamiclib -Wl,-not_for_dyld_shared_cache with dynamic lookup of the LLVM symbols; ad hoc signed. The built digest is recorded in the guest payload receipt.",
+      "install_path": "/System/Library/Extensions/AppleParavirtGPUMetalIOGPUFamily.bundle/libAppleParavirtCompilerPluginIOGPUFamily.dylib",
+      "license": "Unverified: the origin repository declares no licence; vphone-cli redistributes the file under its MIT licence. Redistribution terms need a decision before a built plugin is shipped."
+    },
+    {
+      "id": "launchd-hook",
+      "kind": "guest-native",
+      "first_release": "candidate",
+      "role": "launchdhook-vphone.dylib, loaded into launchd by the guest environment; inserts SystemHook at spawn and carries the ARM64E_X1 on-demand instruction lowering.",
+      "policy": "build-from-source",
+      "digest_policy": "source-tree",
+      "tree_sha256": "29d4aad723370d7cd3c9a4b1fc815828b1cf0fe1a46e116c218f80b365df56e0",
+      "source": {
+        "repository": "https://github.com/Lakr233/vphone-cli",
+        "revision": "b2804adb45a653ff3981f0705108975414dc8d5d",
+        "files": [
+          "VPhoneGuestComponents/LaunchHook/InstallCoordinationPersona.h",
+          "VPhoneGuestComponents/LaunchHook/VPhoneMachMessage.c",
+          "VPhoneGuestComponents/LaunchHook/VPhoneMachMessage.h",
+          "VPhoneGuestComponents/LaunchHook/VPhoneX1Exception.c",
+          "VPhoneGuestComponents/LaunchHook/VPhoneX1Exception.h",
+          "VPhoneGuestComponents/LaunchHook/VPhoneX1Lowering.c",
+          "VPhoneGuestComponents/LaunchHook/VPhoneX1Lowering.h",
+          "VPhoneGuestComponents/LaunchHook/launchdhook-vphone.c",
+          "VPhoneGuestComponents/Shared/AttitudeProcess.h",
+          "VPhoneGuestComponents/Shared/InjectionEnvironment.h",
+          "VPhoneGuestComponents/Shared/JetsamLimits.h",
+          "VPhoneGuestComponents/Shared/RootHideLoaderLinks.c",
+          "VPhoneGuestComponents/Shared/RootHideLoaderLinks.h",
+          "VPhoneGuestComponents/Shared/VPhoneX1Spawn.c",
+          "VPhoneGuestComponents/Shared/VPhoneX1Spawn.h"
+        ]
+      },
+      "build": "xcrun --sdk iphoneos clang -arch arm64e -miphoneos-version-min=26.0 -Os -dynamiclib, with MIG-generated mach_exc stubs from the macOS SDK; ad hoc signed. See VPhoneGuestComponents/Makefile at the pinned revision.",
+      "install_path": "/usr/lib/launchdhook-vphone.dylib",
+      "license": "MIT (vphone-cli)",
+      "notes": "Upstream installs it through the boot-tier system-launchdaemons-boot-environment patch. Whether the first release needs it, including the X1 lowering on this host CPU, is established by FW-08 and E2E-02."
+    },
+    {
+      "id": "system-hook",
+      "kind": "guest-native",
+      "first_release": "candidate",
+      "role": "SystemHook-vphone.dylib, inserted at spawn; loads the per-process fixes such as libhapticsfix into SpringBoard. Links FlutterRemapFix.",
+      "policy": "build-from-source",
+      "digest_policy": "source-tree",
+      "tree_sha256": "b6f8a906b5adb8b11642911e3d057a20e959db028cf7ef9559f20c196432f5b5",
+      "source": {
+        "repository": "https://github.com/Lakr233/vphone-cli",
+        "revision": "b2804adb45a653ff3981f0705108975414dc8d5d",
+        "files": [
+          "VPhoneGuestComponents/FlutterRemapFix/FlutterRemapPolicy.h",
+          "VPhoneGuestComponents/FlutterRemapFix/libflutterremapfix.c",
+          "VPhoneGuestComponents/Shared/AttitudeProcess.h",
+          "VPhoneGuestComponents/Shared/InjectionEnvironment.h",
+          "VPhoneGuestComponents/Shared/JetsamLimits.h",
+          "VPhoneGuestComponents/Shared/RootHideLoaderLinks.c",
+          "VPhoneGuestComponents/Shared/RootHideLoaderLinks.h",
+          "VPhoneGuestComponents/Shared/VPhoneX1Spawn.c",
+          "VPhoneGuestComponents/Shared/VPhoneX1Spawn.h",
+          "VPhoneGuestComponents/SystemHook/SystemHook-vphone.c"
+        ]
+      },
+      "build": "xcrun --sdk iphoneos clang -arch arm64e -miphoneos-version-min=26.0 -Os -dynamiclib -Wl,-not_for_dyld_shared_cache; ad hoc signed.",
+      "install_path": "/usr/lib/SystemHook-vphone.dylib",
+      "license": "MIT (vphone-cli)",
+      "notes": "Required only if a first-release fix it loads is required; established by FW-08 and E2E-02."
+    },
+    {
+      "id": "haptics-fix",
+      "kind": "guest-native",
+      "first_release": "candidate",
+      "role": "libhapticsfix.dylib, loaded into SpringBoard so UIKit's feedback engine takes the no-haptics path instead of crashing on the absent haptic hardware.",
+      "policy": "build-from-source",
+      "digest_policy": "source-tree",
+      "tree_sha256": "c3373d17878f3f40e32773f6313d4b6d33fdc3eccddc6338b7c6e9ea6842b259",
+      "source": {
+        "repository": "https://github.com/Lakr233/vphone-cli",
+        "revision": "b2804adb45a653ff3981f0705108975414dc8d5d",
+        "files": [
+          "VPhoneGuestComponents/HapticsFix/libhapticsfix.c"
+        ]
+      },
+      "build": "xcrun --sdk iphoneos clang -arch arm64e -miphoneos-version-min=26.0 -Os -dynamiclib -lobjc -Wl,-not_for_dyld_shared_cache; ad hoc signed.",
+      "install_path": "/usr/lib/libhapticsfix.dylib",
+      "license": "MIT (vphone-cli)",
+      "notes": "The standard device tree also removes the haptics node; whether both are needed is established by E2E-02."
+    },
+    {
+      "id": "paravirt-gpu-bundle",
+      "kind": "apple-firmware",
+      "first_release": "required",
+      "role": "AppleParavirtGPUMetalIOGPUFamily.bundle, the paravirtual GPU driver the iPhone guest display needs, taken from the same cloudOS release as the kernel.",
+      "policy": "extract-from-firmware",
+      "digest_policy": "recorded-at-extraction",
+      "firmware": {
+        "os": "cloudOS",
+        "version": "26.4",
+        "build": "23E5207q"
+      },
+      "source": {
+        "path": "System/Library/Extensions/AppleParavirtGPUMetalIOGPUFamily.bundle"
+      },
+      "expected": {
+        "CFBundleVersion": "64.4.4",
+        "DTPlatformVersion": "26.4"
+      },
+      "build": "Extracted by FW-05 from the restored, read-only mounted System volume of a temporary cloudOS restore; digests recorded at extraction.",
+      "license": "Apple proprietary firmware content; never committed or redistributed"
+    },
+    {
+      "id": "iphone-ipsw",
+      "kind": "user-firmware",
+      "first_release": "required",
+      "role": "iPhone restore IPSW supplying the guest userland and iPhone components of the hybrid restore.",
+      "policy": "user-supplied",
+      "digest_policy": "verified-at-acquisition",
+      "firmware": {
+        "os": "iOS",
+        "device": "iPhone17,3",
+        "version": "27.0.1",
+        "build": "24A446"
+      },
+      "source": {},
+      "build": "Acquired by FW-02 into the IPSW cache; identity from its BuildManifest and digest verified before use. Originals stay immutable.",
+      "license": "Apple proprietary firmware; never committed or redistributed"
+    },
+    {
+      "id": "cloudos-ipsw",
+      "kind": "user-firmware",
+      "first_release": "required",
+      "role": "cloudOS IPSW supplying the vphone600 boot chain, kernel, SEP firmware and device tree, and the GPU bundle via a temporary restore.",
+      "policy": "user-supplied",
+      "digest_policy": "verified-at-acquisition",
+      "firmware": {
+        "os": "cloudOS",
+        "version": "26.4",
+        "build": "23E5207q"
+      },
+      "source": {},
+      "build": "Acquired by FW-02 into the IPSW cache; identity from its BuildManifest and digest verified before use. Originals stay immutable.",
+      "license": "Apple proprietary firmware; never committed or redistributed"
+    }
+  ]
+}
