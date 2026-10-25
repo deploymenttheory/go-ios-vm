@@ -1,0 +1,2 @@
+# Vendored ROM images are binary
+internal/assets/rom/**/*.bin binary
