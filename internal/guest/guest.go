@@ -18,9 +18,9 @@ const (
 
 // DeviceInfo is the identity the daemon reports for its guest.
 type DeviceInfo struct {
-	ProductType string
-	Version     string
-	Build       string
+	ProductType string `json:"product_type"`
+	Version     string `json:"version"`
+	Build       string `json:"build"`
 }
 
 // Client talks to one machine's guest daemon.
