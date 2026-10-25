@@ -217,11 +217,12 @@ func parseOnly(t *testing.T, args []string) *invocation {
 		t.Fatal(err)
 	}
 	var got *invocation
+	run := cmd.run
 	cmd.run = func(_ context.Context, inv *invocation) error {
 		got = inv
 		return nil
 	}
-	defer func() { cmd.run = nil }()
+	defer func() { cmd.run = run }()
 	if r := runWith(t, hostEnv(), args...); r.code != ExitOK {
 		t.Fatalf("%v: code %d, stderr %q", args, r.code, r.stderr)
 	}

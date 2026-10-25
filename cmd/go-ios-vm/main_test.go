@@ -2,7 +2,10 @@ package main
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -12,6 +15,8 @@ import (
 	"testing"
 
 	"github.com/deploymenttheory/go-ios-vm/internal/buildinfo"
+	"github.com/deploymenttheory/go-ios-vm/internal/firmware"
+	"github.com/deploymenttheory/go-ios-vm/internal/machine"
 )
 
 func goTool(t *testing.T) string {
@@ -139,4 +144,56 @@ func TestBindingsPin(t *testing.T) {
 		}
 	}
 	t.Fatal("go.mod does not require go-bindings-macosplatform")
+}
+
+// TestRestartPreservesIdentityAndReceipts creates a machine with a completed
+// stage in this process, then reads it back through a fresh CLI process.
+func TestRestartPreservesIdentityAndReceipts(t *testing.T) {
+	if runtime.GOOS != "darwin" || runtime.GOARCH != "arm64" {
+		t.Skip("vm info needs the darwin/arm64 host")
+	}
+	bin := filepath.Join(t.TempDir(), "go-ios-vm")
+	build := exec.CommandContext(t.Context(), goTool(t), "build", "-o", bin, ".")
+	build.Env = append(os.Environ(), "CGO_ENABLED=0")
+	if out, err := build.CombinedOutput(); err != nil {
+		t.Fatalf("go build: %v\n%s", err, out)
+	}
+
+	lib := machine.Library{Dir: t.TempDir()}
+	identifier := []byte("stable-native-identifier")
+	m, o, err := lib.Create(machine.Config{
+		Name: "phone", Identifier: identifier, Pair: firmware.SupportedPair,
+		Hardware: machine.Hardware{CPUs: 8, MemoryMiB: 8192, DiskSizeGB: 64, Network: "nat"},
+		Files:    machine.DefaultFiles,
+	}, "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(m.Dir, "acquire.json"), []byte("{}"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	a, err := m.Begin(o, machine.StageAcquire)
+	if err == nil {
+		err = a.Complete("acquire.json")
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	o.Release()
+
+	sum := sha256.Sum256(identifier)
+	for range 2 {
+		out, err := exec.CommandContext(t.Context(), bin, "vm", "info", "phone", "--library", lib.Dir).Output()
+		if err != nil {
+			t.Fatalf("vm info: %v", err)
+		}
+		for _, want := range []string{
+			fmt.Sprintf("Identifier: %d bytes, SHA-256 %s", len(identifier), hex.EncodeToString(sum[:8])),
+			"acquire     completed (1 evidence file(s) verified)",
+		} {
+			if !strings.Contains(string(out), want) {
+				t.Fatalf("vm info after restart does not contain %q:\n%s", want, out)
+			}
+		}
+	}
 }
