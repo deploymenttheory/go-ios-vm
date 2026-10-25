@@ -76,6 +76,21 @@ type invocation struct {
 	library   string
 	ipswCache string
 	args      []string
+	flags     *flag.FlagSet
+}
+
+// flag reports the value of the command's boolean flag name.
+func (inv *invocation) flag(name string) bool {
+	f := inv.flags.Lookup(name)
+	if f == nil {
+		return false
+	}
+	getter, ok := f.Value.(flag.Getter)
+	if !ok {
+		return false
+	}
+	b, _ := getter.Get().(bool)
+	return b
 }
 
 // Run runs the command line args and returns the process exit code.
@@ -132,6 +147,7 @@ func run(ctx context.Context, args []string, env Env) error {
 	if cmd.flags != nil {
 		cmd.flags(fs)
 	}
+	inv.flags = fs
 	inv.args, err = parseInterspersed(fs, rest)
 	if err != nil {
 		if errors.Is(err, flag.ErrHelp) {

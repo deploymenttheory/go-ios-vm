@@ -92,6 +92,7 @@ var Capabilities = []Capability{
 	private("_VZMacHardwareModelDescriptor", "setBoardID:", false, true, "HOST-02", "the PV=3 research hardware model"),
 	private("_VZMacHardwareModelDescriptor", "setISA:", false, true, "HOST-02", "the PV=3 research hardware model"),
 	private("VZMacHardwareModel", "_hardwareModelWithDescriptor:", true, true, "HOST-02", "the PV=3 research hardware model"),
+	public("VZMacHardwareModel", "isSupported", false, "FND-03", "checking research hardware model support"),
 	private("VZMacMachineIdentifier", "_ECID", false, true, "HOST-02", "matching DFU to the stored identity"),
 
 	// Custom ROMs and SEP (private).
@@ -124,3 +125,14 @@ var Capabilities = []Capability{
 	private("_VZGDBDebugStubConfiguration", "", false, false, "HOST-02", "kernel debugging"),
 	private("VZVirtualMachineConfiguration", "_setDebugStub:", false, false, "HOST-02", "kernel debugging"),
 }
+
+// HardwareModelDescriptor describes a Virtualization hardware model.
+type HardwareModelDescriptor struct {
+	PlatformVersion uint32
+	BoardID         uint32
+	ISA             int64
+}
+
+// ResearchHardwareModel is vphone-cli's PV=3 research model: platform version
+// 3, board 0x90 and ISA 2, matching vresearch101.
+var ResearchHardwareModel = HardwareModelDescriptor{PlatformVersion: 3, BoardID: 0x90, ISA: 2}
