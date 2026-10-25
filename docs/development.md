@@ -18,7 +18,7 @@ How to build and test `go-ios-vm`, and what each kind of check does and does not
 | `make test-race` | Portable tests with the race detector. |
 | `make test-native` | The native tier: nonprivileged macOS runtime checks. |
 | `make test-live` | The live tier: tests that need a prepared research host. |
-| `make guest` | The guest daemon build for iOS, which uses external linking. Until GUEST-01 adds the daemon, this target checks for the iPhoneOS SDK and then fails. |
+| `make guest` | Cross-builds the Go guest daemon for iOS with external linking (`bin/go-ios-vm-guestd`). It needs the iPhoneOS SDK. See `docs/guest-daemon.md`. |
 
 The host binary must build with `CGO_ENABLED=0`. It must not execute vphone-cli or other upstream host programs, and must not link a third-party C restore library.
 

@@ -197,3 +197,28 @@ func TestRestartPreservesIdentityAndReceipts(t *testing.T) {
 		}
 	}
 }
+
+// TestHostAndGuestStaySeparate keeps the guest daemon out of the host binary
+// and the macOS bindings out of the iOS guest build.
+func TestHostAndGuestStaySeparate(t *testing.T) {
+	gotool := goTool(t)
+	host, err := exec.CommandContext(t.Context(), gotool, "list", "-deps", ".").Output()
+	if err != nil {
+		t.Fatalf("go list host: %v", err)
+	}
+	if strings.Contains(string(host), "internal/guest/daemon") {
+		t.Error("the host binary imports the guest daemon")
+	}
+	guestList := exec.CommandContext(t.Context(), gotool, "list", "-deps", "../go-ios-vm-guestd")
+	guestList.Env = append(os.Environ(), "GOOS=ios", "GOARCH=arm64", "CGO_ENABLED=1")
+	guest, err := guestList.Output()
+	if err != nil {
+		t.Fatalf("go list guest: %v", err)
+	}
+	if strings.Contains(string(guest), "go-bindings-macosplatform") {
+		t.Error("the iOS guest build imports the macOS bindings")
+	}
+	if !strings.Contains(string(guest), "internal/guest/daemon") {
+		t.Error("guest dependency listing looks wrong: no daemon package")
+	}
+}
