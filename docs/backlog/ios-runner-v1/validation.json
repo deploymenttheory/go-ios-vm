@@ -1,0 +1,44 @@
+{
+  "status": "passed",
+  "repository": "deploymenttheory/go-ios-vm",
+  "namespace": "ios-runner-v1",
+  "source_plan_sha256": "8ad1f8d9e932a758c411ac75d6d00c29853518a011e6cf72edb1d2248124feba",
+  "preview_sha256": "5f1f0d12b2c7c684196c611337269666560437520feb53a854b0abb4de2e5507",
+  "desired_state_sha256": "1a0da97d7bc9d6673431b06b25b429e70359683e89b6d8d3a4e32b89b863f8cc",
+  "issues": 34,
+  "epics": 6,
+  "implementation_tasks": 27,
+  "native_parent_relationships": 27,
+  "native_blocker_relationships": 41,
+  "new_labels": 11,
+  "reused_labels": 8,
+  "new_milestones": 4,
+  "existing_issues_unchanged": 31,
+  "successful_native_relationship_inventory_reads": 62,
+  "ready_after_publication": [
+    "FND-01",
+    "FW-01"
+  ],
+  "checks": [
+    "source fingerprint",
+    "full-preview/body agreement",
+    "unique identities",
+    "eight implementation sections",
+    "parent membership",
+    "acyclic blockers",
+    "no redundant transitive edges",
+    "milestone ordering",
+    "requirement coverage",
+    "label reuse without changes",
+    "readiness",
+    "no existing namespace overlap",
+    "empty publication journal/mapping"
+  ],
+  "not_verified": [
+    "GitHub write capability",
+    "application implementation",
+    "native VM execution",
+    "restore",
+    "graphical guest boot"
+  ]
+}

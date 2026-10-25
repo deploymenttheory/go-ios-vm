@@ -1,0 +1,1696 @@
+{
+  "schema_version": 1,
+  "repository": "deploymenttheory/go-ios-vm",
+  "namespace": "ios-runner-v1",
+  "approval": {
+    "source": "User message: approved",
+    "received_utc": "2026-10-24T21:54:52.931608+00:00",
+    "approved_preview_sha256": "5f1f0d12b2c7c684196c611337269666560437520feb53a854b0abb4de2e5507",
+    "approved_desired_state_sha256": "1a0da97d7bc9d6673431b06b25b429e70359683e89b6d8d3a4e32b89b863f8cc"
+  },
+  "status": "complete",
+  "issues": {
+    "INDEX": {
+      "number": 65,
+      "id": 6018023343,
+      "url": "https://github.com/deploymenttheory/go-ios-vm/issues/65",
+      "updated_at": "2026-10-24T22:06:50Z"
+    },
+    "EPIC-FND": {
+      "number": 66,
+      "id": 6018023654,
+      "url": "https://github.com/deploymenttheory/go-ios-vm/issues/66",
+      "updated_at": "2026-10-24T22:06:52Z"
+    },
+    "EPIC-HOST": {
+      "number": 67,
+      "id": 6018023986,
+      "url": "https://github.com/deploymenttheory/go-ios-vm/issues/67",
+      "updated_at": "2026-10-24T22:06:54Z"
+    },
+    "EPIC-REST": {
+      "number": 68,
+      "id": 6018024354,
+      "url": "https://github.com/deploymenttheory/go-ios-vm/issues/68",
+      "updated_at": "2026-10-24T22:06:55Z"
+    },
+    "EPIC-FW": {
+      "number": 69,
+      "id": 6018024710,
+      "url": "https://github.com/deploymenttheory/go-ios-vm/issues/69",
+      "updated_at": "2026-10-24T22:06:58Z"
+    },
+    "EPIC-GUEST": {
+      "number": 70,
+      "id": 6018025061,
+      "url": "https://github.com/deploymenttheory/go-ios-vm/issues/70",
+      "updated_at": "2026-10-24T22:07:00Z"
+    },
+    "EPIC-E2E": {
+      "number": 71,
+      "id": 6018025418,
+      "url": "https://github.com/deploymenttheory/go-ios-vm/issues/71",
+      "updated_at": "2026-10-24T22:07:02Z"
+    },
+    "FND-01": {
+      "number": 72,
+      "id": 6018025792,
+      "url": "https://github.com/deploymenttheory/go-ios-vm/issues/72",
+      "updated_at": "2026-10-24T22:07:04Z"
+    },
+    "FND-02": {
+      "number": 73,
+      "id": 6018026157,
+      "url": "https://github.com/deploymenttheory/go-ios-vm/issues/73",
+      "updated_at": "2026-10-24T22:07:06Z"
+    },
+    "HOST-01": {
+      "number": 74,
+      "id": 6018026474,
+      "url": "https://github.com/deploymenttheory/go-ios-vm/issues/74",
+      "updated_at": "2026-10-24T22:07:08Z"
+    },
+    "FND-03": {
+      "number": 75,
+      "id": 6018026844,
+      "url": "https://github.com/deploymenttheory/go-ios-vm/issues/75",
+      "updated_at": "2026-10-24T22:07:11Z"
+    },
+    "FND-04": {
+      "number": 76,
+      "id": 6018027189,
+      "url": "https://github.com/deploymenttheory/go-ios-vm/issues/76",
+      "updated_at": "2026-10-24T22:07:13Z"
+    },
+    "FW-01": {
+      "number": 77,
+      "id": 6018027537,
+      "url": "https://github.com/deploymenttheory/go-ios-vm/issues/77",
+      "updated_at": "2026-10-24T22:07:15Z"
+    },
+    "HOST-02": {
+      "number": 78,
+      "id": 6018027909,
+      "url": "https://github.com/deploymenttheory/go-ios-vm/issues/78",
+      "updated_at": "2026-10-24T22:07:17Z"
+    },
+    "HOST-04": {
+      "number": 79,
+      "id": 6018028230,
+      "url": "https://github.com/deploymenttheory/go-ios-vm/issues/79",
+      "updated_at": "2026-10-24T22:07:19Z"
+    },
+    "HOST-03": {
+      "number": 80,
+      "id": 6018028565,
+      "url": "https://github.com/deploymenttheory/go-ios-vm/issues/80",
+      "updated_at": "2026-10-24T22:07:21Z"
+    },
+    "REST-01": {
+      "number": 81,
+      "id": 6018028923,
+      "url": "https://github.com/deploymenttheory/go-ios-vm/issues/81",
+      "updated_at": "2026-10-24T22:07:23Z"
+    },
+    "FW-02": {
+      "number": 82,
+      "id": 6018029285,
+      "url": "https://github.com/deploymenttheory/go-ios-vm/issues/82",
+      "updated_at": "2026-10-24T22:07:25Z"
+    },
+    "FW-03": {
+      "number": 83,
+      "id": 6018029626,
+      "url": "https://github.com/deploymenttheory/go-ios-vm/issues/83",
+      "updated_at": "2026-10-24T22:07:27Z"
+    },
+    "REST-02": {
+      "number": 84,
+      "id": 6018029977,
+      "url": "https://github.com/deploymenttheory/go-ios-vm/issues/84",
+      "updated_at": "2026-10-24T22:07:29Z"
+    },
+    "REST-03": {
+      "number": 85,
+      "id": 6018030300,
+      "url": "https://github.com/deploymenttheory/go-ios-vm/issues/85",
+      "updated_at": "2026-10-24T22:07:32Z"
+    },
+    "REST-04": {
+      "number": 86,
+      "id": 6018030648,
+      "url": "https://github.com/deploymenttheory/go-ios-vm/issues/86",
+      "updated_at": "2026-10-24T22:07:34Z"
+    },
+    "REST-05": {
+      "number": 87,
+      "id": 6018030976,
+      "url": "https://github.com/deploymenttheory/go-ios-vm/issues/87",
+      "updated_at": "2026-10-24T22:07:36Z"
+    },
+    "FW-04": {
+      "number": 88,
+      "id": 6018031349,
+      "url": "https://github.com/deploymenttheory/go-ios-vm/issues/88",
+      "updated_at": "2026-10-24T22:07:38Z"
+    },
+    "FW-05": {
+      "number": 89,
+      "id": 6018031723,
+      "url": "https://github.com/deploymenttheory/go-ios-vm/issues/89",
+      "updated_at": "2026-10-24T22:07:41Z"
+    },
+    "FW-06": {
+      "number": 90,
+      "id": 6018032189,
+      "url": "https://github.com/deploymenttheory/go-ios-vm/issues/90",
+      "updated_at": "2026-10-24T22:07:43Z"
+    },
+    "FW-08": {
+      "number": 91,
+      "id": 6018032533,
+      "url": "https://github.com/deploymenttheory/go-ios-vm/issues/91",
+      "updated_at": "2026-10-24T22:07:45Z"
+    },
+    "GUEST-01": {
+      "number": 92,
+      "id": 6018032841,
+      "url": "https://github.com/deploymenttheory/go-ios-vm/issues/92",
+      "updated_at": "2026-10-24T22:07:47Z"
+    },
+    "GUEST-02": {
+      "number": 93,
+      "id": 6018033178,
+      "url": "https://github.com/deploymenttheory/go-ios-vm/issues/93",
+      "updated_at": "2026-10-24T22:07:49Z"
+    },
+    "FW-07": {
+      "number": 94,
+      "id": 6018033539,
+      "url": "https://github.com/deploymenttheory/go-ios-vm/issues/94",
+      "updated_at": "2026-10-24T22:07:51Z"
+    },
+    "GUEST-03": {
+      "number": 95,
+      "id": 6018033924,
+      "url": "https://github.com/deploymenttheory/go-ios-vm/issues/95",
+      "updated_at": "2026-10-24T22:07:53Z"
+    },
+    "E2E-01": {
+      "number": 96,
+      "id": 6018034312,
+      "url": "https://github.com/deploymenttheory/go-ios-vm/issues/96",
+      "updated_at": "2026-10-24T22:07:55Z"
+    },
+    "E2E-02": {
+      "number": 97,
+      "id": 6018034623,
+      "url": "https://github.com/deploymenttheory/go-ios-vm/issues/97",
+      "updated_at": "2026-10-24T22:07:57Z"
+    },
+    "E2E-03": {
+      "number": 98,
+      "id": 6018034981,
+      "url": "https://github.com/deploymenttheory/go-ios-vm/issues/98",
+      "updated_at": "2026-10-24T22:08:00Z"
+    }
+  },
+  "milestones": {
+    "M1": {
+      "number": 3,
+      "url": "https://github.com/deploymenttheory/go-ios-vm/milestone/3"
+    },
+    "M2": {
+      "number": 4,
+      "url": "https://github.com/deploymenttheory/go-ios-vm/milestone/4"
+    },
+    "M3": {
+      "number": 5,
+      "url": "https://github.com/deploymenttheory/go-ios-vm/milestone/5"
+    },
+    "M4": {
+      "number": 6,
+      "url": "https://github.com/deploymenttheory/go-ios-vm/milestone/6"
+    }
+  },
+  "journal": [
+    {
+      "operation": "create-label",
+      "identity": "area:fnd",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/labels",
+      "attempted_utc": "2026-10-24T21:54:54.035122+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:54:55.843450+00:00"
+    },
+    {
+      "operation": "create-label",
+      "identity": "area:host",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/labels",
+      "attempted_utc": "2026-10-24T21:54:55.843902+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:54:58.212008+00:00"
+    },
+    {
+      "operation": "create-label",
+      "identity": "area:restore",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/labels",
+      "attempted_utc": "2026-10-24T21:54:58.212446+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:54:59.960727+00:00"
+    },
+    {
+      "operation": "create-label",
+      "identity": "area:firmware",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/labels",
+      "attempted_utc": "2026-10-24T21:54:59.961581+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:55:02.075490+00:00"
+    },
+    {
+      "operation": "create-label",
+      "identity": "area:guest",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/labels",
+      "attempted_utc": "2026-10-24T21:55:02.076285+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:55:03.904132+00:00"
+    },
+    {
+      "operation": "create-label",
+      "identity": "component:runtime",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/labels",
+      "attempted_utc": "2026-10-24T21:55:03.904543+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:55:05.724136+00:00"
+    },
+    {
+      "operation": "create-label",
+      "identity": "component:protocol",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/labels",
+      "attempted_utc": "2026-10-24T21:55:05.724589+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:55:07.578450+00:00"
+    },
+    {
+      "operation": "create-label",
+      "identity": "component:firmware",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/labels",
+      "attempted_utc": "2026-10-24T21:55:07.579064+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:55:09.394892+00:00"
+    },
+    {
+      "operation": "create-label",
+      "identity": "component:native-ui",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/labels",
+      "attempted_utc": "2026-10-24T21:55:09.395321+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:55:11.177377+00:00"
+    },
+    {
+      "operation": "create-label",
+      "identity": "component:infrastructure",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/labels",
+      "attempted_utc": "2026-10-24T21:55:11.178271+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:55:12.898377+00:00"
+    },
+    {
+      "operation": "create-label",
+      "identity": "component:documentation",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/labels",
+      "attempted_utc": "2026-10-24T21:55:12.898899+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:55:14.835638+00:00"
+    },
+    {
+      "operation": "create-milestone",
+      "identity": "M1",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/milestones",
+      "attempted_utc": "2026-10-24T21:55:15.218540+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:55:17.006069+00:00"
+    },
+    {
+      "operation": "create-milestone",
+      "identity": "M2",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/milestones",
+      "attempted_utc": "2026-10-24T21:55:17.006691+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:55:18.855442+00:00"
+    },
+    {
+      "operation": "create-milestone",
+      "identity": "M3",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/milestones",
+      "attempted_utc": "2026-10-24T21:55:18.856106+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:55:20.648212+00:00"
+    },
+    {
+      "operation": "create-milestone",
+      "identity": "M4",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/milestones",
+      "attempted_utc": "2026-10-24T21:55:20.648977+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:55:22.566794+00:00"
+    },
+    {
+      "operation": "create-issue",
+      "identity": "INDEX",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues",
+      "attempted_utc": "2026-10-24T21:55:22.567508+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:55:25.011995+00:00"
+    },
+    {
+      "operation": "create-issue",
+      "identity": "EPIC-FND",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues",
+      "attempted_utc": "2026-10-24T21:55:25.012544+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:55:27.616246+00:00"
+    },
+    {
+      "operation": "create-issue",
+      "identity": "EPIC-HOST",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues",
+      "attempted_utc": "2026-10-24T21:55:27.616744+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:55:30.249528+00:00"
+    },
+    {
+      "operation": "create-issue",
+      "identity": "EPIC-REST",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues",
+      "attempted_utc": "2026-10-24T21:55:30.249974+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:55:33.055837+00:00"
+    },
+    {
+      "operation": "create-issue",
+      "identity": "EPIC-FW",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues",
+      "attempted_utc": "2026-10-24T21:55:33.056282+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:55:35.643932+00:00"
+    },
+    {
+      "operation": "create-issue",
+      "identity": "EPIC-GUEST",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues",
+      "attempted_utc": "2026-10-24T21:55:35.644448+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:55:38.230235+00:00"
+    },
+    {
+      "operation": "create-issue",
+      "identity": "EPIC-E2E",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues",
+      "attempted_utc": "2026-10-24T21:55:38.230721+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:55:40.853665+00:00"
+    },
+    {
+      "operation": "create-issue",
+      "identity": "FND-01",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues",
+      "attempted_utc": "2026-10-24T21:55:40.854136+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:55:43.503534+00:00"
+    },
+    {
+      "operation": "create-issue",
+      "identity": "FND-02",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues",
+      "attempted_utc": "2026-10-24T21:55:43.505117+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:55:46.108018+00:00"
+    },
+    {
+      "operation": "create-issue",
+      "identity": "HOST-01",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues",
+      "attempted_utc": "2026-10-24T21:55:46.109205+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:55:48.895937+00:00"
+    },
+    {
+      "operation": "create-issue",
+      "identity": "FND-03",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues",
+      "attempted_utc": "2026-10-24T21:55:48.896608+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:55:51.864727+00:00"
+    },
+    {
+      "operation": "create-issue",
+      "identity": "FND-04",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues",
+      "attempted_utc": "2026-10-24T21:55:51.865383+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:55:54.288185+00:00"
+    },
+    {
+      "operation": "create-issue",
+      "identity": "FW-01",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues",
+      "attempted_utc": "2026-10-24T21:55:54.289263+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:55:57.106184+00:00"
+    },
+    {
+      "operation": "create-issue",
+      "identity": "HOST-02",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues",
+      "attempted_utc": "2026-10-24T21:55:57.107596+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:56:00.100256+00:00"
+    },
+    {
+      "operation": "create-issue",
+      "identity": "HOST-04",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues",
+      "attempted_utc": "2026-10-24T21:56:00.101536+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:56:02.876484+00:00"
+    },
+    {
+      "operation": "create-issue",
+      "identity": "HOST-03",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues",
+      "attempted_utc": "2026-10-24T21:56:02.877424+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:56:05.495423+00:00"
+    },
+    {
+      "operation": "create-issue",
+      "identity": "REST-01",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues",
+      "attempted_utc": "2026-10-24T21:56:05.496466+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:56:08.115425+00:00"
+    },
+    {
+      "operation": "create-issue",
+      "identity": "FW-02",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues",
+      "attempted_utc": "2026-10-24T21:56:08.116276+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:56:10.780583+00:00"
+    },
+    {
+      "operation": "create-issue",
+      "identity": "FW-03",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues",
+      "attempted_utc": "2026-10-24T21:56:10.781958+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:56:13.525091+00:00"
+    },
+    {
+      "operation": "create-issue",
+      "identity": "REST-02",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues",
+      "attempted_utc": "2026-10-24T21:56:13.526504+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:56:16.262416+00:00"
+    },
+    {
+      "operation": "create-issue",
+      "identity": "REST-03",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues",
+      "attempted_utc": "2026-10-24T21:56:16.263631+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:56:19.014765+00:00"
+    },
+    {
+      "operation": "create-issue",
+      "identity": "REST-04",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues",
+      "attempted_utc": "2026-10-24T21:56:19.015472+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:56:21.748563+00:00"
+    },
+    {
+      "operation": "create-issue",
+      "identity": "REST-05",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues",
+      "attempted_utc": "2026-10-24T21:56:21.749222+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:56:24.450150+00:00"
+    },
+    {
+      "operation": "create-issue",
+      "identity": "FW-04",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues",
+      "attempted_utc": "2026-10-24T21:56:24.451062+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:56:27.515332+00:00"
+    },
+    {
+      "operation": "create-issue",
+      "identity": "FW-05",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues",
+      "attempted_utc": "2026-10-24T21:56:27.515927+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:56:30.155971+00:00"
+    },
+    {
+      "operation": "create-issue",
+      "identity": "FW-06",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues",
+      "attempted_utc": "2026-10-24T21:56:30.156746+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:56:32.763753+00:00"
+    },
+    {
+      "operation": "create-issue",
+      "identity": "FW-08",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues",
+      "attempted_utc": "2026-10-24T21:56:32.764550+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:56:35.395399+00:00"
+    },
+    {
+      "operation": "create-issue",
+      "identity": "GUEST-01",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues",
+      "attempted_utc": "2026-10-24T21:56:35.396329+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:56:38.001191+00:00"
+    },
+    {
+      "operation": "create-issue",
+      "identity": "GUEST-02",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues",
+      "attempted_utc": "2026-10-24T21:56:38.001982+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:56:40.920815+00:00"
+    },
+    {
+      "operation": "create-issue",
+      "identity": "FW-07",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues",
+      "attempted_utc": "2026-10-24T21:56:40.921802+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:56:43.990720+00:00"
+    },
+    {
+      "operation": "create-issue",
+      "identity": "GUEST-03",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues",
+      "attempted_utc": "2026-10-24T21:56:43.991948+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:56:46.916787+00:00"
+    },
+    {
+      "operation": "create-issue",
+      "identity": "E2E-01",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues",
+      "attempted_utc": "2026-10-24T21:56:46.918319+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:56:49.347818+00:00"
+    },
+    {
+      "operation": "create-issue",
+      "identity": "E2E-02",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues",
+      "attempted_utc": "2026-10-24T21:56:49.348745+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:56:51.830461+00:00"
+    },
+    {
+      "operation": "create-issue",
+      "identity": "E2E-03",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues",
+      "attempted_utc": "2026-10-24T21:56:51.831167+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:56:54.832015+00:00"
+    },
+    {
+      "operation": "attach-parent",
+      "identity": "FND-01",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/66/sub_issues",
+      "attempted_utc": "2026-10-24T21:56:55.149701+00:00",
+      "state": "ambiguous-or-failed",
+      "error": "POST repos/deploymenttheory/go-ios-vm/issues/66/sub_issues: gh: Invalid request.\n\nInvalid input: object is missing required key: sub_issue_id. (HTTP 422)"
+    },
+    {
+      "operation": "attach-parent",
+      "identity": "FND-01",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/66/sub_issues",
+      "attempted_utc": "2026-10-24T21:57:29.529229+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:57:32.527742+00:00"
+    },
+    {
+      "operation": "attach-parent",
+      "identity": "FND-02",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/66/sub_issues",
+      "attempted_utc": "2026-10-24T21:57:32.528875+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:57:35.510640+00:00"
+    },
+    {
+      "operation": "attach-parent",
+      "identity": "FND-03",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/66/sub_issues",
+      "attempted_utc": "2026-10-24T21:57:35.511423+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:57:38.295249+00:00"
+    },
+    {
+      "operation": "attach-parent",
+      "identity": "FND-04",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/66/sub_issues",
+      "attempted_utc": "2026-10-24T21:57:38.296059+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:57:40.916146+00:00"
+    },
+    {
+      "operation": "attach-parent",
+      "identity": "HOST-01",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/67/sub_issues",
+      "attempted_utc": "2026-10-24T21:57:41.203984+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:57:43.765004+00:00"
+    },
+    {
+      "operation": "attach-parent",
+      "identity": "HOST-02",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/67/sub_issues",
+      "attempted_utc": "2026-10-24T21:57:43.765744+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:57:46.304524+00:00"
+    },
+    {
+      "operation": "attach-parent",
+      "identity": "HOST-03",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/67/sub_issues",
+      "attempted_utc": "2026-10-24T21:57:46.305157+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:57:48.783523+00:00"
+    },
+    {
+      "operation": "attach-parent",
+      "identity": "HOST-04",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/67/sub_issues",
+      "attempted_utc": "2026-10-24T21:57:48.784391+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:57:51.169151+00:00"
+    },
+    {
+      "operation": "attach-parent",
+      "identity": "REST-01",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/68/sub_issues",
+      "attempted_utc": "2026-10-24T21:57:51.491306+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:57:54.023381+00:00"
+    },
+    {
+      "operation": "attach-parent",
+      "identity": "REST-02",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/68/sub_issues",
+      "attempted_utc": "2026-10-24T21:57:54.024095+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:57:56.643916+00:00"
+    },
+    {
+      "operation": "attach-parent",
+      "identity": "REST-03",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/68/sub_issues",
+      "attempted_utc": "2026-10-24T21:57:56.644483+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:57:59.267648+00:00"
+    },
+    {
+      "operation": "attach-parent",
+      "identity": "REST-04",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/68/sub_issues",
+      "attempted_utc": "2026-10-24T21:57:59.268261+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:58:01.981859+00:00"
+    },
+    {
+      "operation": "attach-parent",
+      "identity": "REST-05",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/68/sub_issues",
+      "attempted_utc": "2026-10-24T21:58:01.982565+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:58:04.612487+00:00"
+    },
+    {
+      "operation": "attach-parent",
+      "identity": "FW-01",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/69/sub_issues",
+      "attempted_utc": "2026-10-24T21:58:04.933355+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:58:07.346481+00:00"
+    },
+    {
+      "operation": "attach-parent",
+      "identity": "FW-02",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/69/sub_issues",
+      "attempted_utc": "2026-10-24T21:58:07.347188+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:58:10.004626+00:00"
+    },
+    {
+      "operation": "attach-parent",
+      "identity": "FW-03",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/69/sub_issues",
+      "attempted_utc": "2026-10-24T21:58:10.005326+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:58:12.433662+00:00"
+    },
+    {
+      "operation": "attach-parent",
+      "identity": "FW-04",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/69/sub_issues",
+      "attempted_utc": "2026-10-24T21:58:12.434377+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:58:15.060549+00:00"
+    },
+    {
+      "operation": "attach-parent",
+      "identity": "FW-05",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/69/sub_issues",
+      "attempted_utc": "2026-10-24T21:58:15.061716+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:58:17.729245+00:00"
+    },
+    {
+      "operation": "attach-parent",
+      "identity": "FW-06",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/69/sub_issues",
+      "attempted_utc": "2026-10-24T21:58:17.730239+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:58:20.761553+00:00"
+    },
+    {
+      "operation": "attach-parent",
+      "identity": "FW-08",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/69/sub_issues",
+      "attempted_utc": "2026-10-24T21:58:20.762421+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:58:23.614802+00:00"
+    },
+    {
+      "operation": "attach-parent",
+      "identity": "FW-07",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/69/sub_issues",
+      "attempted_utc": "2026-10-24T21:58:23.615686+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:58:26.038981+00:00"
+    },
+    {
+      "operation": "attach-parent",
+      "identity": "GUEST-01",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/70/sub_issues",
+      "attempted_utc": "2026-10-24T21:58:26.556383+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:58:28.880064+00:00"
+    },
+    {
+      "operation": "attach-parent",
+      "identity": "GUEST-02",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/70/sub_issues",
+      "attempted_utc": "2026-10-24T21:58:28.881285+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:58:31.971069+00:00"
+    },
+    {
+      "operation": "attach-parent",
+      "identity": "GUEST-03",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/70/sub_issues",
+      "attempted_utc": "2026-10-24T21:58:31.971732+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:58:34.503406+00:00"
+    },
+    {
+      "operation": "attach-parent",
+      "identity": "E2E-01",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/71/sub_issues",
+      "attempted_utc": "2026-10-24T21:58:34.916958+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:58:37.293640+00:00"
+    },
+    {
+      "operation": "attach-parent",
+      "identity": "E2E-02",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/71/sub_issues",
+      "attempted_utc": "2026-10-24T21:58:37.294648+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:58:39.635934+00:00"
+    },
+    {
+      "operation": "attach-parent",
+      "identity": "E2E-03",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/71/sub_issues",
+      "attempted_utc": "2026-10-24T21:58:39.636661+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:58:42.132646+00:00"
+    },
+    {
+      "operation": "attach-blocker",
+      "identity": "FND-02 blocked by FND-01",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/73/dependencies/blocked_by",
+      "attempted_utc": "2026-10-24T21:58:42.826277+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:58:45.121396+00:00"
+    },
+    {
+      "operation": "attach-blocker",
+      "identity": "FND-03 blocked by FND-02",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/75/dependencies/blocked_by",
+      "attempted_utc": "2026-10-24T21:58:45.403894+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:58:47.793323+00:00"
+    },
+    {
+      "operation": "attach-blocker",
+      "identity": "FND-03 blocked by HOST-01",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/75/dependencies/blocked_by",
+      "attempted_utc": "2026-10-24T21:58:47.793926+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:58:50.339332+00:00"
+    },
+    {
+      "operation": "attach-blocker",
+      "identity": "FND-04 blocked by FND-01",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/76/dependencies/blocked_by",
+      "attempted_utc": "2026-10-24T21:58:50.645800+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:58:53.267381+00:00"
+    },
+    {
+      "operation": "attach-blocker",
+      "identity": "HOST-01 blocked by FND-01",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/74/dependencies/blocked_by",
+      "attempted_utc": "2026-10-24T21:58:53.552805+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:58:56.040385+00:00"
+    },
+    {
+      "operation": "attach-blocker",
+      "identity": "HOST-02 blocked by HOST-01",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/78/dependencies/blocked_by",
+      "attempted_utc": "2026-10-24T21:58:56.413279+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:58:58.753997+00:00"
+    },
+    {
+      "operation": "attach-blocker",
+      "identity": "HOST-02 blocked by FND-02",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/78/dependencies/blocked_by",
+      "attempted_utc": "2026-10-24T21:58:58.754822+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:59:01.179776+00:00"
+    },
+    {
+      "operation": "attach-blocker",
+      "identity": "HOST-02 blocked by FW-01",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/78/dependencies/blocked_by",
+      "attempted_utc": "2026-10-24T21:59:01.180619+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:59:03.639539+00:00"
+    },
+    {
+      "operation": "attach-blocker",
+      "identity": "HOST-03 blocked by HOST-04",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/80/dependencies/blocked_by",
+      "attempted_utc": "2026-10-24T21:59:03.957094+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:59:06.405675+00:00"
+    },
+    {
+      "operation": "attach-blocker",
+      "identity": "HOST-04 blocked by HOST-02",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/79/dependencies/blocked_by",
+      "attempted_utc": "2026-10-24T21:59:06.901863+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:59:09.362894+00:00"
+    },
+    {
+      "operation": "attach-blocker",
+      "identity": "REST-01 blocked by HOST-02",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/81/dependencies/blocked_by",
+      "attempted_utc": "2026-10-24T21:59:09.763900+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:59:12.213637+00:00"
+    },
+    {
+      "operation": "attach-blocker",
+      "identity": "REST-02 blocked by REST-01",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/84/dependencies/blocked_by",
+      "attempted_utc": "2026-10-24T21:59:12.562563+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:59:14.937035+00:00"
+    },
+    {
+      "operation": "attach-blocker",
+      "identity": "REST-02 blocked by FW-03",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/84/dependencies/blocked_by",
+      "attempted_utc": "2026-10-24T21:59:14.937870+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:59:17.526116+00:00"
+    },
+    {
+      "operation": "attach-blocker",
+      "identity": "REST-03 blocked by REST-02",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/85/dependencies/blocked_by",
+      "attempted_utc": "2026-10-24T21:59:17.909876+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:59:20.531806+00:00"
+    },
+    {
+      "operation": "attach-blocker",
+      "identity": "REST-04 blocked by REST-03",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/86/dependencies/blocked_by",
+      "attempted_utc": "2026-10-24T21:59:20.854611+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:59:23.677223+00:00"
+    },
+    {
+      "operation": "attach-blocker",
+      "identity": "REST-05 blocked by REST-04",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/87/dependencies/blocked_by",
+      "attempted_utc": "2026-10-24T21:59:24.023441+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:59:26.457312+00:00"
+    },
+    {
+      "operation": "attach-blocker",
+      "identity": "REST-05 blocked by HOST-04",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/87/dependencies/blocked_by",
+      "attempted_utc": "2026-10-24T21:59:26.458858+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:59:29.065502+00:00"
+    },
+    {
+      "operation": "attach-blocker",
+      "identity": "FW-02 blocked by FND-02",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/82/dependencies/blocked_by",
+      "attempted_utc": "2026-10-24T21:59:31.305414+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:59:34.165275+00:00"
+    },
+    {
+      "operation": "attach-blocker",
+      "identity": "FW-03 blocked by FW-02",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/83/dependencies/blocked_by",
+      "attempted_utc": "2026-10-24T21:59:34.691247+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:59:38.430267+00:00"
+    },
+    {
+      "operation": "attach-blocker",
+      "identity": "FW-04 blocked by FW-03",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/88/dependencies/blocked_by",
+      "attempted_utc": "2026-10-24T21:59:39.408801+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:59:43.079138+00:00"
+    },
+    {
+      "operation": "attach-blocker",
+      "identity": "FW-04 blocked by FW-01",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/88/dependencies/blocked_by",
+      "attempted_utc": "2026-10-24T21:59:43.080360+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:59:47.423347+00:00"
+    },
+    {
+      "operation": "attach-blocker",
+      "identity": "FW-05 blocked by REST-05",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/89/dependencies/blocked_by",
+      "attempted_utc": "2026-10-24T21:59:48.533213+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:59:52.373273+00:00"
+    },
+    {
+      "operation": "attach-blocker",
+      "identity": "FW-06 blocked by FW-04",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/90/dependencies/blocked_by",
+      "attempted_utc": "2026-10-24T21:59:53.310755+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T21:59:56.715454+00:00"
+    },
+    {
+      "operation": "attach-blocker",
+      "identity": "FW-06 blocked by FW-05",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/90/dependencies/blocked_by",
+      "attempted_utc": "2026-10-24T21:59:56.717752+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T22:00:00.537602+00:00"
+    },
+    {
+      "operation": "attach-blocker",
+      "identity": "FW-08 blocked by FW-03",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/91/dependencies/blocked_by",
+      "attempted_utc": "2026-10-24T22:00:01.233364+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T22:00:04.109098+00:00"
+    },
+    {
+      "operation": "attach-blocker",
+      "identity": "FW-08 blocked by FW-01",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/91/dependencies/blocked_by",
+      "attempted_utc": "2026-10-24T22:00:04.112085+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T22:00:09.339116+00:00"
+    },
+    {
+      "operation": "attach-blocker",
+      "identity": "FW-07 blocked by FW-06",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/94/dependencies/blocked_by",
+      "attempted_utc": "2026-10-24T22:00:10.540887+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T22:00:14.540400+00:00"
+    },
+    {
+      "operation": "attach-blocker",
+      "identity": "FW-07 blocked by FW-08",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/94/dependencies/blocked_by",
+      "attempted_utc": "2026-10-24T22:00:14.541401+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T22:00:18.841872+00:00"
+    },
+    {
+      "operation": "attach-blocker",
+      "identity": "FW-07 blocked by GUEST-02",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/94/dependencies/blocked_by",
+      "attempted_utc": "2026-10-24T22:00:18.843193+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T22:00:22.930048+00:00"
+    },
+    {
+      "operation": "attach-blocker",
+      "identity": "GUEST-01 blocked by FND-01",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/92/dependencies/blocked_by",
+      "attempted_utc": "2026-10-24T22:00:23.786516+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T22:00:26.476764+00:00"
+    },
+    {
+      "operation": "attach-blocker",
+      "identity": "GUEST-02 blocked by GUEST-01",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/93/dependencies/blocked_by",
+      "attempted_utc": "2026-10-24T22:00:26.908369+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T22:00:29.747766+00:00"
+    },
+    {
+      "operation": "attach-blocker",
+      "identity": "GUEST-02 blocked by FW-01",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/93/dependencies/blocked_by",
+      "attempted_utc": "2026-10-24T22:00:29.750705+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T22:00:32.365307+00:00"
+    },
+    {
+      "operation": "attach-blocker",
+      "identity": "GUEST-03 blocked by GUEST-02",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/95/dependencies/blocked_by",
+      "attempted_utc": "2026-10-24T22:00:32.799474+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T22:00:35.205339+00:00"
+    },
+    {
+      "operation": "attach-blocker",
+      "identity": "GUEST-03 blocked by HOST-04",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/95/dependencies/blocked_by",
+      "attempted_utc": "2026-10-24T22:00:35.207398+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T22:00:37.796865+00:00"
+    },
+    {
+      "operation": "attach-blocker",
+      "identity": "E2E-01 blocked by FW-07",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/96/dependencies/blocked_by",
+      "attempted_utc": "2026-10-24T22:00:38.194839+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T22:00:40.814222+00:00"
+    },
+    {
+      "operation": "attach-blocker",
+      "identity": "E2E-01 blocked by GUEST-03",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/96/dependencies/blocked_by",
+      "attempted_utc": "2026-10-24T22:00:40.815220+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T22:00:43.376836+00:00"
+    },
+    {
+      "operation": "attach-blocker",
+      "identity": "E2E-01 blocked by HOST-03",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/96/dependencies/blocked_by",
+      "attempted_utc": "2026-10-24T22:00:43.378043+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T22:00:46.019344+00:00"
+    },
+    {
+      "operation": "attach-blocker",
+      "identity": "E2E-01 blocked by FND-03",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/96/dependencies/blocked_by",
+      "attempted_utc": "2026-10-24T22:00:46.020451+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T22:00:48.756017+00:00"
+    },
+    {
+      "operation": "attach-blocker",
+      "identity": "E2E-02 blocked by E2E-01",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/97/dependencies/blocked_by",
+      "attempted_utc": "2026-10-24T22:00:49.147222+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T22:00:51.763711+00:00"
+    },
+    {
+      "operation": "attach-blocker",
+      "identity": "E2E-02 blocked by FND-04",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/97/dependencies/blocked_by",
+      "attempted_utc": "2026-10-24T22:00:51.764355+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T22:00:54.271587+00:00"
+    },
+    {
+      "operation": "attach-blocker",
+      "identity": "E2E-03 blocked by E2E-02",
+      "method": "POST",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/98/dependencies/blocked_by",
+      "attempted_utc": "2026-10-24T22:00:54.624008+00:00",
+      "state": "verified",
+      "verified_utc": "2026-10-24T22:00:57.040637+00:00"
+    },
+    {
+      "operation": "resolve-references",
+      "identity": "INDEX",
+      "method": "PATCH",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/65",
+      "references": 67,
+      "state": "verified",
+      "attempted_utc": "2026-10-24T22:06:49.216711+00:00",
+      "verified_utc": "2026-10-24T22:06:50.902167+00:00",
+      "updated_at": "2026-10-24T22:06:50Z"
+    },
+    {
+      "operation": "resolve-references",
+      "identity": "EPIC-FND",
+      "method": "PATCH",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/66",
+      "references": 7,
+      "state": "verified",
+      "attempted_utc": "2026-10-24T22:06:51.280498+00:00",
+      "verified_utc": "2026-10-24T22:06:52.910032+00:00",
+      "updated_at": "2026-10-24T22:06:52Z"
+    },
+    {
+      "operation": "resolve-references",
+      "identity": "EPIC-HOST",
+      "method": "PATCH",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/67",
+      "references": 7,
+      "state": "verified",
+      "attempted_utc": "2026-10-24T22:06:53.282266+00:00",
+      "verified_utc": "2026-10-24T22:06:54.761046+00:00",
+      "updated_at": "2026-10-24T22:06:54Z"
+    },
+    {
+      "operation": "resolve-references",
+      "identity": "EPIC-REST",
+      "method": "PATCH",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/68",
+      "references": 8,
+      "state": "verified",
+      "attempted_utc": "2026-10-24T22:06:55.100876+00:00",
+      "verified_utc": "2026-10-24T22:06:56.869530+00:00",
+      "updated_at": "2026-10-24T22:06:55Z"
+    },
+    {
+      "operation": "resolve-references",
+      "identity": "EPIC-FW",
+      "method": "PATCH",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/69",
+      "references": 11,
+      "state": "verified",
+      "attempted_utc": "2026-10-24T22:06:57.242808+00:00",
+      "verified_utc": "2026-10-24T22:06:59.090219+00:00",
+      "updated_at": "2026-10-24T22:06:58Z"
+    },
+    {
+      "operation": "resolve-references",
+      "identity": "EPIC-GUEST",
+      "method": "PATCH",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/70",
+      "references": 6,
+      "state": "verified",
+      "attempted_utc": "2026-10-24T22:06:59.441429+00:00",
+      "verified_utc": "2026-10-24T22:07:01.389481+00:00",
+      "updated_at": "2026-10-24T22:07:00Z"
+    },
+    {
+      "operation": "resolve-references",
+      "identity": "EPIC-E2E",
+      "method": "PATCH",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/71",
+      "references": 6,
+      "state": "verified",
+      "attempted_utc": "2026-10-24T22:07:01.728001+00:00",
+      "verified_utc": "2026-10-24T22:07:03.486526+00:00",
+      "updated_at": "2026-10-24T22:07:02Z"
+    },
+    {
+      "operation": "resolve-references",
+      "identity": "FND-01",
+      "method": "PATCH",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/72",
+      "references": 4,
+      "state": "verified",
+      "attempted_utc": "2026-10-24T22:07:03.868227+00:00",
+      "verified_utc": "2026-10-24T22:07:05.584556+00:00",
+      "updated_at": "2026-10-24T22:07:04Z"
+    },
+    {
+      "operation": "resolve-references",
+      "identity": "FND-02",
+      "method": "PATCH",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/73",
+      "references": 5,
+      "state": "verified",
+      "attempted_utc": "2026-10-24T22:07:05.988252+00:00",
+      "verified_utc": "2026-10-24T22:07:07.690287+00:00",
+      "updated_at": "2026-10-24T22:07:06Z"
+    },
+    {
+      "operation": "resolve-references",
+      "identity": "HOST-01",
+      "method": "PATCH",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/74",
+      "references": 5,
+      "state": "verified",
+      "attempted_utc": "2026-10-24T22:07:08.073558+00:00",
+      "verified_utc": "2026-10-24T22:07:09.626106+00:00",
+      "updated_at": "2026-10-24T22:07:08Z"
+    },
+    {
+      "operation": "resolve-references",
+      "identity": "FND-03",
+      "method": "PATCH",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/75",
+      "references": 7,
+      "state": "verified",
+      "attempted_utc": "2026-10-24T22:07:10.127780+00:00",
+      "verified_utc": "2026-10-24T22:07:12.304466+00:00",
+      "updated_at": "2026-10-24T22:07:11Z"
+    },
+    {
+      "operation": "resolve-references",
+      "identity": "FND-04",
+      "method": "PATCH",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/76",
+      "references": 5,
+      "state": "verified",
+      "attempted_utc": "2026-10-24T22:07:12.663725+00:00",
+      "verified_utc": "2026-10-24T22:07:14.170096+00:00",
+      "updated_at": "2026-10-24T22:07:13Z"
+    },
+    {
+      "operation": "resolve-references",
+      "identity": "FW-01",
+      "method": "PATCH",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/77",
+      "references": 4,
+      "state": "verified",
+      "attempted_utc": "2026-10-24T22:07:14.532992+00:00",
+      "verified_utc": "2026-10-24T22:07:16.488174+00:00",
+      "updated_at": "2026-10-24T22:07:15Z"
+    },
+    {
+      "operation": "resolve-references",
+      "identity": "HOST-02",
+      "method": "PATCH",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/78",
+      "references": 8,
+      "state": "verified",
+      "attempted_utc": "2026-10-24T22:07:16.941491+00:00",
+      "verified_utc": "2026-10-24T22:07:18.526764+00:00",
+      "updated_at": "2026-10-24T22:07:17Z"
+    },
+    {
+      "operation": "resolve-references",
+      "identity": "HOST-04",
+      "method": "PATCH",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/79",
+      "references": 9,
+      "state": "verified",
+      "attempted_utc": "2026-10-24T22:07:18.976299+00:00",
+      "verified_utc": "2026-10-24T22:07:20.579417+00:00",
+      "updated_at": "2026-10-24T22:07:19Z"
+    },
+    {
+      "operation": "resolve-references",
+      "identity": "HOST-03",
+      "method": "PATCH",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/80",
+      "references": 10,
+      "state": "verified",
+      "attempted_utc": "2026-10-24T22:07:20.979074+00:00",
+      "verified_utc": "2026-10-24T22:07:22.661305+00:00",
+      "updated_at": "2026-10-24T22:07:21Z"
+    },
+    {
+      "operation": "resolve-references",
+      "identity": "REST-01",
+      "method": "PATCH",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/81",
+      "references": 9,
+      "state": "verified",
+      "attempted_utc": "2026-10-24T22:07:23.006974+00:00",
+      "verified_utc": "2026-10-24T22:07:24.590321+00:00",
+      "updated_at": "2026-10-24T22:07:23Z"
+    },
+    {
+      "operation": "resolve-references",
+      "identity": "FW-02",
+      "method": "PATCH",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/82",
+      "references": 6,
+      "state": "verified",
+      "attempted_utc": "2026-10-24T22:07:24.981799+00:00",
+      "verified_utc": "2026-10-24T22:07:26.655965+00:00",
+      "updated_at": "2026-10-24T22:07:25Z"
+    },
+    {
+      "operation": "resolve-references",
+      "identity": "FW-03",
+      "method": "PATCH",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/83",
+      "references": 7,
+      "state": "verified",
+      "attempted_utc": "2026-10-24T22:07:27.077852+00:00",
+      "verified_utc": "2026-10-24T22:07:28.723945+00:00",
+      "updated_at": "2026-10-24T22:07:27Z"
+    },
+    {
+      "operation": "resolve-references",
+      "identity": "REST-02",
+      "method": "PATCH",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/84",
+      "references": 12,
+      "state": "verified",
+      "attempted_utc": "2026-10-24T22:07:29.175870+00:00",
+      "verified_utc": "2026-10-24T22:07:31.026553+00:00",
+      "updated_at": "2026-10-24T22:07:29Z"
+    },
+    {
+      "operation": "resolve-references",
+      "identity": "REST-03",
+      "method": "PATCH",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/85",
+      "references": 13,
+      "state": "verified",
+      "attempted_utc": "2026-10-24T22:07:31.370426+00:00",
+      "verified_utc": "2026-10-24T22:07:33.370706+00:00",
+      "updated_at": "2026-10-24T22:07:32Z"
+    },
+    {
+      "operation": "resolve-references",
+      "identity": "REST-04",
+      "method": "PATCH",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/86",
+      "references": 14,
+      "state": "verified",
+      "attempted_utc": "2026-10-24T22:07:33.754345+00:00",
+      "verified_utc": "2026-10-24T22:07:35.329207+00:00",
+      "updated_at": "2026-10-24T22:07:34Z"
+    },
+    {
+      "operation": "resolve-references",
+      "identity": "REST-05",
+      "method": "PATCH",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/87",
+      "references": 16,
+      "state": "verified",
+      "attempted_utc": "2026-10-24T22:07:35.765602+00:00",
+      "verified_utc": "2026-10-24T22:07:37.389629+00:00",
+      "updated_at": "2026-10-24T22:07:36Z"
+    },
+    {
+      "operation": "resolve-references",
+      "identity": "FW-04",
+      "method": "PATCH",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/88",
+      "references": 9,
+      "state": "verified",
+      "attempted_utc": "2026-10-24T22:07:37.840881+00:00",
+      "verified_utc": "2026-10-24T22:07:39.733572+00:00",
+      "updated_at": "2026-10-24T22:07:38Z"
+    },
+    {
+      "operation": "resolve-references",
+      "identity": "FW-05",
+      "method": "PATCH",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/89",
+      "references": 17,
+      "state": "verified",
+      "attempted_utc": "2026-10-24T22:07:40.190152+00:00",
+      "verified_utc": "2026-10-24T22:07:42.190979+00:00",
+      "updated_at": "2026-10-24T22:07:41Z"
+    },
+    {
+      "operation": "resolve-references",
+      "identity": "FW-06",
+      "method": "PATCH",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/90",
+      "references": 19,
+      "state": "verified",
+      "attempted_utc": "2026-10-24T22:07:42.597562+00:00",
+      "verified_utc": "2026-10-24T22:07:44.231657+00:00",
+      "updated_at": "2026-10-24T22:07:43Z"
+    },
+    {
+      "operation": "resolve-references",
+      "identity": "FW-08",
+      "method": "PATCH",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/91",
+      "references": 9,
+      "state": "verified",
+      "attempted_utc": "2026-10-24T22:07:44.695275+00:00",
+      "verified_utc": "2026-10-24T22:07:46.097015+00:00",
+      "updated_at": "2026-10-24T22:07:45Z"
+    },
+    {
+      "operation": "resolve-references",
+      "identity": "GUEST-01",
+      "method": "PATCH",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/92",
+      "references": 5,
+      "state": "verified",
+      "attempted_utc": "2026-10-24T22:07:46.479189+00:00",
+      "verified_utc": "2026-10-24T22:07:48.105982+00:00",
+      "updated_at": "2026-10-24T22:07:47Z"
+    },
+    {
+      "operation": "resolve-references",
+      "identity": "GUEST-02",
+      "method": "PATCH",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/93",
+      "references": 7,
+      "state": "verified",
+      "attempted_utc": "2026-10-24T22:07:48.483802+00:00",
+      "verified_utc": "2026-10-24T22:07:49.970271+00:00",
+      "updated_at": "2026-10-24T22:07:49Z"
+    },
+    {
+      "operation": "resolve-references",
+      "identity": "FW-07",
+      "method": "PATCH",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/94",
+      "references": 23,
+      "state": "verified",
+      "attempted_utc": "2026-10-24T22:07:50.361158+00:00",
+      "verified_utc": "2026-10-24T22:07:51.903700+00:00",
+      "updated_at": "2026-10-24T22:07:51Z"
+    },
+    {
+      "operation": "resolve-references",
+      "identity": "GUEST-03",
+      "method": "PATCH",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/95",
+      "references": 12,
+      "state": "verified",
+      "attempted_utc": "2026-10-24T22:07:52.275896+00:00",
+      "verified_utc": "2026-10-24T22:07:54.346256+00:00",
+      "updated_at": "2026-10-24T22:07:53Z"
+    },
+    {
+      "operation": "resolve-references",
+      "identity": "E2E-01",
+      "method": "PATCH",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/96",
+      "references": 27,
+      "state": "verified",
+      "attempted_utc": "2026-10-24T22:07:54.725552+00:00",
+      "verified_utc": "2026-10-24T22:07:56.460696+00:00",
+      "updated_at": "2026-10-24T22:07:55Z"
+    },
+    {
+      "operation": "resolve-references",
+      "identity": "E2E-02",
+      "method": "PATCH",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/97",
+      "references": 29,
+      "state": "verified",
+      "attempted_utc": "2026-10-24T22:07:56.848587+00:00",
+      "verified_utc": "2026-10-24T22:07:58.539630+00:00",
+      "updated_at": "2026-10-24T22:07:57Z"
+    },
+    {
+      "operation": "resolve-references",
+      "identity": "E2E-03",
+      "method": "PATCH",
+      "path": "repos/deploymenttheory/go-ios-vm/issues/98",
+      "references": 30,
+      "state": "verified",
+      "attempted_utc": "2026-10-24T22:07:58.928027+00:00",
+      "verified_utc": "2026-10-24T22:08:00.932780+00:00",
+      "updated_at": "2026-10-24T22:08:00Z"
+    }
+  ],
+  "last_error": null,
+  "verification": {
+    "verified_utc": "2026-10-24T22:09:27.870349+00:00",
+    "result": "passed",
+    "checks": [
+      "one issue per stable identity (34), no duplicate or unexpected markers",
+      "bodies equal approved drafts with 433 draft references resolved to issue URLs; markers first",
+      "no unresolved [STABLE-ID](#anchor) references; links target only managed issues",
+      "titles, labels, milestones and open state match the approved backlog",
+      "label colors/descriptions and milestone titles/descriptions match",
+      "27 native parents (parent field and epic sub-issue sets) match",
+      "41 native blocker edges match with no extra managed edges",
+      "31 pre-existing issues unchanged",
+      "ready frontier FND-01 (#72), FW-01 (#77)"
+    ],
+    "not_verified": [
+      "application implementation",
+      "native VM execution",
+      "restore",
+      "graphical guest boot"
+    ]
+  }
+}

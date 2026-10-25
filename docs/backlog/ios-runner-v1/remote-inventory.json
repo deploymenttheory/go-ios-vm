@@ -1,0 +1,3049 @@
+{
+  "captured_utc": "2026-10-24T21:25:09.760330+00:00",
+  "relationship_reads_completed_utc": "2026-10-24T21:35:12.674089+00:00",
+  "repository": "deploymenttheory/go-ios-vm",
+  "default_branch": "main",
+  "main_commit": "cbe8cd92d5672544fb97629ab0753c3eeb2cd176",
+  "pagination": "gh api --paginate --slurp; all open/closed issues; pull requests excluded",
+  "issues": [
+    {
+      "number": 52,
+      "id": 5983095791,
+      "html_url": "https://github.com/deploymenttheory/go-ios-vm/issues/52",
+      "title": "Bound native decoding and remeasure real APFS resource use",
+      "state": "open",
+      "state_reason": null,
+      "updated_at": "2026-10-22T16:14:44Z",
+      "body": "## Outcome\n\nMake native decompression interruptible within a measured resource bound before the exact iOS 14/15 first-tooling gate can pass.\n\n## Evidence\n\nThe current KernelCache/DeviceTree adapter calls `lzfse-cgo.DecodeBufferInto` synchronously. Go context cancellation is checked before and after component reads, but cannot stop that C call once entered. Its input/output buffers are bounded (KernelCache 128 MiB each; DeviceTree 16 MiB each), yet native allocation and execution time have no hard process limit. The exact verified iPhone12,1 iOS 14/15 inspections observed peak RSS of 145,457,152 and 207,708,160 bytes respectively while disk/APFS parsing stopped at upstream UDIF codec [go-apfs-v3 #146](https://github.com/deploymenttheory/go-apfs-v3/issues/146). Those runs do not measure the real APFS path after the codec is fixed. [PR #53](https://github.com/deploymenttheory/go-ios-vm/pull/53) records the resource budget and fixed-path limits.\n\n## Work\n\n- Bound interruption of synchronous native payload decoding, for example through a killable isolated worker or a proven equivalent. Preserve the current byte caps and source/evidence semantics.\n- Re-run the exact two verified images after #146 advances UDIF parsing, measure process RSS/CPU and disk/staging demand, and set a defensible operational limit or explicit refusal path.\n- Keep cancellation, timeout, resource exhaustion, and partial coverage distinct. Do not mark a run complete after a worker is killed or a codec fails.\n\n## Acceptance\n\n- [ ] A deliberately stalled or oversized native decode is interrupted within a documented bound; no worker or temporary file is left behind.\n- [ ] The exact pinned iOS 14/15 pair has updated host measurements after the UDIF codec change, or a further format blocker is linked with truthful partial coverage.\n- [ ] PostgreSQL/CLI integration, cancellation and failure-injection tests pass on macOS and Linux; `go test ./...` and `go vet ./...` pass.\n\n## Coordination\n\nPriority P0 release blocker for [go-ios-vm #20](https://github.com/deploymenttheory/go-ios-vm/issues/20). Depends on resource-budget issue #19 and upstream go-apfs-v3 #146 for the real-image measurement. Do not commit proprietary firmware bytes.\n\n",
+      "labels": [
+        {
+          "id": 12791196197,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-moqJQ",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/enhancement",
+          "name": "enhancement",
+          "color": "a2eeef",
+          "default": true,
+          "description": "New feature or request",
+          "archived_at": null,
+          "archived_by": null
+        },
+        {
+          "id": 12796355660,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-rjkTA",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/priority:P0",
+          "name": "priority:P0",
+          "color": "b60205",
+          "default": false,
+          "description": "Integrity or first-tooling acceptance gate",
+          "archived_at": null,
+          "archived_by": null
+        }
+      ],
+      "milestone": {
+        "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/milestones/1",
+        "html_url": "https://github.com/deploymenttheory/go-ios-vm/milestone/1",
+        "labels_url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/milestones/1/labels",
+        "id": 18810487,
+        "node_id": "MI_kwDOVTNSXs4BHwZ3",
+        "number": 1,
+        "title": "Real-image inspection gate",
+        "description": "Qualify the first static inspection release against exact iPhone12,1 iOS 14.0 and 15.0 restore images. The VM runner and machine-profile implementation are later work. First-tooling acceptance also requires the local read-only inspection UI and its integrated QA-01 gate.",
+        "creator": {
+          "login": "ShocOne",
+          "id": 62835948,
+          "node_id": "MDQ6VXNlcjYyODM1OTQ4",
+          "avatar_url": "https://avatars.githubusercontent.com/u/62835948?v=4",
+          "gravatar_id": "",
+          "url": "https://api.github.com/users/ShocOne",
+          "html_url": "https://github.com/ShocOne",
+          "followers_url": "https://api.github.com/users/ShocOne/followers",
+          "following_url": "https://api.github.com/users/ShocOne/following{/other_user}",
+          "gists_url": "https://api.github.com/users/ShocOne/gists{/gist_id}",
+          "starred_url": "https://api.github.com/users/ShocOne/starred{/owner}{/repo}",
+          "subscriptions_url": "https://api.github.com/users/ShocOne/subscriptions",
+          "organizations_url": "https://api.github.com/users/ShocOne/orgs",
+          "repos_url": "https://api.github.com/users/ShocOne/repos",
+          "events_url": "https://api.github.com/users/ShocOne/events{/privacy}",
+          "received_events_url": "https://api.github.com/users/ShocOne/received_events",
+          "type": "User",
+          "user_view_type": "public",
+          "site_admin": false
+        },
+        "open_issues": 3,
+        "closed_issues": 11,
+        "state": "open",
+        "created_at": "2026-10-22T11:42:37Z",
+        "updated_at": "2026-10-22T18:47:22Z",
+        "due_on": null,
+        "closed_at": null
+      }
+    },
+    {
+      "number": 48,
+      "id": 5982433850,
+      "html_url": "https://github.com/deploymenttheory/go-ios-vm/issues/48",
+      "title": "[QA-01] Qualify the integrated local UI",
+      "state": "open",
+      "state_reason": null,
+      "updated_at": "2026-10-22T15:36:34Z",
+      "body": "<!-- weave-backlog:go-ios-vm-inspection-ui:v1:QA-01 -->\nBacklog ID: `QA-01` \u00b7 Epic: [EPIC-QA](https://github.com/deploymenttheory/go-ios-vm/issues/38) \u00b7 Product baseline: [INDEX](https://github.com/deploymenttheory/go-ios-vm/issues/34).\n\n#### Outcome\nProve the requested UI workflow before existing #20 can pass first-tooling acceptance.\n\n#### Implementation\nFrom fresh CLI/UI processes, observe live inspection of the exact pinned iPhone12,1 iOS 14/15 images and a bounded acquisition fixture, reusing #20's image workflow rather than requiring redundant full downloads. Search each target/run, inspect revisions/assessments and retained bytes, and trace representative device-tree/driver/APFS/evidence graph edges. Prune eligible cache and repeat browser retrieval; stream backup/restore into an isolated DB and repeat. Document commands, host, versions, pins, coverage and upstream gaps. Add controlled crash/retry and partial/unsupported fixtures. Do not commit firmware or build a campaign harness.\n\n#### Acceptance criteria\n- [ ] Live status, search/browse and graph agree with CLI/PostgreSQL for both exact identities; support remains readable after cache cleanup/restore.\n- [ ] Partial, failed, stale, unsupported, absent, zero and unknown show truthfully; UI claims neither usable VM nor complete APFS while #146 remains open.\n- [ ] #20 links this completed UI gate and preserves its independent inspection checks.\n\n#### Verification\nRun `go test ./...`, `go vet ./...`, relevant PostgreSQL/race checks and `python3 scripts/check-backup.py` in an isolated environment. Record browser smoke evidence, macOS/Linux behavior, real-image IDs/digests, DB/CLI samples, prune/restore results and blocker URLs in PR/issue.\n\n#### Dependencies\nDirect blockers: [DATA-03](https://github.com/deploymenttheory/go-ios-vm/issues/42), [LIVE-03](https://github.com/deploymenttheory/go-ios-vm/issues/45), [MAP-02](https://github.com/deploymenttheory/go-ios-vm/issues/47), [#11](https://github.com/deploymenttheory/go-ios-vm/issues/11) verified second image. Supporting: #13/#15/#16/#17 supplied transitively; #20 is downstream, not a predecessor.\n\n#### Applicable product rules\nUI blocks #20 (user decision). Exact image identity, source-backed evidence, truthful partial coverage, cache independence and no proprietary blobs in Git (README/architecture/evidence model).\n\n#### Planning\nMilestone: `Local inspection UI` exit and predecessor of existing `Real-image inspection gate`. Priority: P0. Component/scope owner: integrated verification/documentation, excluding new features and VM runner. Source: user request/#20.\n\n#### Architecture decision alignment\n[ADR 0003](https://github.com/deploymenttheory/go-ios-vm/blob/e8e2011/docs/adr/0003-postgresql-evidence-store.md) requires evidence after cache cleanup and DB restore. [ADR 0002](https://github.com/deploymenttheory/go-ios-vm/blob/e8e2011/docs/adr/0002-codec-capabilities-in-go-apfs.md) leaves codec gaps in go-apfs-v3; [ADR 0001](https://github.com/deploymenttheory/go-ios-vm/blob/e8e2011/docs/adr/0001-fresh-implementation.md) forbids legacy artifact import.\n",
+      "labels": [
+        {
+          "id": 12791196176,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-moqEA",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/documentation",
+          "name": "documentation",
+          "color": "0075ca",
+          "default": true,
+          "description": "Improvements or additions to documentation",
+          "archived_at": null,
+          "archived_by": null
+        },
+        {
+          "id": 12796354814,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-rjg_g",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/type:task",
+          "name": "type:task",
+          "color": "0075ca",
+          "default": false,
+          "description": "Bounded implementation or verification work",
+          "archived_at": null,
+          "archived_by": null
+        },
+        {
+          "id": 12796355660,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-rjkTA",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/priority:P0",
+          "name": "priority:P0",
+          "color": "b60205",
+          "default": false,
+          "description": "Integrity or first-tooling acceptance gate",
+          "archived_at": null,
+          "archived_by": null
+        },
+        {
+          "id": 12796358534,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-rjvhg",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/area:qa",
+          "name": "area:qa",
+          "color": "fbca04",
+          "default": false,
+          "description": "Integrated qualification",
+          "archived_at": null,
+          "archived_by": null
+        },
+        {
+          "id": 12796360117,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-rj1tQ",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/component:verification",
+          "name": "component:verification",
+          "color": "f9d0c4",
+          "default": false,
+          "description": "Cross-component acceptance evidence",
+          "archived_at": null,
+          "archived_by": null
+        }
+      ],
+      "milestone": {
+        "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/milestones/2",
+        "html_url": "https://github.com/deploymenttheory/go-ios-vm/milestone/2",
+        "labels_url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/milestones/2/labels",
+        "id": 18824572,
+        "node_id": "MI_kwDOVTNSXs4BHz18",
+        "number": 2,
+        "title": "Local inspection UI",
+        "description": "A local read-only Go-served browser shows committed acquisition/inspection progress, bounded PostgreSQL search and retained evidence, and a source-backed firmware relationship graph. Exit: QA-01 validates the exact iPhone12,1 iOS 14/15 pair and partial-coverage cases.",
+        "creator": {
+          "login": "ShocOne",
+          "id": 62835948,
+          "node_id": "MDQ6VXNlcjYyODM1OTQ4",
+          "avatar_url": "https://avatars.githubusercontent.com/u/62835948?v=4",
+          "gravatar_id": "",
+          "url": "https://api.github.com/users/ShocOne",
+          "html_url": "https://github.com/ShocOne",
+          "followers_url": "https://api.github.com/users/ShocOne/followers",
+          "following_url": "https://api.github.com/users/ShocOne/following{/other_user}",
+          "gists_url": "https://api.github.com/users/ShocOne/gists{/gist_id}",
+          "starred_url": "https://api.github.com/users/ShocOne/starred{/owner}{/repo}",
+          "subscriptions_url": "https://api.github.com/users/ShocOne/subscriptions",
+          "organizations_url": "https://api.github.com/users/ShocOne/orgs",
+          "repos_url": "https://api.github.com/users/ShocOne/repos",
+          "events_url": "https://api.github.com/users/ShocOne/events{/privacy}",
+          "received_events_url": "https://api.github.com/users/ShocOne/received_events",
+          "type": "User",
+          "user_view_type": "public",
+          "site_admin": false
+        },
+        "open_issues": 7,
+        "closed_issues": 7,
+        "state": "open",
+        "created_at": "2026-10-22T15:31:20Z",
+        "updated_at": "2026-10-23T01:59:08Z",
+        "due_on": null,
+        "closed_at": null
+      }
+    },
+    {
+      "number": 47,
+      "id": 5982432588,
+      "html_url": "https://github.com/deploymenttheory/go-ios-vm/issues/47",
+      "title": "[MAP-02] Review firmware relationships visually",
+      "state": "open",
+      "state_reason": null,
+      "updated_at": "2026-10-22T18:16:59Z",
+      "body": "<!-- weave-backlog:go-ios-vm-inspection-ui:v1:MAP-02 -->\nBacklog ID: `MAP-02` \u00b7 Epic: [EPIC-MAP](https://github.com/deploymenttheory/go-ios-vm/issues/37) \u00b7 Product baseline: [INDEX](https://github.com/deploymenttheory/go-ios-vm/issues/34).\n\n#### Outcome\nAn analyst can follow a component or field to related records and inspect why the edge exists.\n\n#### Implementation\nBuild graph view with target/component filters, bounded expansion, directional/type legend, keyboard selection, searchable nodes and synchronized detail pane. Show observation/basis, source location, coverage and links to [DATA-03](https://github.com/deploymenttheory/go-ios-vm/issues/42) details. Provide an equivalent sortable relationship table for accessibility and large graphs. Keep layout client-side only; do not store interpretation as evidence.\n\n#### Acceptance criteria\n- [ ] Trace selected device-tree property or driver dependency through finding/basis/evidence and distinguish observed, inferred, unknown and unsupported paths.\n- [ ] Real image does not require all-node load; table/graph agree on edges and duplicate names across targets remain separate.\n\n#### Verification\nBrowser interaction tests cover expand/filter, keyboard/table path, source navigation, partial coverage and large-neighborhood limit. Record reproducible real-image UI evidence with proprietary bytes omitted; run `go test ./...`/`go vet ./...`.\n\n#### Dependencies\nDirect blockers: [MAP-01](https://github.com/deploymenttheory/go-ios-vm/issues/46) graph API and [DATA-03](https://github.com/deploymenttheory/go-ios-vm/issues/42) deep-link/details. Supporting: [UI-01](https://github.com/deploymenttheory/go-ios-vm/issues/39) shell supplied transitively.\n\n#### Applicable product rules\nLocal read-only visual review (user decisions). Edges are evidence-backed; names alone do not establish cross-target equivalence (evidence model).\n\n#### Planning\nMilestone: `Local inspection UI`. Priority: P1. Component/scope owner: browser graph/table interaction, excluding graph derivation and codecs. Source: user visual-relationship request.\n\n#### Architecture decision alignment\n[ADR 0003](https://github.com/deploymenttheory/go-ios-vm/blob/e8e2011/docs/adr/0003-postgresql-evidence-store.md) makes retained evidence authoritative; browser publishes no findings. [ADR 0002](https://github.com/deploymenttheory/go-ios-vm/blob/e8e2011/docs/adr/0002-codec-capabilities-in-go-apfs.md) means missing APFS content remains a visible limitation.\n",
+      "labels": [
+        {
+          "id": 12791196197,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-moqJQ",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/enhancement",
+          "name": "enhancement",
+          "color": "a2eeef",
+          "default": true,
+          "description": "New feature or request",
+          "archived_at": null,
+          "archived_by": null
+        },
+        {
+          "id": 12796354814,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-rjg_g",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/type:task",
+          "name": "type:task",
+          "color": "0075ca",
+          "default": false,
+          "description": "Bounded implementation or verification work",
+          "archived_at": null,
+          "archived_by": null
+        },
+        {
+          "id": 12796356113,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-rjmEQ",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/priority:P1",
+          "name": "priority:P1",
+          "color": "d93f0b",
+          "default": false,
+          "description": "Required capability within this phase",
+          "archived_at": null,
+          "archived_by": null
+        },
+        {
+          "id": 12796357927,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-rjtJw",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/area:map",
+          "name": "area:map",
+          "color": "5319e7",
+          "default": false,
+          "description": "Firmware relationship exploration",
+          "archived_at": null,
+          "archived_by": null
+        },
+        {
+          "id": 12796359492,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-rjzRA",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/component:frontend",
+          "name": "component:frontend",
+          "color": "bfdadc",
+          "default": false,
+          "description": "Browser interaction and presentation",
+          "archived_at": null,
+          "archived_by": null
+        }
+      ],
+      "milestone": {
+        "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/milestones/2",
+        "html_url": "https://github.com/deploymenttheory/go-ios-vm/milestone/2",
+        "labels_url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/milestones/2/labels",
+        "id": 18824572,
+        "node_id": "MI_kwDOVTNSXs4BHz18",
+        "number": 2,
+        "title": "Local inspection UI",
+        "description": "A local read-only Go-served browser shows committed acquisition/inspection progress, bounded PostgreSQL search and retained evidence, and a source-backed firmware relationship graph. Exit: QA-01 validates the exact iPhone12,1 iOS 14/15 pair and partial-coverage cases.",
+        "creator": {
+          "login": "ShocOne",
+          "id": 62835948,
+          "node_id": "MDQ6VXNlcjYyODM1OTQ4",
+          "avatar_url": "https://avatars.githubusercontent.com/u/62835948?v=4",
+          "gravatar_id": "",
+          "url": "https://api.github.com/users/ShocOne",
+          "html_url": "https://github.com/ShocOne",
+          "followers_url": "https://api.github.com/users/ShocOne/followers",
+          "following_url": "https://api.github.com/users/ShocOne/following{/other_user}",
+          "gists_url": "https://api.github.com/users/ShocOne/gists{/gist_id}",
+          "starred_url": "https://api.github.com/users/ShocOne/starred{/owner}{/repo}",
+          "subscriptions_url": "https://api.github.com/users/ShocOne/subscriptions",
+          "organizations_url": "https://api.github.com/users/ShocOne/orgs",
+          "repos_url": "https://api.github.com/users/ShocOne/repos",
+          "events_url": "https://api.github.com/users/ShocOne/events{/privacy}",
+          "received_events_url": "https://api.github.com/users/ShocOne/received_events",
+          "type": "User",
+          "user_view_type": "public",
+          "site_admin": false
+        },
+        "open_issues": 7,
+        "closed_issues": 7,
+        "state": "open",
+        "created_at": "2026-10-22T15:31:20Z",
+        "updated_at": "2026-10-23T01:59:08Z",
+        "due_on": null,
+        "closed_at": null
+      }
+    },
+    {
+      "number": 46,
+      "id": 5982431172,
+      "html_url": "https://github.com/deploymenttheory/go-ios-vm/issues/46",
+      "title": "[MAP-01] Expose a bounded typed relationship graph",
+      "state": "open",
+      "state_reason": null,
+      "updated_at": "2026-10-22T15:36:27Z",
+      "body": "<!-- weave-backlog:go-ios-vm-inspection-ui:v1:MAP-01 -->\nBacklog ID: `MAP-01` \u00b7 Epic: [EPIC-MAP](https://github.com/deploymenttheory/go-ios-vm/issues/37) \u00b7 Product baseline: [INDEX](https://github.com/deploymenttheory/go-ios-vm/issues/34).\n\n#### Outcome\nQuery a small exact-target neighborhood of firmware structure and evidence relationships with traceable basis for each edge.\n\n#### Implementation\nDefine typed node/edge IDs and bounded graph queries for artifact \u2192 target \u2192 manifest component; device-tree node \u2192 property; declared driver dependency; supported APFS path/file; observation \u2192 finding revision/assessment; and revision \u2192 supporting/contradicting observation/revision/evidence. Derive only stored relationships; include edge origin, parser/run, source location and coverage. Filter and cap neighborhood expansion so real-image graphs need no all-node load. Cross-image links require explicit comparison identity, never matching names alone.\n\n#### Acceptance criteria\n- [ ] Every edge resolves to retained source/record or is explicitly labelled interpretation; no guessed hardware behavior or physical APFS offset.\n- [ ] Unsupported APFS/incomplete search appear as gaps; duplicate names and cross-target data cannot collapse into one node.\n\n#### Verification\nSeed device-tree, driver-dependency, APFS-path and conflicting-finding fixtures plus a large synthetic graph for limits. Compare edge IDs/basis with DB records; run `go test ./...`/`go vet ./...` and sample a pinned real image where supported.\n\n#### Dependencies\nDirect blockers: [DATA-02](https://github.com/deploymenttheory/go-ios-vm/issues/41) basis/source query contract; [#13](https://github.com/deploymenttheory/go-ios-vm/issues/13) filesystem path/content contract. Supporting: closed #14 revisions, closed #25 IDREF driver metadata; open [go-apfs-v3 #146](https://github.com/deploymenttheory/go-apfs-v3/issues/146) is a format limitation, not codec work for this ticket.\n\n#### Applicable product rules\nVisual IPSW review from evidence, not inferred equivalence (user request/evidence model). Missing/unsupported/unexamined differ; source selectors may be logical views ([ADR 0002](https://github.com/deploymenttheory/go-ios-vm/blob/e8e2011/docs/adr/0002-codec-capabilities-in-go-apfs.md)).\n\n#### Planning\nMilestone: `Local inspection UI`. Priority: P1. Component/scope owner: graph projection/API, excluding layout and codec work. Source: user visual-relationship request.\n\n#### Architecture decision alignment\n[ADR 0002](https://github.com/deploymenttheory/go-ios-vm/blob/e8e2011/docs/adr/0002-codec-capabilities-in-go-apfs.md) leaves codecs upstream; [ADR 0003](https://github.com/deploymenttheory/go-ios-vm/blob/e8e2011/docs/adr/0003-postgresql-evidence-store.md) supplies retained source-linked records. A graph does not choose machine-profile behavior.\n",
+      "labels": [
+        {
+          "id": 12791196197,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-moqJQ",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/enhancement",
+          "name": "enhancement",
+          "color": "a2eeef",
+          "default": true,
+          "description": "New feature or request",
+          "archived_at": null,
+          "archived_by": null
+        },
+        {
+          "id": 12796354814,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-rjg_g",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/type:task",
+          "name": "type:task",
+          "color": "0075ca",
+          "default": false,
+          "description": "Bounded implementation or verification work",
+          "archived_at": null,
+          "archived_by": null
+        },
+        {
+          "id": 12796356113,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-rjmEQ",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/priority:P1",
+          "name": "priority:P1",
+          "color": "d93f0b",
+          "default": false,
+          "description": "Required capability within this phase",
+          "archived_at": null,
+          "archived_by": null
+        },
+        {
+          "id": 12796357927,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-rjtJw",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/area:map",
+          "name": "area:map",
+          "color": "5319e7",
+          "default": false,
+          "description": "Firmware relationship exploration",
+          "archived_at": null,
+          "archived_by": null
+        },
+        {
+          "id": 12796358871,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-rjw1w",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/component:backend",
+          "name": "component:backend",
+          "color": "c5def5",
+          "default": false,
+          "description": "Go server, query or persistence work",
+          "archived_at": null,
+          "archived_by": null
+        }
+      ],
+      "milestone": {
+        "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/milestones/2",
+        "html_url": "https://github.com/deploymenttheory/go-ios-vm/milestone/2",
+        "labels_url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/milestones/2/labels",
+        "id": 18824572,
+        "node_id": "MI_kwDOVTNSXs4BHz18",
+        "number": 2,
+        "title": "Local inspection UI",
+        "description": "A local read-only Go-served browser shows committed acquisition/inspection progress, bounded PostgreSQL search and retained evidence, and a source-backed firmware relationship graph. Exit: QA-01 validates the exact iPhone12,1 iOS 14/15 pair and partial-coverage cases.",
+        "creator": {
+          "login": "ShocOne",
+          "id": 62835948,
+          "node_id": "MDQ6VXNlcjYyODM1OTQ4",
+          "avatar_url": "https://avatars.githubusercontent.com/u/62835948?v=4",
+          "gravatar_id": "",
+          "url": "https://api.github.com/users/ShocOne",
+          "html_url": "https://github.com/ShocOne",
+          "followers_url": "https://api.github.com/users/ShocOne/followers",
+          "following_url": "https://api.github.com/users/ShocOne/following{/other_user}",
+          "gists_url": "https://api.github.com/users/ShocOne/gists{/gist_id}",
+          "starred_url": "https://api.github.com/users/ShocOne/starred{/owner}{/repo}",
+          "subscriptions_url": "https://api.github.com/users/ShocOne/subscriptions",
+          "organizations_url": "https://api.github.com/users/ShocOne/orgs",
+          "repos_url": "https://api.github.com/users/ShocOne/repos",
+          "events_url": "https://api.github.com/users/ShocOne/events{/privacy}",
+          "received_events_url": "https://api.github.com/users/ShocOne/received_events",
+          "type": "User",
+          "user_view_type": "public",
+          "site_admin": false
+        },
+        "open_issues": 7,
+        "closed_issues": 7,
+        "state": "open",
+        "created_at": "2026-10-22T15:31:20Z",
+        "updated_at": "2026-10-23T01:59:08Z",
+        "due_on": null,
+        "closed_at": null
+      }
+    },
+    {
+      "number": 45,
+      "id": 5982429758,
+      "html_url": "https://github.com/deploymenttheory/go-ios-vm/issues/45",
+      "title": "[LIVE-03] Monitor acquisition and inspection in the browser",
+      "state": "closed",
+      "state_reason": "completed",
+      "updated_at": "2026-10-23T01:59:08Z",
+      "body": "<!-- weave-backlog:go-ios-vm-inspection-ui:v1:LIVE-03 -->\nBacklog ID: `LIVE-03` \u00b7 Epic: [EPIC-LIVE](https://github.com/deploymenttheory/go-ios-vm/issues/36) \u00b7 Product baseline: [INDEX](https://github.com/deploymenttheory/go-ios-vm/issues/34).\n\n#### Outcome\nA user can watch active CLI work and inspect historical phases, components and reasons locally.\n\n#### Implementation\nBuild active/history lists and attempt detail with phase, measured progress, completed bytes/batches/components, final coverage and safe diagnostic. Update incrementally; reconnect without losing committed history. Give indeterminate progress for unknown totals and explicit stale/interrupted state. Link to exact target/run and [DATA-03](https://github.com/deploymenttheory/go-ios-vm/issues/42) details where available; no start/cancel controls in this read-only phase.\n\n#### Acceptance criteria\n- [ ] A live fetch and inspection change visibly in a second browser process, then show correct terminal/partial state.\n- [ ] Refresh/reconnect and worker crash retain last-committed state without a false-success bar; keyboard/text views work.\n\n#### Verification\nBrowser smoke flow with controllable fixture worker and isolated DB for running, retry, cancellation, failure and reconnect; compare display to API/CLI. Run `go test ./...`/`go vet ./...`.\n\n#### Dependencies\nDirect blockers: [LIVE-02](https://github.com/deploymenttheory/go-ios-vm/issues/44) status API and [UI-01](https://github.com/deploymenttheory/go-ios-vm/issues/39) shell. Supporting contract: [DATA-03](https://github.com/deploymenttheory/go-ios-vm/issues/42) supplies optional deep links but not status truth.\n\n#### Applicable product rules\nLocal read-only progress observation (user decisions). A complete download is not complete inspection; component coverage remains explicit (architecture).\n\n#### Planning\nMilestone: `Local inspection UI`. Priority: P1. Component/scope owner: browser monitor, excluding persistence/API. Source: user progress request.\n\n#### Architecture decision alignment\n[ADR 0003](https://github.com/deploymenttheory/go-ios-vm/blob/e8e2011/docs/adr/0003-postgresql-evidence-store.md) supplies durable state; no client-side authoritative progress store or VM runner coupling.\n",
+      "labels": [
+        {
+          "id": 12791196197,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-moqJQ",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/enhancement",
+          "name": "enhancement",
+          "color": "a2eeef",
+          "default": true,
+          "description": "New feature or request",
+          "archived_at": null,
+          "archived_by": null
+        },
+        {
+          "id": 12796354814,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-rjg_g",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/type:task",
+          "name": "type:task",
+          "color": "0075ca",
+          "default": false,
+          "description": "Bounded implementation or verification work",
+          "archived_at": null,
+          "archived_by": null
+        },
+        {
+          "id": 12796356113,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-rjmEQ",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/priority:P1",
+          "name": "priority:P1",
+          "color": "d93f0b",
+          "default": false,
+          "description": "Required capability within this phase",
+          "archived_at": null,
+          "archived_by": null
+        },
+        {
+          "id": 12796357431,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-rjrNw",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/area:live",
+          "name": "area:live",
+          "color": "006b75",
+          "default": false,
+          "description": "CLI progress monitoring",
+          "archived_at": null,
+          "archived_by": null
+        },
+        {
+          "id": 12796359492,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-rjzRA",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/component:frontend",
+          "name": "component:frontend",
+          "color": "bfdadc",
+          "default": false,
+          "description": "Browser interaction and presentation",
+          "archived_at": null,
+          "archived_by": null
+        }
+      ],
+      "milestone": {
+        "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/milestones/2",
+        "html_url": "https://github.com/deploymenttheory/go-ios-vm/milestone/2",
+        "labels_url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/milestones/2/labels",
+        "id": 18824572,
+        "node_id": "MI_kwDOVTNSXs4BHz18",
+        "number": 2,
+        "title": "Local inspection UI",
+        "description": "A local read-only Go-served browser shows committed acquisition/inspection progress, bounded PostgreSQL search and retained evidence, and a source-backed firmware relationship graph. Exit: QA-01 validates the exact iPhone12,1 iOS 14/15 pair and partial-coverage cases.",
+        "creator": {
+          "login": "ShocOne",
+          "id": 62835948,
+          "node_id": "MDQ6VXNlcjYyODM1OTQ4",
+          "avatar_url": "https://avatars.githubusercontent.com/u/62835948?v=4",
+          "gravatar_id": "",
+          "url": "https://api.github.com/users/ShocOne",
+          "html_url": "https://github.com/ShocOne",
+          "followers_url": "https://api.github.com/users/ShocOne/followers",
+          "following_url": "https://api.github.com/users/ShocOne/following{/other_user}",
+          "gists_url": "https://api.github.com/users/ShocOne/gists{/gist_id}",
+          "starred_url": "https://api.github.com/users/ShocOne/starred{/owner}{/repo}",
+          "subscriptions_url": "https://api.github.com/users/ShocOne/subscriptions",
+          "organizations_url": "https://api.github.com/users/ShocOne/orgs",
+          "repos_url": "https://api.github.com/users/ShocOne/repos",
+          "events_url": "https://api.github.com/users/ShocOne/events{/privacy}",
+          "received_events_url": "https://api.github.com/users/ShocOne/received_events",
+          "type": "User",
+          "user_view_type": "public",
+          "site_admin": false
+        },
+        "open_issues": 7,
+        "closed_issues": 7,
+        "state": "open",
+        "created_at": "2026-10-22T15:31:20Z",
+        "updated_at": "2026-10-23T01:59:08Z",
+        "due_on": null,
+        "closed_at": null
+      }
+    },
+    {
+      "number": 44,
+      "id": 5982428450,
+      "html_url": "https://github.com/deploymenttheory/go-ios-vm/issues/44",
+      "title": "[LIVE-02] Expose truthful live status from PostgreSQL",
+      "state": "closed",
+      "state_reason": "completed",
+      "updated_at": "2026-10-22T19:10:26Z",
+      "body": "<!-- weave-backlog:go-ios-vm-inspection-ui:v1:LIVE-02 -->\nBacklog ID: `LIVE-02` \u00b7 Epic: [EPIC-LIVE](https://github.com/deploymenttheory/go-ios-vm/issues/36) \u00b7 Product baseline: [INDEX](https://github.com/deploymenttheory/go-ios-vm/issues/34).\n\n#### Outcome\nThe browser can fetch incremental progress and current state without reading worker memory or polling entire tables.\n\n#### Implementation\nAdd bounded snapshot/since-cursor status APIs for acquisition and inspection, with polling or SSE selected by implementation. Combine committed progress with #17 stale-run reconciliation and final coverage. Preserve last-known state when the worker disappears. Define sequence/cursor, timeouts and safe diagnostics. Unknown totals stay indeterminate; downloaded bytes alone cannot mean inspection success.\n\n#### Acceptance criteria\n- [ ] A separate process gets ordered incremental changes and a stable snapshot on reconnect, resume or server restart.\n- [ ] Stale, cancelled, failed, partial and complete remain distinct; no uncommitted batch or DSN leaks.\n\n#### Verification\nTwo-connection isolated PostgreSQL and HTTP handler tests cover reconnect, cursors, stale detection, terminal states and bounded polling. Run `go test ./...` and `go vet ./...`.\n\n#### Dependencies\nDirect blockers: [LIVE-01](https://github.com/deploymenttheory/go-ios-vm/issues/43) persisted progress, [UI-01](https://github.com/deploymenttheory/go-ios-vm/issues/39) HTTP boundary, [#17](https://github.com/deploymenttheory/go-ios-vm/issues/17) crash reconciliation. Supporting contract: #16 is supplied transitively.\n\n#### Applicable product rules\nUI observes durable CLI work and shows uncertainty honestly (user request/evidence model). Diagnostic responses omit secrets (#18).\n\n#### Planning\nMilestone: `Local inspection UI`. Priority: P1. Component/scope owner: backend status read/API, excluding dashboard. Source: user live-progress request.\n\n#### Architecture decision alignment\n[ADR 0003](https://github.com/deploymenttheory/go-ios-vm/blob/e8e2011/docs/adr/0003-postgresql-evidence-store.md): read shared PostgreSQL state. The UI server does not change run state.\n",
+      "labels": [
+        {
+          "id": 12791196197,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-moqJQ",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/enhancement",
+          "name": "enhancement",
+          "color": "a2eeef",
+          "default": true,
+          "description": "New feature or request",
+          "archived_at": null,
+          "archived_by": null
+        },
+        {
+          "id": 12796354814,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-rjg_g",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/type:task",
+          "name": "type:task",
+          "color": "0075ca",
+          "default": false,
+          "description": "Bounded implementation or verification work",
+          "archived_at": null,
+          "archived_by": null
+        },
+        {
+          "id": 12796356113,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-rjmEQ",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/priority:P1",
+          "name": "priority:P1",
+          "color": "d93f0b",
+          "default": false,
+          "description": "Required capability within this phase",
+          "archived_at": null,
+          "archived_by": null
+        },
+        {
+          "id": 12796357431,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-rjrNw",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/area:live",
+          "name": "area:live",
+          "color": "006b75",
+          "default": false,
+          "description": "CLI progress monitoring",
+          "archived_at": null,
+          "archived_by": null
+        },
+        {
+          "id": 12796358871,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-rjw1w",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/component:backend",
+          "name": "component:backend",
+          "color": "c5def5",
+          "default": false,
+          "description": "Go server, query or persistence work",
+          "archived_at": null,
+          "archived_by": null
+        }
+      ],
+      "milestone": {
+        "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/milestones/2",
+        "html_url": "https://github.com/deploymenttheory/go-ios-vm/milestone/2",
+        "labels_url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/milestones/2/labels",
+        "id": 18824572,
+        "node_id": "MI_kwDOVTNSXs4BHz18",
+        "number": 2,
+        "title": "Local inspection UI",
+        "description": "A local read-only Go-served browser shows committed acquisition/inspection progress, bounded PostgreSQL search and retained evidence, and a source-backed firmware relationship graph. Exit: QA-01 validates the exact iPhone12,1 iOS 14/15 pair and partial-coverage cases.",
+        "creator": {
+          "login": "ShocOne",
+          "id": 62835948,
+          "node_id": "MDQ6VXNlcjYyODM1OTQ4",
+          "avatar_url": "https://avatars.githubusercontent.com/u/62835948?v=4",
+          "gravatar_id": "",
+          "url": "https://api.github.com/users/ShocOne",
+          "html_url": "https://github.com/ShocOne",
+          "followers_url": "https://api.github.com/users/ShocOne/followers",
+          "following_url": "https://api.github.com/users/ShocOne/following{/other_user}",
+          "gists_url": "https://api.github.com/users/ShocOne/gists{/gist_id}",
+          "starred_url": "https://api.github.com/users/ShocOne/starred{/owner}{/repo}",
+          "subscriptions_url": "https://api.github.com/users/ShocOne/subscriptions",
+          "organizations_url": "https://api.github.com/users/ShocOne/orgs",
+          "repos_url": "https://api.github.com/users/ShocOne/repos",
+          "events_url": "https://api.github.com/users/ShocOne/events{/privacy}",
+          "received_events_url": "https://api.github.com/users/ShocOne/received_events",
+          "type": "User",
+          "user_view_type": "public",
+          "site_admin": false
+        },
+        "open_issues": 7,
+        "closed_issues": 7,
+        "state": "open",
+        "created_at": "2026-10-22T15:31:20Z",
+        "updated_at": "2026-10-23T01:59:08Z",
+        "due_on": null,
+        "closed_at": null
+      }
+    },
+    {
+      "number": 43,
+      "id": 5982424914,
+      "html_url": "https://github.com/deploymenttheory/go-ios-vm/issues/43",
+      "title": "[LIVE-01] Persist bounded CLI progress events",
+      "state": "closed",
+      "state_reason": "completed",
+      "updated_at": "2026-10-22T18:57:33Z",
+      "body": "<!-- weave-backlog:go-ios-vm-inspection-ui:v1:LIVE-01 -->\nBacklog ID: `LIVE-01` \u00b7 Epic: [EPIC-LIVE](https://github.com/deploymenttheory/go-ios-vm/issues/36) \u00b7 Product baseline: [INDEX](https://github.com/deploymenttheory/go-ios-vm/issues/34).\n\n#### Outcome\nA separate UI process can observe committed CLI acquisition/inspection progress, including after worker exit or crash.\n\n#### Implementation\nRegister a durable acquisition attempt before transfer begins. Persist bounded phase transitions and periodically coalesced counters for exact acquisition/run IDs: source resolution, bytes downloaded/verified, component inspection, batch/checkpoint publication and terminal outcome. Store units/totals only when known, timestamps and safe diagnostic codes; exclude secrets and unbounded log text. Avoid one row per byte/chunk and image-long transactions. Reuse #16 checkpoints and evidence deduplication.\n\n#### Acceptance criteria\n- [ ] A second process sees monotonic committed counters and phase changes for one fetch and inspection; resume keeps exact input identity.\n- [ ] Crash, cancellation and DB write failure leave truthful last-committed state; retention bounds event growth.\n\n#### Verification\nIsolated PostgreSQL integration tests use two connections/processes, restart/retry, unknown totals, throttling and failure injection. Run `go test ./...`/`go vet ./...`; document write volume in a large-image trial.\n\n#### Dependencies\nDirect blocker: [#16](https://github.com/deploymenttheory/go-ios-vm/issues/16) for component checkpoints and batch identity. Supporting contract: [#17](https://github.com/deploymenttheory/go-ios-vm/issues/17) later reconciles stale runs for readers.\n\n#### Applicable product rules\nProgress reflects committed work; incomplete coverage cannot be complete (user request; evidence model/#16). Credentials and proprietary bytes stay out of messages (README/evidence model).\n\n#### Planning\nMilestone: `Local inspection UI`. Priority: P1. Component/scope owner: CLI/workflow/PostgreSQL progress writes, excluding status API/browser. Source: user live-observation request.\n\n#### Architecture decision alignment\n[ADR 0003](https://github.com/deploymenttheory/go-ios-vm/blob/e8e2011/docs/adr/0003-postgresql-evidence-store.md) makes PostgreSQL shared durable state. Workflow publishes; `internal/postgres` owns schema/SQL. No separate event service.\n",
+      "labels": [
+        {
+          "id": 12791196197,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-moqJQ",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/enhancement",
+          "name": "enhancement",
+          "color": "a2eeef",
+          "default": true,
+          "description": "New feature or request",
+          "archived_at": null,
+          "archived_by": null
+        },
+        {
+          "id": 12796354814,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-rjg_g",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/type:task",
+          "name": "type:task",
+          "color": "0075ca",
+          "default": false,
+          "description": "Bounded implementation or verification work",
+          "archived_at": null,
+          "archived_by": null
+        },
+        {
+          "id": 12796356113,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-rjmEQ",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/priority:P1",
+          "name": "priority:P1",
+          "color": "d93f0b",
+          "default": false,
+          "description": "Required capability within this phase",
+          "archived_at": null,
+          "archived_by": null
+        },
+        {
+          "id": 12796357431,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-rjrNw",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/area:live",
+          "name": "area:live",
+          "color": "006b75",
+          "default": false,
+          "description": "CLI progress monitoring",
+          "archived_at": null,
+          "archived_by": null
+        },
+        {
+          "id": 12796358871,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-rjw1w",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/component:backend",
+          "name": "component:backend",
+          "color": "c5def5",
+          "default": false,
+          "description": "Go server, query or persistence work",
+          "archived_at": null,
+          "archived_by": null
+        }
+      ],
+      "milestone": {
+        "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/milestones/2",
+        "html_url": "https://github.com/deploymenttheory/go-ios-vm/milestone/2",
+        "labels_url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/milestones/2/labels",
+        "id": 18824572,
+        "node_id": "MI_kwDOVTNSXs4BHz18",
+        "number": 2,
+        "title": "Local inspection UI",
+        "description": "A local read-only Go-served browser shows committed acquisition/inspection progress, bounded PostgreSQL search and retained evidence, and a source-backed firmware relationship graph. Exit: QA-01 validates the exact iPhone12,1 iOS 14/15 pair and partial-coverage cases.",
+        "creator": {
+          "login": "ShocOne",
+          "id": 62835948,
+          "node_id": "MDQ6VXNlcjYyODM1OTQ4",
+          "avatar_url": "https://avatars.githubusercontent.com/u/62835948?v=4",
+          "gravatar_id": "",
+          "url": "https://api.github.com/users/ShocOne",
+          "html_url": "https://github.com/ShocOne",
+          "followers_url": "https://api.github.com/users/ShocOne/followers",
+          "following_url": "https://api.github.com/users/ShocOne/following{/other_user}",
+          "gists_url": "https://api.github.com/users/ShocOne/gists{/gist_id}",
+          "starred_url": "https://api.github.com/users/ShocOne/starred{/owner}{/repo}",
+          "subscriptions_url": "https://api.github.com/users/ShocOne/subscriptions",
+          "organizations_url": "https://api.github.com/users/ShocOne/orgs",
+          "repos_url": "https://api.github.com/users/ShocOne/repos",
+          "events_url": "https://api.github.com/users/ShocOne/events{/privacy}",
+          "received_events_url": "https://api.github.com/users/ShocOne/received_events",
+          "type": "User",
+          "user_view_type": "public",
+          "site_admin": false
+        },
+        "open_issues": 7,
+        "closed_issues": 7,
+        "state": "open",
+        "created_at": "2026-10-22T15:31:20Z",
+        "updated_at": "2026-10-23T01:59:08Z",
+        "due_on": null,
+        "closed_at": null
+      }
+    },
+    {
+      "number": 42,
+      "id": 5982423767,
+      "html_url": "https://github.com/deploymenttheory/go-ios-vm/issues/42",
+      "title": "[DATA-03] Search and browse inspection results",
+      "state": "closed",
+      "state_reason": "completed",
+      "updated_at": "2026-10-23T01:15:48Z",
+      "body": "<!-- weave-backlog:go-ios-vm-inspection-ui:v1:DATA-03 -->\nBacklog ID: `DATA-03` \u00b7 Epic: [EPIC-UI](https://github.com/deploymenttheory/go-ios-vm/issues/35) \u00b7 Product baseline: [INDEX](https://github.com/deploymenttheory/go-ios-vm/issues/34).\n\n#### Outcome\nA user can find a target/run and drill from components to observations, findings, assessments and source evidence in the browser.\n\n#### Implementation\nBuild browser navigation, search/filter/paginated lists, detail views and stable deep links on [DATA-01](https://github.com/deploymenttheory/go-ios-vm/issues/40)/02 APIs. Show exact build/identity and coverage on relevant views; label basis separately from assessment. Render unsigned values without precision loss, logical source selector chains, bounded byte previews, and clear empty/loading/failure/partial states. Keep keyboard navigation and a usable narrow-window layout.\n\n#### Acceptance criteria\n- [ ] Search by product/build, component and subject/property reaches a retained finding and source preview without SQL.\n- [ ] Duplicate names across targets do not merge; unexamined, unsupported, absent, zero and failed states render distinctly.\n\n#### Verification\nAutomated browser or handler smoke flow over a seeded isolated DB, including deep-link refresh and cache-deleted evidence. Test text escaping and long values; run `go test ./...`/`go vet ./...` and record reproducible UI evidence in the PR.\n\n#### Dependencies\nDirect blockers: [DATA-01](https://github.com/deploymenttheory/go-ios-vm/issues/40), [DATA-02](https://github.com/deploymenttheory/go-ios-vm/issues/41). Supporting contract: [UI-01](https://github.com/deploymenttheory/go-ios-vm/issues/39) is transitively supplied by both.\n\n#### Applicable product rules\nLocal read-only browser and PostgreSQL browsing (user decisions). Exact target selection and truthful coverage (inspection architecture).\n\n#### Planning\nMilestone: `Local inspection UI`. Priority: P1. Component/scope owner: browser search/detail, excluding server queries and graph layout. Source: user search/browse request.\n\n#### Architecture decision alignment\n[ADR 0003](https://github.com/deploymenttheory/go-ios-vm/blob/e8e2011/docs/adr/0003-postgresql-evidence-store.md) makes database evidence authoritative; browser data is a bounded view, not a second findings store. [ADR 0001](https://github.com/deploymenttheory/go-ios-vm/blob/e8e2011/docs/adr/0001-fresh-implementation.md) excludes legacy UI import.\n",
+      "labels": [
+        {
+          "id": 12791196197,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-moqJQ",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/enhancement",
+          "name": "enhancement",
+          "color": "a2eeef",
+          "default": true,
+          "description": "New feature or request",
+          "archived_at": null,
+          "archived_by": null
+        },
+        {
+          "id": 12796354814,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-rjg_g",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/type:task",
+          "name": "type:task",
+          "color": "0075ca",
+          "default": false,
+          "description": "Bounded implementation or verification work",
+          "archived_at": null,
+          "archived_by": null
+        },
+        {
+          "id": 12796356113,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-rjmEQ",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/priority:P1",
+          "name": "priority:P1",
+          "color": "d93f0b",
+          "default": false,
+          "description": "Required capability within this phase",
+          "archived_at": null,
+          "archived_by": null
+        },
+        {
+          "id": 12796356600,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-rjn-A",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/area:ui",
+          "name": "area:ui",
+          "color": "0e8a16",
+          "default": false,
+          "description": "Local UI and result browsing",
+          "archived_at": null,
+          "archived_by": null
+        },
+        {
+          "id": 12796359492,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-rjzRA",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/component:frontend",
+          "name": "component:frontend",
+          "color": "bfdadc",
+          "default": false,
+          "description": "Browser interaction and presentation",
+          "archived_at": null,
+          "archived_by": null
+        }
+      ],
+      "milestone": {
+        "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/milestones/2",
+        "html_url": "https://github.com/deploymenttheory/go-ios-vm/milestone/2",
+        "labels_url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/milestones/2/labels",
+        "id": 18824572,
+        "node_id": "MI_kwDOVTNSXs4BHz18",
+        "number": 2,
+        "title": "Local inspection UI",
+        "description": "A local read-only Go-served browser shows committed acquisition/inspection progress, bounded PostgreSQL search and retained evidence, and a source-backed firmware relationship graph. Exit: QA-01 validates the exact iPhone12,1 iOS 14/15 pair and partial-coverage cases.",
+        "creator": {
+          "login": "ShocOne",
+          "id": 62835948,
+          "node_id": "MDQ6VXNlcjYyODM1OTQ4",
+          "avatar_url": "https://avatars.githubusercontent.com/u/62835948?v=4",
+          "gravatar_id": "",
+          "url": "https://api.github.com/users/ShocOne",
+          "html_url": "https://github.com/ShocOne",
+          "followers_url": "https://api.github.com/users/ShocOne/followers",
+          "following_url": "https://api.github.com/users/ShocOne/following{/other_user}",
+          "gists_url": "https://api.github.com/users/ShocOne/gists{/gist_id}",
+          "starred_url": "https://api.github.com/users/ShocOne/starred{/owner}{/repo}",
+          "subscriptions_url": "https://api.github.com/users/ShocOne/subscriptions",
+          "organizations_url": "https://api.github.com/users/ShocOne/orgs",
+          "repos_url": "https://api.github.com/users/ShocOne/repos",
+          "events_url": "https://api.github.com/users/ShocOne/events{/privacy}",
+          "received_events_url": "https://api.github.com/users/ShocOne/received_events",
+          "type": "User",
+          "user_view_type": "public",
+          "site_admin": false
+        },
+        "open_issues": 7,
+        "closed_issues": 7,
+        "state": "open",
+        "created_at": "2026-10-22T15:31:20Z",
+        "updated_at": "2026-10-23T01:59:08Z",
+        "due_on": null,
+        "closed_at": null
+      }
+    },
+    {
+      "number": 41,
+      "id": 5982422207,
+      "html_url": "https://github.com/deploymenttheory/go-ios-vm/issues/41",
+      "title": "[DATA-02] Query findings, assessments and retained evidence",
+      "state": "closed",
+      "state_reason": "completed",
+      "updated_at": "2026-10-22T18:57:46Z",
+      "body": "<!-- weave-backlog:go-ios-vm-inspection-ui:v1:DATA-02 -->\nBacklog ID: `DATA-02` \u00b7 Epic: [EPIC-UI](https://github.com/deploymenttheory/go-ios-vm/issues/35) \u00b7 Product baseline: [INDEX](https://github.com/deploymenttheory/go-ios-vm/issues/34).\n\n#### Outcome\nThe UI can inspect a finding's revision chain, review history, basis and retained support after the source cache is removed.\n\n#### Implementation\nAdd read-only target-scoped search/detail queries for observations, findings, revisions, assessments, basis links, typed values and source locations. Provide a bounded explicit hex/text preview of retained evidence with digest/length checks; distinguish unavailable support from zero bytes or empty value. Add indexed subject/property/component/basis/assessment filters and stable cursor pagination. No revision or assessment mutation route.\n\n#### Acceptance criteria\n- [ ] A corrected revision retains its predecessor and does not inherit its assessment; support and contradiction roles are visible.\n- [ ] Support remains navigable after cache deletion; incomplete or absent blobs never look complete.\n\n#### Verification\nIsolated PostgreSQL fixtures cover contradictory revisions, changed support, zero/missing/unknown, binary limits and cache deletion. Compare responses with CLI `finding show`; run backup/restore where applicable plus `go test ./...` and `go vet ./...`.\n\n#### Dependencies\nDirect blockers: [UI-01](https://github.com/deploymenttheory/go-ios-vm/issues/39) for the API boundary; [#15](https://github.com/deploymenttheory/go-ios-vm/issues/15) for assessment/history semantics. Supporting contract: closed [#14](https://github.com/deploymenttheory/go-ios-vm/issues/14) for stable findings/revisions.\n\n#### Applicable product rules\nRead-only review (user decision). Assessment belongs to one revision/basis; absent, zero, unknown and unexamined differ (evidence model/#15). Essential support survives cache deletion ([ADR 0003](https://github.com/deploymenttheory/go-ios-vm/blob/e8e2011/docs/adr/0003-postgresql-evidence-store.md)).\n\n#### Planning\nMilestone: `Local inspection UI`. Priority: P1. Component/scope owner: Go finding/evidence query API, excluding visual graph and edits. Source: user database-browsing request.\n\n#### Architecture decision alignment\n[ADR 0003](https://github.com/deploymenttheory/go-ios-vm/blob/e8e2011/docs/adr/0003-postgresql-evidence-store.md) requires retained evidence in PostgreSQL. A decoded logical source location is not an invented physical offset (evidence model).\n",
+      "labels": [
+        {
+          "id": 12791196197,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-moqJQ",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/enhancement",
+          "name": "enhancement",
+          "color": "a2eeef",
+          "default": true,
+          "description": "New feature or request",
+          "archived_at": null,
+          "archived_by": null
+        },
+        {
+          "id": 12796354814,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-rjg_g",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/type:task",
+          "name": "type:task",
+          "color": "0075ca",
+          "default": false,
+          "description": "Bounded implementation or verification work",
+          "archived_at": null,
+          "archived_by": null
+        },
+        {
+          "id": 12796356113,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-rjmEQ",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/priority:P1",
+          "name": "priority:P1",
+          "color": "d93f0b",
+          "default": false,
+          "description": "Required capability within this phase",
+          "archived_at": null,
+          "archived_by": null
+        },
+        {
+          "id": 12796356600,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-rjn-A",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/area:ui",
+          "name": "area:ui",
+          "color": "0e8a16",
+          "default": false,
+          "description": "Local UI and result browsing",
+          "archived_at": null,
+          "archived_by": null
+        },
+        {
+          "id": 12796358871,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-rjw1w",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/component:backend",
+          "name": "component:backend",
+          "color": "c5def5",
+          "default": false,
+          "description": "Go server, query or persistence work",
+          "archived_at": null,
+          "archived_by": null
+        }
+      ],
+      "milestone": {
+        "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/milestones/2",
+        "html_url": "https://github.com/deploymenttheory/go-ios-vm/milestone/2",
+        "labels_url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/milestones/2/labels",
+        "id": 18824572,
+        "node_id": "MI_kwDOVTNSXs4BHz18",
+        "number": 2,
+        "title": "Local inspection UI",
+        "description": "A local read-only Go-served browser shows committed acquisition/inspection progress, bounded PostgreSQL search and retained evidence, and a source-backed firmware relationship graph. Exit: QA-01 validates the exact iPhone12,1 iOS 14/15 pair and partial-coverage cases.",
+        "creator": {
+          "login": "ShocOne",
+          "id": 62835948,
+          "node_id": "MDQ6VXNlcjYyODM1OTQ4",
+          "avatar_url": "https://avatars.githubusercontent.com/u/62835948?v=4",
+          "gravatar_id": "",
+          "url": "https://api.github.com/users/ShocOne",
+          "html_url": "https://github.com/ShocOne",
+          "followers_url": "https://api.github.com/users/ShocOne/followers",
+          "following_url": "https://api.github.com/users/ShocOne/following{/other_user}",
+          "gists_url": "https://api.github.com/users/ShocOne/gists{/gist_id}",
+          "starred_url": "https://api.github.com/users/ShocOne/starred{/owner}{/repo}",
+          "subscriptions_url": "https://api.github.com/users/ShocOne/subscriptions",
+          "organizations_url": "https://api.github.com/users/ShocOne/orgs",
+          "repos_url": "https://api.github.com/users/ShocOne/repos",
+          "events_url": "https://api.github.com/users/ShocOne/events{/privacy}",
+          "received_events_url": "https://api.github.com/users/ShocOne/received_events",
+          "type": "User",
+          "user_view_type": "public",
+          "site_admin": false
+        },
+        "open_issues": 7,
+        "closed_issues": 7,
+        "state": "open",
+        "created_at": "2026-10-22T15:31:20Z",
+        "updated_at": "2026-10-23T01:59:08Z",
+        "due_on": null,
+        "closed_at": null
+      }
+    },
+    {
+      "number": 40,
+      "id": 5982420461,
+      "html_url": "https://github.com/deploymenttheory/go-ios-vm/issues/40",
+      "title": "[DATA-01] Query targets, acquisitions, runs and coverage",
+      "state": "closed",
+      "state_reason": "completed",
+      "updated_at": "2026-10-22T18:29:55Z",
+      "body": "<!-- weave-backlog:go-ios-vm-inspection-ui:v1:DATA-01 -->\nBacklog ID: `DATA-01` \u00b7 Epic: [EPIC-UI](https://github.com/deploymenttheory/go-ios-vm/issues/35) \u00b7 Product baseline: [INDEX](https://github.com/deploymenttheory/go-ios-vm/issues/34).\n\n#### Outcome\nThe UI can search exact targets and inspect an acquisition or run's committed scope and component coverage.\n\n#### Implementation\nAdd read-only PostgreSQL queries and `/api/v1` handlers for artifacts/targets, acquisition attempts, runs, component checkpoints and final coverage. Filter by exact product/build/identity, state and time, with bounded page size, stable cursor order and query timeouts. Return typed IDs, provenance, partial reasons and availability. SQL stays in `internal/postgres`; API mapping stays at the UI edge. A failed source or partial run must not imply a complete search.\n\n#### Acceptance criteria\n- [ ] Two identities in one IPSW and two builds for one product stay distinct in search/detail responses.\n- [ ] Running, interrupted, partial, complete and failed runs show committed checkpoints/coverage without fabricated progress or unbounded rows.\n\n#### Verification\nIsolated PostgreSQL fixtures cover multi-identity, filtering/pagination, missing and partial coverage. Assert bounded responses and stable ordering across inserts; run `go test ./...` and `go vet ./...`.\n\n#### Dependencies\nDirect blockers: [UI-01](https://github.com/deploymenttheory/go-ios-vm/issues/39) for the API boundary; [#16](https://github.com/deploymenttheory/go-ios-vm/issues/16) for committed component checkpoints. Supporting contract: closed [#9](https://github.com/deploymenttheory/go-ios-vm/issues/9) for exact acquisition identity.\n\n#### Applicable product rules\nRead-only PostgreSQL browsing and exact target identity (user decision; evidence model). Absence requires a complete search (inspection architecture).\n\n#### Planning\nMilestone: `Local inspection UI`. Priority: P1. Component/scope owner: Go read model/API for acquisition and run state, excluding finding queries and page design. Source: user database-browsing request.\n\n#### Architecture decision alignment\n[ADR 0003](https://github.com/deploymenttheory/go-ios-vm/blob/e8e2011/docs/adr/0003-postgresql-evidence-store.md) owns durable state. Inspection architecture places SQL in `internal/postgres` and transport formatting at the CLI/UI edge.\n",
+      "labels": [
+        {
+          "id": 12791196197,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-moqJQ",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/enhancement",
+          "name": "enhancement",
+          "color": "a2eeef",
+          "default": true,
+          "description": "New feature or request",
+          "archived_at": null,
+          "archived_by": null
+        },
+        {
+          "id": 12796354814,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-rjg_g",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/type:task",
+          "name": "type:task",
+          "color": "0075ca",
+          "default": false,
+          "description": "Bounded implementation or verification work",
+          "archived_at": null,
+          "archived_by": null
+        },
+        {
+          "id": 12796356113,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-rjmEQ",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/priority:P1",
+          "name": "priority:P1",
+          "color": "d93f0b",
+          "default": false,
+          "description": "Required capability within this phase",
+          "archived_at": null,
+          "archived_by": null
+        },
+        {
+          "id": 12796356600,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-rjn-A",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/area:ui",
+          "name": "area:ui",
+          "color": "0e8a16",
+          "default": false,
+          "description": "Local UI and result browsing",
+          "archived_at": null,
+          "archived_by": null
+        },
+        {
+          "id": 12796358871,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-rjw1w",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/component:backend",
+          "name": "component:backend",
+          "color": "c5def5",
+          "default": false,
+          "description": "Go server, query or persistence work",
+          "archived_at": null,
+          "archived_by": null
+        }
+      ],
+      "milestone": {
+        "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/milestones/2",
+        "html_url": "https://github.com/deploymenttheory/go-ios-vm/milestone/2",
+        "labels_url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/milestones/2/labels",
+        "id": 18824572,
+        "node_id": "MI_kwDOVTNSXs4BHz18",
+        "number": 2,
+        "title": "Local inspection UI",
+        "description": "A local read-only Go-served browser shows committed acquisition/inspection progress, bounded PostgreSQL search and retained evidence, and a source-backed firmware relationship graph. Exit: QA-01 validates the exact iPhone12,1 iOS 14/15 pair and partial-coverage cases.",
+        "creator": {
+          "login": "ShocOne",
+          "id": 62835948,
+          "node_id": "MDQ6VXNlcjYyODM1OTQ4",
+          "avatar_url": "https://avatars.githubusercontent.com/u/62835948?v=4",
+          "gravatar_id": "",
+          "url": "https://api.github.com/users/ShocOne",
+          "html_url": "https://github.com/ShocOne",
+          "followers_url": "https://api.github.com/users/ShocOne/followers",
+          "following_url": "https://api.github.com/users/ShocOne/following{/other_user}",
+          "gists_url": "https://api.github.com/users/ShocOne/gists{/gist_id}",
+          "starred_url": "https://api.github.com/users/ShocOne/starred{/owner}{/repo}",
+          "subscriptions_url": "https://api.github.com/users/ShocOne/subscriptions",
+          "organizations_url": "https://api.github.com/users/ShocOne/orgs",
+          "repos_url": "https://api.github.com/users/ShocOne/repos",
+          "events_url": "https://api.github.com/users/ShocOne/events{/privacy}",
+          "received_events_url": "https://api.github.com/users/ShocOne/received_events",
+          "type": "User",
+          "user_view_type": "public",
+          "site_admin": false
+        },
+        "open_issues": 7,
+        "closed_issues": 7,
+        "state": "open",
+        "created_at": "2026-10-22T15:31:20Z",
+        "updated_at": "2026-10-23T01:59:08Z",
+        "due_on": null,
+        "closed_at": null
+      }
+    },
+    {
+      "number": 39,
+      "id": 5982419179,
+      "html_url": "https://github.com/deploymenttheory/go-ios-vm/issues/39",
+      "title": "[UI-01] Serve a local read-only inspection UI",
+      "state": "closed",
+      "state_reason": "completed",
+      "updated_at": "2026-10-22T18:27:50Z",
+      "body": "<!-- weave-backlog:go-ios-vm-inspection-ui:v1:UI-01 -->\nBacklog ID: `UI-01` \u00b7 Epic: [EPIC-UI](https://github.com/deploymenttheory/go-ios-vm/issues/35) \u00b7 Product baseline: [INDEX](https://github.com/deploymenttheory/go-ios-vm/issues/34).\n\n#### Outcome\nA user can run `go-ios-vm ui serve` and open the inspection app locally while CLI work runs in another process.\n\n#### Implementation\nAdd a Go HTTP server at the CLI edge with typed Viper configuration, bundled assets and graceful shutdown. Bind loopback by default and reject non-loopback binding in this phase. Reuse PostgreSQL configuration without exposing its DSN, credentials or raw errors in HTML/JSON. Provide a versioned `/api/v1` read boundary, no mutation route, no arbitrary SQL and no second evidence store. Preserve package boundaries.\n\n#### Acceptance criteria\n- [ ] Existing database configuration starts the app; DB failure has a safe visible diagnostic.\n- [ ] Only local clients connect; no secret or write endpoint is exposed; shutdown releases listener and pool.\n\n#### Verification\nGo `httptest` and an isolated PostgreSQL schema cover startup, health, routing and shutdown; test non-loopback refusal, error redaction and `go test ./...`/`go vet ./...`. Document the command and port behavior.\n\n#### Dependencies\nDirect blockers: None; ready now. Supporting contracts: closed [#18](https://github.com/deploymenttheory/go-ios-vm/issues/18) for diagnostics and [README](https://github.com/deploymenttheory/go-ios-vm/blob/e8e2011/README.md) for configuration.\n\n#### Applicable product rules\nLocal browser served by Go CLI; read-only exploration; blocks #20 (2026-10-22 user decisions). PostgreSQL is the durable evidence store and credentials are configuration, not provenance ([ADR 0003](https://github.com/deploymenttheory/go-ios-vm/blob/e8e2011/docs/adr/0003-postgresql-evidence-store.md)/evidence model).\n\n#### Planning\nMilestone: `Local inspection UI`. Priority: P1. Component/scope owner: Go CLI/server, excluding query semantics and browser pages. Source: user local-UI decision and CLI architecture.\n\n#### Architecture decision alignment\n[ADR 0001](https://github.com/deploymenttheory/go-ios-vm/blob/e8e2011/docs/adr/0001-fresh-implementation.md): fresh implementation. [ADR 0003](https://github.com/deploymenttheory/go-ios-vm/blob/e8e2011/docs/adr/0003-postgresql-evidence-store.md): PostgreSQL reads, no report archive. The web edge does not enter `internal/model`.\n",
+      "labels": [
+        {
+          "id": 12791196197,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-moqJQ",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/enhancement",
+          "name": "enhancement",
+          "color": "a2eeef",
+          "default": true,
+          "description": "New feature or request",
+          "archived_at": null,
+          "archived_by": null
+        },
+        {
+          "id": 12796354814,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-rjg_g",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/type:task",
+          "name": "type:task",
+          "color": "0075ca",
+          "default": false,
+          "description": "Bounded implementation or verification work",
+          "archived_at": null,
+          "archived_by": null
+        },
+        {
+          "id": 12796356113,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-rjmEQ",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/priority:P1",
+          "name": "priority:P1",
+          "color": "d93f0b",
+          "default": false,
+          "description": "Required capability within this phase",
+          "archived_at": null,
+          "archived_by": null
+        },
+        {
+          "id": 12796356600,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-rjn-A",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/area:ui",
+          "name": "area:ui",
+          "color": "0e8a16",
+          "default": false,
+          "description": "Local UI and result browsing",
+          "archived_at": null,
+          "archived_by": null
+        },
+        {
+          "id": 12796358871,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-rjw1w",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/component:backend",
+          "name": "component:backend",
+          "color": "c5def5",
+          "default": false,
+          "description": "Go server, query or persistence work",
+          "archived_at": null,
+          "archived_by": null
+        }
+      ],
+      "milestone": {
+        "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/milestones/2",
+        "html_url": "https://github.com/deploymenttheory/go-ios-vm/milestone/2",
+        "labels_url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/milestones/2/labels",
+        "id": 18824572,
+        "node_id": "MI_kwDOVTNSXs4BHz18",
+        "number": 2,
+        "title": "Local inspection UI",
+        "description": "A local read-only Go-served browser shows committed acquisition/inspection progress, bounded PostgreSQL search and retained evidence, and a source-backed firmware relationship graph. Exit: QA-01 validates the exact iPhone12,1 iOS 14/15 pair and partial-coverage cases.",
+        "creator": {
+          "login": "ShocOne",
+          "id": 62835948,
+          "node_id": "MDQ6VXNlcjYyODM1OTQ4",
+          "avatar_url": "https://avatars.githubusercontent.com/u/62835948?v=4",
+          "gravatar_id": "",
+          "url": "https://api.github.com/users/ShocOne",
+          "html_url": "https://github.com/ShocOne",
+          "followers_url": "https://api.github.com/users/ShocOne/followers",
+          "following_url": "https://api.github.com/users/ShocOne/following{/other_user}",
+          "gists_url": "https://api.github.com/users/ShocOne/gists{/gist_id}",
+          "starred_url": "https://api.github.com/users/ShocOne/starred{/owner}{/repo}",
+          "subscriptions_url": "https://api.github.com/users/ShocOne/subscriptions",
+          "organizations_url": "https://api.github.com/users/ShocOne/orgs",
+          "repos_url": "https://api.github.com/users/ShocOne/repos",
+          "events_url": "https://api.github.com/users/ShocOne/events{/privacy}",
+          "received_events_url": "https://api.github.com/users/ShocOne/received_events",
+          "type": "User",
+          "user_view_type": "public",
+          "site_admin": false
+        },
+        "open_issues": 7,
+        "closed_issues": 7,
+        "state": "open",
+        "created_at": "2026-10-22T15:31:20Z",
+        "updated_at": "2026-10-23T01:59:08Z",
+        "due_on": null,
+        "closed_at": null
+      }
+    },
+    {
+      "number": 38,
+      "id": 5982415568,
+      "html_url": "https://github.com/deploymenttheory/go-ios-vm/issues/38",
+      "title": "[Epic QA] Integrated UI acceptance",
+      "state": "open",
+      "state_reason": null,
+      "updated_at": "2026-10-22T15:35:49Z",
+      "body": "<!-- weave-backlog:go-ios-vm-inspection-ui:v1:EPIC-QA -->\nBacklog ID: `EPIC-QA` \u00b7 Product baseline: [INDEX](https://github.com/deploymenttheory/go-ios-vm/issues/34).\n\n#### Outcome\nProvide reproducible evidence that the requested local UI works on the pinned pair before #20 can close.\n\n#### Agreed behavior\nQualification separates UI availability from parser coverage, uses exact pins and controlled failure fixtures, and does not claim a usable VM or hide go-apfs-v3 #146.\n\n#### Implementation tickets\n- [ ] [QA-01](https://github.com/deploymenttheory/go-ios-vm/issues/48) \u2014 verification; end-to-end UI gate and docs.\n\n#### Epic acceptance\n- [ ] [QA-01](https://github.com/deploymenttheory/go-ios-vm/issues/48) covers live progress, search, retained bytes after cache cleanup/DB restore, and graph links on the exact pair.\n- [ ] UI and #20 record unsupported layers and do not claim complete coverage while inspection is partial.\n\n#### Planning\nMilestone: `Local inspection UI`; priority P0 first-tooling gate; source: user's explicit decision to block #20.\n\n#### Architecture decision alignment\n[ADR 0003](https://github.com/deploymenttheory/go-ios-vm/blob/e8e2011/docs/adr/0003-postgresql-evidence-store.md) requires retained support after cache cleanup/restore. [ADR 0002](https://github.com/deploymenttheory/go-ios-vm/blob/e8e2011/docs/adr/0002-codec-capabilities-in-go-apfs.md) owns codec gaps upstream; architecture requires truthful macOS/Linux results.\n",
+      "labels": [
+        {
+          "id": 12796354397,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-rjfXQ",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/type:epic",
+          "name": "type:epic",
+          "color": "5319e7",
+          "default": false,
+          "description": "Coherent behavior with integrated acceptance",
+          "archived_at": null,
+          "archived_by": null
+        },
+        {
+          "id": 12796355660,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-rjkTA",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/priority:P0",
+          "name": "priority:P0",
+          "color": "b60205",
+          "default": false,
+          "description": "Integrity or first-tooling acceptance gate",
+          "archived_at": null,
+          "archived_by": null
+        },
+        {
+          "id": 12796358534,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-rjvhg",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/area:qa",
+          "name": "area:qa",
+          "color": "fbca04",
+          "default": false,
+          "description": "Integrated qualification",
+          "archived_at": null,
+          "archived_by": null
+        }
+      ],
+      "milestone": {
+        "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/milestones/2",
+        "html_url": "https://github.com/deploymenttheory/go-ios-vm/milestone/2",
+        "labels_url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/milestones/2/labels",
+        "id": 18824572,
+        "node_id": "MI_kwDOVTNSXs4BHz18",
+        "number": 2,
+        "title": "Local inspection UI",
+        "description": "A local read-only Go-served browser shows committed acquisition/inspection progress, bounded PostgreSQL search and retained evidence, and a source-backed firmware relationship graph. Exit: QA-01 validates the exact iPhone12,1 iOS 14/15 pair and partial-coverage cases.",
+        "creator": {
+          "login": "ShocOne",
+          "id": 62835948,
+          "node_id": "MDQ6VXNlcjYyODM1OTQ4",
+          "avatar_url": "https://avatars.githubusercontent.com/u/62835948?v=4",
+          "gravatar_id": "",
+          "url": "https://api.github.com/users/ShocOne",
+          "html_url": "https://github.com/ShocOne",
+          "followers_url": "https://api.github.com/users/ShocOne/followers",
+          "following_url": "https://api.github.com/users/ShocOne/following{/other_user}",
+          "gists_url": "https://api.github.com/users/ShocOne/gists{/gist_id}",
+          "starred_url": "https://api.github.com/users/ShocOne/starred{/owner}{/repo}",
+          "subscriptions_url": "https://api.github.com/users/ShocOne/subscriptions",
+          "organizations_url": "https://api.github.com/users/ShocOne/orgs",
+          "repos_url": "https://api.github.com/users/ShocOne/repos",
+          "events_url": "https://api.github.com/users/ShocOne/events{/privacy}",
+          "received_events_url": "https://api.github.com/users/ShocOne/received_events",
+          "type": "User",
+          "user_view_type": "public",
+          "site_admin": false
+        },
+        "open_issues": 7,
+        "closed_issues": 7,
+        "state": "open",
+        "created_at": "2026-10-22T15:31:20Z",
+        "updated_at": "2026-10-23T01:59:08Z",
+        "due_on": null,
+        "closed_at": null
+      }
+    },
+    {
+      "number": 37,
+      "id": 5982413997,
+      "html_url": "https://github.com/deploymenttheory/go-ios-vm/issues/37",
+      "title": "[Epic MAP] Visual firmware relationships",
+      "state": "open",
+      "state_reason": null,
+      "updated_at": "2026-10-22T15:35:46Z",
+      "body": "<!-- weave-backlog:go-ios-vm-inspection-ui:v1:EPIC-MAP -->\nBacklog ID: `EPIC-MAP` \u00b7 Product baseline: [INDEX](https://github.com/deploymenttheory/go-ios-vm/issues/34).\n\n#### Outcome\nTrace a selected target's firmware structure and a displayed edge to its observation, source location or finding basis.\n\n#### Agreed behavior\nTyped directional edges are source-backed, with bounded neighborhood expansion. Structural/declared relations differ from interpretations. APFS gaps remain visible and same-named fields across targets are not equivalent.\n\n#### Implementation tickets\n- [ ] [MAP-01](https://github.com/deploymenttheory/go-ios-vm/issues/46) \u2014 backend; typed projection and bounded query.\n- [ ] [MAP-02](https://github.com/deploymenttheory/go-ios-vm/issues/47) \u2014 frontend; interactive graph and table alternative.\n\n#### Epic acceptance\n- [ ] Device-tree hierarchy/property, declared driver dependency, supported file path and evidence-basis edges trace to exact target/run/source records.\n- [ ] A large real-image graph remains navigable without loading every node; unsupported components remain explicit.\n\n#### Planning\nMilestone: `Local inspection UI`; priority P1; source: user request, architecture and evidence model.\n\n#### Architecture decision alignment\n[ADR 0002](https://github.com/deploymenttheory/go-ios-vm/blob/e8e2011/docs/adr/0002-codec-capabilities-in-go-apfs.md) leaves codec work in go-apfs-v3. [ADR 0003](https://github.com/deploymenttheory/go-ios-vm/blob/e8e2011/docs/adr/0003-postgresql-evidence-store.md) supplies retained evidence. A graph never decides machine behavior or mutates the reviewed profile.\n",
+      "labels": [
+        {
+          "id": 12796354397,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-rjfXQ",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/type:epic",
+          "name": "type:epic",
+          "color": "5319e7",
+          "default": false,
+          "description": "Coherent behavior with integrated acceptance",
+          "archived_at": null,
+          "archived_by": null
+        },
+        {
+          "id": 12796356113,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-rjmEQ",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/priority:P1",
+          "name": "priority:P1",
+          "color": "d93f0b",
+          "default": false,
+          "description": "Required capability within this phase",
+          "archived_at": null,
+          "archived_by": null
+        },
+        {
+          "id": 12796357927,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-rjtJw",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/area:map",
+          "name": "area:map",
+          "color": "5319e7",
+          "default": false,
+          "description": "Firmware relationship exploration",
+          "archived_at": null,
+          "archived_by": null
+        }
+      ],
+      "milestone": {
+        "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/milestones/2",
+        "html_url": "https://github.com/deploymenttheory/go-ios-vm/milestone/2",
+        "labels_url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/milestones/2/labels",
+        "id": 18824572,
+        "node_id": "MI_kwDOVTNSXs4BHz18",
+        "number": 2,
+        "title": "Local inspection UI",
+        "description": "A local read-only Go-served browser shows committed acquisition/inspection progress, bounded PostgreSQL search and retained evidence, and a source-backed firmware relationship graph. Exit: QA-01 validates the exact iPhone12,1 iOS 14/15 pair and partial-coverage cases.",
+        "creator": {
+          "login": "ShocOne",
+          "id": 62835948,
+          "node_id": "MDQ6VXNlcjYyODM1OTQ4",
+          "avatar_url": "https://avatars.githubusercontent.com/u/62835948?v=4",
+          "gravatar_id": "",
+          "url": "https://api.github.com/users/ShocOne",
+          "html_url": "https://github.com/ShocOne",
+          "followers_url": "https://api.github.com/users/ShocOne/followers",
+          "following_url": "https://api.github.com/users/ShocOne/following{/other_user}",
+          "gists_url": "https://api.github.com/users/ShocOne/gists{/gist_id}",
+          "starred_url": "https://api.github.com/users/ShocOne/starred{/owner}{/repo}",
+          "subscriptions_url": "https://api.github.com/users/ShocOne/subscriptions",
+          "organizations_url": "https://api.github.com/users/ShocOne/orgs",
+          "repos_url": "https://api.github.com/users/ShocOne/repos",
+          "events_url": "https://api.github.com/users/ShocOne/events{/privacy}",
+          "received_events_url": "https://api.github.com/users/ShocOne/received_events",
+          "type": "User",
+          "user_view_type": "public",
+          "site_admin": false
+        },
+        "open_issues": 7,
+        "closed_issues": 7,
+        "state": "open",
+        "created_at": "2026-10-22T15:31:20Z",
+        "updated_at": "2026-10-23T01:59:08Z",
+        "due_on": null,
+        "closed_at": null
+      }
+    },
+    {
+      "number": 36,
+      "id": 5982412523,
+      "html_url": "https://github.com/deploymenttheory/go-ios-vm/issues/36",
+      "title": "[Epic LIVE] Durable analysis progress",
+      "state": "open",
+      "state_reason": null,
+      "updated_at": "2026-10-22T15:35:42Z",
+      "body": "<!-- weave-backlog:go-ios-vm-inspection-ui:v1:EPIC-LIVE -->\nBacklog ID: `EPIC-LIVE` \u00b7 Product baseline: [INDEX](https://github.com/deploymenttheory/go-ios-vm/issues/34).\n\n#### Outcome\nThe browser reports current and historical CLI acquisition/inspection progress from committed state, including interrupted work.\n\n#### Agreed behavior\nProgress is bounded and durable enough for a separate UI process. Download bytes and inspection coverage have different units. Stale/uncertain runs never look complete. No general event log or guest telemetry is included.\n\n#### Implementation tickets\n- [ ] [LIVE-01](https://github.com/deploymenttheory/go-ios-vm/issues/43) \u2014 backend; persist bounded milestones/counters.\n- [ ] [LIVE-02](https://github.com/deploymenttheory/go-ios-vm/issues/44) \u2014 backend; status query and incremental transport.\n- [ ] [LIVE-03](https://github.com/deploymenttheory/go-ios-vm/issues/45) \u2014 frontend; live and historical monitor.\n\n#### Epic acceptance\n- [ ] A second process observes running fetch and inspection, then the correct terminal/partial state.\n- [ ] Crash, retry, cancellation and DB loss show last committed state with an honest diagnostic, not invented success.\n\n#### Planning\nMilestone: `Local inspection UI`; priority P1; source: user request, architecture, #16/#17.\n\n#### Architecture decision alignment\n[ADR 0003](https://github.com/deploymenttheory/go-ios-vm/blob/e8e2011/docs/adr/0003-postgresql-evidence-store.md) supplies shared durable state. The workflow publishes; the UI reads. VM runner telemetry remains separate.\n",
+      "labels": [
+        {
+          "id": 12796354397,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-rjfXQ",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/type:epic",
+          "name": "type:epic",
+          "color": "5319e7",
+          "default": false,
+          "description": "Coherent behavior with integrated acceptance",
+          "archived_at": null,
+          "archived_by": null
+        },
+        {
+          "id": 12796356113,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-rjmEQ",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/priority:P1",
+          "name": "priority:P1",
+          "color": "d93f0b",
+          "default": false,
+          "description": "Required capability within this phase",
+          "archived_at": null,
+          "archived_by": null
+        },
+        {
+          "id": 12796357431,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-rjrNw",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/area:live",
+          "name": "area:live",
+          "color": "006b75",
+          "default": false,
+          "description": "CLI progress monitoring",
+          "archived_at": null,
+          "archived_by": null
+        }
+      ],
+      "milestone": {
+        "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/milestones/2",
+        "html_url": "https://github.com/deploymenttheory/go-ios-vm/milestone/2",
+        "labels_url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/milestones/2/labels",
+        "id": 18824572,
+        "node_id": "MI_kwDOVTNSXs4BHz18",
+        "number": 2,
+        "title": "Local inspection UI",
+        "description": "A local read-only Go-served browser shows committed acquisition/inspection progress, bounded PostgreSQL search and retained evidence, and a source-backed firmware relationship graph. Exit: QA-01 validates the exact iPhone12,1 iOS 14/15 pair and partial-coverage cases.",
+        "creator": {
+          "login": "ShocOne",
+          "id": 62835948,
+          "node_id": "MDQ6VXNlcjYyODM1OTQ4",
+          "avatar_url": "https://avatars.githubusercontent.com/u/62835948?v=4",
+          "gravatar_id": "",
+          "url": "https://api.github.com/users/ShocOne",
+          "html_url": "https://github.com/ShocOne",
+          "followers_url": "https://api.github.com/users/ShocOne/followers",
+          "following_url": "https://api.github.com/users/ShocOne/following{/other_user}",
+          "gists_url": "https://api.github.com/users/ShocOne/gists{/gist_id}",
+          "starred_url": "https://api.github.com/users/ShocOne/starred{/owner}{/repo}",
+          "subscriptions_url": "https://api.github.com/users/ShocOne/subscriptions",
+          "organizations_url": "https://api.github.com/users/ShocOne/orgs",
+          "repos_url": "https://api.github.com/users/ShocOne/repos",
+          "events_url": "https://api.github.com/users/ShocOne/events{/privacy}",
+          "received_events_url": "https://api.github.com/users/ShocOne/received_events",
+          "type": "User",
+          "user_view_type": "public",
+          "site_admin": false
+        },
+        "open_issues": 7,
+        "closed_issues": 7,
+        "state": "open",
+        "created_at": "2026-10-22T15:31:20Z",
+        "updated_at": "2026-10-23T01:59:08Z",
+        "due_on": null,
+        "closed_at": null
+      }
+    },
+    {
+      "number": 35,
+      "id": 5982411112,
+      "html_url": "https://github.com/deploymenttheory/go-ios-vm/issues/35",
+      "title": "[Epic UI] Local browser and evidence exploration",
+      "state": "open",
+      "state_reason": null,
+      "updated_at": "2026-10-22T15:35:37Z",
+      "body": "<!-- weave-backlog:go-ios-vm-inspection-ui:v1:EPIC-UI -->\nBacklog ID: `EPIC-UI` \u00b7 Product baseline: [INDEX](https://github.com/deploymenttheory/go-ios-vm/issues/34).\n\n#### Outcome\nOpen a local browser, select an exact target/run and search durable results and retained support without SQL or source-cache paths.\n\n#### Agreed behavior\nThe Go CLI serves a loopback read-only app using configured PostgreSQL. Lists and details are scoped, paginated and safe for large images. Exact identity, revision basis, coverage and availability remain visible; secrets do not reach the browser. Progress persistence and graph drawing belong to other epics.\n\n#### Implementation tickets\n- [ ] [UI-01](https://github.com/deploymenttheory/go-ios-vm/issues/39) \u2014 backend; server and read-only boundary.\n- [ ] [DATA-01](https://github.com/deploymenttheory/go-ios-vm/issues/40) \u2014 backend; target/acquisition/run/coverage queries.\n- [ ] [DATA-02](https://github.com/deploymenttheory/go-ios-vm/issues/41) \u2014 backend; findings, assessments and evidence queries.\n- [ ] [DATA-03](https://github.com/deploymenttheory/go-ios-vm/issues/42) \u2014 frontend; search and drill-down.\n\n#### Epic acceptance\n- [ ] A fresh CLI process serves the app and reads the same findings as CLI commands after source-cache pruning.\n- [ ] Two identities/releases remain separate; unknown, absent, zero, unsupported and unexamined render distinctly.\n\n#### Planning\nMilestone: `Local inspection UI`; priority P1; source: user request, README and evidence model.\n\n#### Architecture decision alignment\n[ADR 0003](https://github.com/deploymenttheory/go-ios-vm/blob/e8e2011/docs/adr/0003-postgresql-evidence-store.md) makes PostgreSQL authoritative. SQL stays in `internal/postgres`; transport stays at the CLI/UI edge and domain types remain web-independent. [ADR 0001](https://github.com/deploymenttheory/go-ios-vm/blob/e8e2011/docs/adr/0001-fresh-implementation.md) excludes legacy UI import.\n",
+      "labels": [
+        {
+          "id": 12796354397,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-rjfXQ",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/type:epic",
+          "name": "type:epic",
+          "color": "5319e7",
+          "default": false,
+          "description": "Coherent behavior with integrated acceptance",
+          "archived_at": null,
+          "archived_by": null
+        },
+        {
+          "id": 12796356113,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-rjmEQ",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/priority:P1",
+          "name": "priority:P1",
+          "color": "d93f0b",
+          "default": false,
+          "description": "Required capability within this phase",
+          "archived_at": null,
+          "archived_by": null
+        },
+        {
+          "id": 12796356600,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-rjn-A",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/area:ui",
+          "name": "area:ui",
+          "color": "0e8a16",
+          "default": false,
+          "description": "Local UI and result browsing",
+          "archived_at": null,
+          "archived_by": null
+        }
+      ],
+      "milestone": {
+        "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/milestones/2",
+        "html_url": "https://github.com/deploymenttheory/go-ios-vm/milestone/2",
+        "labels_url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/milestones/2/labels",
+        "id": 18824572,
+        "node_id": "MI_kwDOVTNSXs4BHz18",
+        "number": 2,
+        "title": "Local inspection UI",
+        "description": "A local read-only Go-served browser shows committed acquisition/inspection progress, bounded PostgreSQL search and retained evidence, and a source-backed firmware relationship graph. Exit: QA-01 validates the exact iPhone12,1 iOS 14/15 pair and partial-coverage cases.",
+        "creator": {
+          "login": "ShocOne",
+          "id": 62835948,
+          "node_id": "MDQ6VXNlcjYyODM1OTQ4",
+          "avatar_url": "https://avatars.githubusercontent.com/u/62835948?v=4",
+          "gravatar_id": "",
+          "url": "https://api.github.com/users/ShocOne",
+          "html_url": "https://github.com/ShocOne",
+          "followers_url": "https://api.github.com/users/ShocOne/followers",
+          "following_url": "https://api.github.com/users/ShocOne/following{/other_user}",
+          "gists_url": "https://api.github.com/users/ShocOne/gists{/gist_id}",
+          "starred_url": "https://api.github.com/users/ShocOne/starred{/owner}{/repo}",
+          "subscriptions_url": "https://api.github.com/users/ShocOne/subscriptions",
+          "organizations_url": "https://api.github.com/users/ShocOne/orgs",
+          "repos_url": "https://api.github.com/users/ShocOne/repos",
+          "events_url": "https://api.github.com/users/ShocOne/events{/privacy}",
+          "received_events_url": "https://api.github.com/users/ShocOne/received_events",
+          "type": "User",
+          "user_view_type": "public",
+          "site_admin": false
+        },
+        "open_issues": 7,
+        "closed_issues": 7,
+        "state": "open",
+        "created_at": "2026-10-22T15:31:20Z",
+        "updated_at": "2026-10-23T01:59:08Z",
+        "due_on": null,
+        "closed_at": null
+      }
+    },
+    {
+      "number": 34,
+      "id": 5982409674,
+      "html_url": "https://github.com/deploymenttheory/go-ios-vm/issues/34",
+      "title": "go-ios-vm: local inspection UI baseline",
+      "state": "open",
+      "state_reason": null,
+      "updated_at": "2026-10-22T15:35:33Z",
+      "body": "<!-- weave-backlog:go-ios-vm-inspection-ui:v1:INDEX -->\nBacklog ID: `INDEX` \u00b7 Source: 2026-10-22 user UI request and answers; repository `main` `e8e2011`; [README](https://github.com/deploymenttheory/go-ios-vm/blob/e8e2011/README.md), [inspection architecture](https://github.com/deploymenttheory/go-ios-vm/blob/e8e2011/docs/inspection-architecture.md), [evidence model](https://github.com/deploymenttheory/go-ios-vm/blob/e8e2011/docs/evidence-model.md), and the ADRs linked below.\n\n#### Purpose and scope\nAdd a local browser app served by the Go CLI so an analyst can observe running CLI work, search and browse PostgreSQL inspection results, and visually review source-backed IPSW relationships. This UI blocks #20. It is read-only; hosted collaboration, arbitrary SQL, VM execution, finding edits and assessment edits are outside this phase.\n\n#### Product baseline\n1. Serve on loopback by default with existing Viper database configuration; never send a DSN or credentials to the browser. Source: user decision and README.\n2. Show committed acquisition/inspection progress, coverage, interruption, stale/crashed, failure, cancellation, partial and complete states. Percentages require measured totals. Source: user request, architecture and #16/#17.\n3. Search exact targets, artifacts, runs, components, observations, findings/revisions/assessments, source locations and retained evidence from PostgreSQL after cache pruning. Bound pages and byte previews. Source: user request, evidence model, [ADR 0003](https://github.com/deploymenttheory/go-ios-vm/blob/e8e2011/docs/adr/0003-postgresql-evidence-store.md).\n4. Draw only typed relationships backed by selected-target records: manifest components, device-tree structure, declared driver dependencies, supported APFS paths, and finding/evidence basis. Distinguish interpretations and coverage; never infer cross-target equivalence from matching names. Source: user request and evidence model.\n5. Validate the UI on the exact iPhone12,1 iOS 14/15 pair before #20 can close; format gaps remain explicit. Source: user decision, #20, [ADR 0002](https://github.com/deploymenttheory/go-ios-vm/blob/e8e2011/docs/adr/0002-codec-capabilities-in-go-apfs.md).\n\n#### Glossary\n`Target` is one exact manifest identity; `run` is an attempt; `observation` is a source-scoped reading; `finding` is a target/subject/property question; `revision` is one answer; `assessment` reviews that revision; `coverage` describes examined scope; `source location` names a logical decoded view or range. Unknown, absent, unexamined, unsupported and zero are distinct.\n\n#### Agreed architecture decisions\n[ADR 0001](https://github.com/deploymenttheory/go-ios-vm/blob/e8e2011/docs/adr/0001-fresh-implementation.md): fresh implementation, no legacy UI migration. [ADR 0002](https://github.com/deploymenttheory/go-ios-vm/blob/e8e2011/docs/adr/0002-codec-capabilities-in-go-apfs.md): missing disk/filesystem codecs belong in go-apfs-v3. [ADR 0003](https://github.com/deploymenttheory/go-ios-vm/blob/e8e2011/docs/adr/0003-postgresql-evidence-store.md): PostgreSQL owns durable findings and supporting bytes; the UI reads that system of record. The runner does not depend on the UI or database.\n\n#### Delivery map\n| Milestone | Exit conditions | Epics |\n| --- | --- | --- |\n| `Local inspection UI` | Local read-only app, committed progress, bounded search, graph and [QA-01](https://github.com/deploymenttheory/go-ios-vm/issues/48) evidence | [EPIC-UI](https://github.com/deploymenttheory/go-ios-vm/issues/35), [EPIC-LIVE](https://github.com/deploymenttheory/go-ios-vm/issues/36), [EPIC-MAP](https://github.com/deploymenttheory/go-ios-vm/issues/37), [EPIC-QA](https://github.com/deploymenttheory/go-ios-vm/issues/38) |\n| existing `Real-image inspection gate` | Existing #20 checks plus completed UI gate | #20 (external to namespace) |\n\n#### Requirement coverage\n| Source requirement | Ticket or existing contract | Rationale |\n| --- | --- | --- |\n| Local browser, read-only | [UI-01](https://github.com/deploymenttheory/go-ios-vm/issues/39) | Go CLI hosts loopback; no mutation endpoints. |\n| Observe CLI progress | [LIVE-01](https://github.com/deploymenttheory/go-ios-vm/issues/43)\u2013[LIVE-03](https://github.com/deploymenttheory/go-ios-vm/issues/45), #16/#17 | Durable truthful state across processes/crashes. |\n| Search/browse database | [DATA-01](https://github.com/deploymenttheory/go-ios-vm/issues/40)\u2013[DATA-03](https://github.com/deploymenttheory/go-ios-vm/issues/42), #14/#15 | Scoped queries and evidence navigation. |\n| Visual IPSW relationships | [MAP-01](https://github.com/deploymenttheory/go-ios-vm/issues/46)\u2013[MAP-02](https://github.com/deploymenttheory/go-ios-vm/issues/47), #13 | Typed source-backed graph with gaps visible. |\n| Block first-tooling acceptance | [QA-01](https://github.com/deploymenttheory/go-ios-vm/issues/48), targeted #20 update | Pinned-pair UI verification. |\n| Hosted app, edits, VM runner | Excluded | Outside requested local read-only phase. |\n\n#### Execution conventions\nOne owner and focused PR per task. Use Go package boundaries and isolated PostgreSQL test schemas. Do not commit firmware or credentials. Native direct blockers determine readiness. Epic acceptance is independent of child closure. Replace draft IDs with real issue URLs on publication.\n",
+      "labels": [
+        {
+          "id": 12796353778,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-rjc8g",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/type:backlog",
+          "name": "type:backlog",
+          "color": "ededed",
+          "default": false,
+          "description": "Agreed backlog baseline",
+          "archived_at": null,
+          "archived_by": null
+        },
+        {
+          "id": 12796355660,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-rjkTA",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/priority:P0",
+          "name": "priority:P0",
+          "color": "b60205",
+          "default": false,
+          "description": "Integrity or first-tooling acceptance gate",
+          "archived_at": null,
+          "archived_by": null
+        }
+      ],
+      "milestone": {
+        "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/milestones/1",
+        "html_url": "https://github.com/deploymenttheory/go-ios-vm/milestone/1",
+        "labels_url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/milestones/1/labels",
+        "id": 18810487,
+        "node_id": "MI_kwDOVTNSXs4BHwZ3",
+        "number": 1,
+        "title": "Real-image inspection gate",
+        "description": "Qualify the first static inspection release against exact iPhone12,1 iOS 14.0 and 15.0 restore images. The VM runner and machine-profile implementation are later work. First-tooling acceptance also requires the local read-only inspection UI and its integrated QA-01 gate.",
+        "creator": {
+          "login": "ShocOne",
+          "id": 62835948,
+          "node_id": "MDQ6VXNlcjYyODM1OTQ4",
+          "avatar_url": "https://avatars.githubusercontent.com/u/62835948?v=4",
+          "gravatar_id": "",
+          "url": "https://api.github.com/users/ShocOne",
+          "html_url": "https://github.com/ShocOne",
+          "followers_url": "https://api.github.com/users/ShocOne/followers",
+          "following_url": "https://api.github.com/users/ShocOne/following{/other_user}",
+          "gists_url": "https://api.github.com/users/ShocOne/gists{/gist_id}",
+          "starred_url": "https://api.github.com/users/ShocOne/starred{/owner}{/repo}",
+          "subscriptions_url": "https://api.github.com/users/ShocOne/subscriptions",
+          "organizations_url": "https://api.github.com/users/ShocOne/orgs",
+          "repos_url": "https://api.github.com/users/ShocOne/repos",
+          "events_url": "https://api.github.com/users/ShocOne/events{/privacy}",
+          "received_events_url": "https://api.github.com/users/ShocOne/received_events",
+          "type": "User",
+          "user_view_type": "public",
+          "site_admin": false
+        },
+        "open_issues": 3,
+        "closed_issues": 11,
+        "state": "open",
+        "created_at": "2026-10-22T11:42:37Z",
+        "updated_at": "2026-10-22T18:47:22Z",
+        "due_on": null,
+        "closed_at": null
+      }
+    },
+    {
+      "number": 30,
+      "id": 5981901128,
+      "html_url": "https://github.com/deploymenttheory/go-ios-vm/issues/30",
+      "title": "Consolidate Go linting on the targeted golangci-lint workflow",
+      "state": "closed",
+      "state_reason": "completed",
+      "updated_at": "2026-10-22T15:11:43Z",
+      "body": "## Outcome\n\nUse one Go lint pipeline for this Go project, with the existing configured `golangci-lint` workflow as the authoritative check.\n\n## Evidence\n\n- `.github/workflows/linter.yml` enables only Super-Linter's `GO_MODULES` validator. Super-Linter runs `golangci-lint` for Go and reads this repository's `.golangci.yml`.\n- `.github/workflows/go-lint.yml` already runs a pinned `golangci-lint` version with this configuration on Go/module/config changes. Both checks reported the same Go warning on PR #26.\n- The Super-Linter workflow ignores `.github/**` PR changes and does not currently provide Markdown, YAML, or workflow linting.\n\n## Work\n\n- Remove the duplicate Super-Linter workflow while retaining the targeted `go-lint.yml` job and its configured Go analyzers.\n- Check whether repository branch protection or rulesets require the removed `\u2728 Linter` status; record any required status migration without weakening the Go lint gate.\n- Keep the change limited to CI/documentation needed to explain the single lint gate.\n\n## Acceptance\n\n- [ ] Go changes still trigger one configured `golangci-lint` check; documentation-only changes do not trigger a redundant Go lint job.\n- [ ] The old Super-Linter Go check no longer runs on new PRs, and the surviving check passes on this PR.\n- [ ] Any required-check dependency on the old status is resolved or explicitly identified before merge.\n- [ ] No application code or tests are changed solely for this workflow cleanup.\n\n## Coordination\n\n- Priority: P1\n- Depends on: None.\n- One agent owns this issue and proposes one focused PR. Link the PR and record verification in the issue.\n",
+      "labels": [],
+      "milestone": null
+    },
+    {
+      "number": 25,
+      "id": 5980351203,
+      "html_url": "https://github.com/deploymenttheory/go-ios-vm/issues/25",
+      "title": "Decode IDREF object references in iOS 14 prelinked kernel metadata",
+      "state": "closed",
+      "state_reason": "completed",
+      "updated_at": "2026-10-22T14:45:31Z",
+      "body": "## Observed format gap\n\nThe verified public iPhone12,1 iOS 14.0 (18A373) archive (`SHA-256 a30f2fa8d4dbdcd2a8cf0f1644de3879019ba6f8be8fba49806a9c82dec09759`) contains selected identity 1 (`n104ap`, Customer Erase). Its `kernelcache.release.iphone12b` decodes to a Mach-O with a 1,121,340-byte `__PRELINK_INFO/__info` section. The section contains 3,383 self-closing `<integer IDREF=\"\u2026\"/>` elements and corresponding `<integer ID=\"\u2026\" size=\"64\">\u2026</integer>` definitions. The current `readKernel` passes the section to `howett.net/plist.Unmarshal`, which returns:\n\n```text\nplist: error parsing XML property list: invalid empty <integer/>\n```\n\nBoth macOS and Linux inspection runs retain the kernel `mach_header` finding but mark `KernelCache` partial at this error. The raw kernel ZIP member and its source coordinate remain recoverable from PostgreSQL. The complete archive and local BuildManifest were independently checked in [qualification issue #10](https://github.com/deploymenttheory/go-ios-vm/issues/10).\n\nA small, safe reproducer of the parser mismatch (no firmware bytes):\n\n```xml\n<plist version=\"1.0\"><array><integer ID=\"1\" size=\"64\">42</integer><integer IDREF=\"1\"/></array></plist>\n```\n\n`howett.net/plist.Unmarshal` returns the same `invalid empty <integer/>` error for this input. Apple's [IOKitUser unserializer](https://github.com/apple-oss-distributions/IOKitUser/blob/main/IOCFUnserialize.tab.c) has an explicit `IDREF` grammar and object-tag table. This suggests the section uses IOKit object serialization XML rather than an ordinary property list; implement according to the actual reference semantics rather than treating the empty tag as zero.\n\n## Requested outcome\n\n- Decode the bounded prelink object graph with ID/IDREF references, preserving exact integer values and shared references needed for driver metadata. Keep the existing 16 MiB section limit; reject dangling or duplicate definitions and invalid types, and bound traversal of cycles without unbounded recursion or memory growth.\n- Retain source coordinates and raw supporting bytes for driver findings. Do not infer missing drivers from a parse failure.\n- Add small synthetic fixtures for valid shared references and malformed references. No proprietary kernel bytes in Git.\n- Re-run this verified image on macOS and Linux; recover driver findings from `finding show` and document any further format gap separately.\n\nRelated: [qualification PR #22](https://github.com/deploymenttheory/go-ios-vm/pull/22).\n",
+      "labels": [],
+      "milestone": null
+    },
+    {
+      "number": 23,
+      "id": 5980134246,
+      "html_url": "https://github.com/deploymenttheory/go-ios-vm/issues/23",
+      "title": "List and search restore IPSWs before verified CLI download",
+      "state": "closed",
+      "state_reason": "completed",
+      "updated_at": "2026-10-22T14:05:19Z",
+      "body": "## Outcome\n\nLet a CLI user find an available restore IPSW for an exact device, choose a version/build from a concise list, and download that exact choice through the existing verified `firmware fetch` path.\n\n## Work\n\n- Add `firmware list --product PRODUCT` (with `search` as an alias or an equivalent `--search QUERY` filter) to enumerate restore IPSW candidates for the device across the current Apple restore catalog and the historical locator. Search must match version/build without requiring the user to know the exact build first.\n- Return product, version, build, source, URL, declared size/checksum where present, and an explicit unverified/catalog-locator status. Release-only metadata must not look like a downloadable restore IPSW. Give text users a concise sorted result and keep versioned JSON output for automation.\n- Preserve source attribution and raw catalog responses in PostgreSQL. Handle failed sources as partial results rather than silently claiming an exhaustive list; reject malformed/non-Apple URLs and duplicate or ambiguous exact selections.\n- Show the documented next command for an exact row: `firmware fetch --product PRODUCT --version VERSION --build BUILD`. Fetch must retain bounded manifest probing, full size/checksum verification, SHA-256 cache naming, and local BuildManifest verification before publishing the file.\n- Cover historical-only releases, query matches/no matches, source failure, and ambiguity with safe fixtures. Do not commit IPSWs.\n\n## Acceptance\n\n- [ ] A user can list `iPhone12,1` releases, search for `14.0`, select build `18A373`, and start the exact verified fetch without copying a URL by hand.\n- [ ] The list labels unverified candidates and source failures accurately; an empty result is distinct from a complete catalog.\n- [ ] Unit/integration tests and `go vet ./...` pass; documentation includes text and JSON examples and explains PostgreSQL configuration.\n\n## Coordination\n\n- Keep this as a separate focused PR from image qualification issue #10/PR #22, so the catalog/search user flow can be reviewed independently.\n",
+      "labels": [],
+      "milestone": null
+    },
+    {
+      "number": 20,
+      "id": 5978630875,
+      "html_url": "https://github.com/deploymenttheory/go-ios-vm/issues/20",
+      "title": "Prove the iOS 14/15 first-tooling acceptance workflow",
+      "state": "open",
+      "state_reason": null,
+      "updated_at": "2026-10-22T16:15:08Z",
+      "body": "## Outcome\n\nDemonstrate the complete first inspection workflow on the exact matching-hardware pair and record what it actually supports.\n\n## Work\n\n- From a fresh CLI process, inspect each pinned image, retrieve retained findings and bytes, compare the runs, prune eligible cache files, restart the CLI, and retrieve the evidence again.\n- Stream PostgreSQL backup/restore into a temporary database and verify selected source bytes, finding/revision/assessment links, and run relationships after restore.\n- Update README and implementation-status documentation with exact pins, macOS/Linux results, coverage, comparison rules, blockers, and reproducible commands. Do not create a general campaign harness or commit firmware.\n\n- Start the local read-only UI in a separate process during the pinned-image workflow; observe committed acquisition/inspection progress, search and browse PostgreSQL results, and trace representative source-backed firmware relationships. Use [QA-01](https://github.com/deploymenttheory/go-ios-vm/issues/48) as the reproducible UI verification record.\n\n## Acceptance\n\n- [ ] Comparison preserves zero, missing, unknown, and incomparable states and never implies cross-hardware equivalence.\n- [ ] Cache cleanup and database restore leave retained supporting evidence readable; no required component is reported complete without a completed search.\n- [ ] All confirmed format-gap issues opened from #10/#11 are linked and closed before this gate passes; project tests and vet pass.\n\n- [ ] [QA-01](https://github.com/deploymenttheory/go-ios-vm/issues/48) is complete: the UI shows the exact pair's live and retained results after cache cleanup and database restore, with truthful partial/unsupported states and bounded relationship navigation.\n\n## Coordination\n\n- Priority: P0\n- Depends on: #10, #11, #13, #15, #17, #18, #19\n- One agent owns one issue and proposes one focused PR. Link the PR and record commands, fixtures, and observed results in the issue. Do not put firmware blobs or credentials in Git.\n\nConfirmed format gaps from the two image-qualification issues are additional blockers for this gate. Link those follow-up issues here before closing this issue.\n\n- UI gate: blocked by [QA-01](https://github.com/deploymenttheory/go-ios-vm/issues/48) (native GitHub dependency).\n- Native resource gate: blocked by [#52](https://github.com/deploymenttheory/go-ios-vm/issues/52), which must bound decoder interruption and remeasure real APFS use after the upstream codec advances (native GitHub dependency).\n\n## Project context\n\nStart with [implementation status](https://github.com/deploymenttheory/go-ios-vm/blob/main/docs/implementation-status.md), [inspection architecture](https://github.com/deploymenttheory/go-ios-vm/blob/main/docs/inspection-architecture.md), and the [evidence model](https://github.com/deploymenttheory/go-ios-vm/blob/main/docs/evidence-model.md).\n\n",
+      "labels": [
+        {
+          "id": 12791196176,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-moqEA",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/documentation",
+          "name": "documentation",
+          "color": "0075ca",
+          "default": true,
+          "description": "Improvements or additions to documentation",
+          "archived_at": null,
+          "archived_by": null
+        }
+      ],
+      "milestone": {
+        "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/milestones/1",
+        "html_url": "https://github.com/deploymenttheory/go-ios-vm/milestone/1",
+        "labels_url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/milestones/1/labels",
+        "id": 18810487,
+        "node_id": "MI_kwDOVTNSXs4BHwZ3",
+        "number": 1,
+        "title": "Real-image inspection gate",
+        "description": "Qualify the first static inspection release against exact iPhone12,1 iOS 14.0 and 15.0 restore images. The VM runner and machine-profile implementation are later work. First-tooling acceptance also requires the local read-only inspection UI and its integrated QA-01 gate.",
+        "creator": {
+          "login": "ShocOne",
+          "id": 62835948,
+          "node_id": "MDQ6VXNlcjYyODM1OTQ4",
+          "avatar_url": "https://avatars.githubusercontent.com/u/62835948?v=4",
+          "gravatar_id": "",
+          "url": "https://api.github.com/users/ShocOne",
+          "html_url": "https://github.com/ShocOne",
+          "followers_url": "https://api.github.com/users/ShocOne/followers",
+          "following_url": "https://api.github.com/users/ShocOne/following{/other_user}",
+          "gists_url": "https://api.github.com/users/ShocOne/gists{/gist_id}",
+          "starred_url": "https://api.github.com/users/ShocOne/starred{/owner}{/repo}",
+          "subscriptions_url": "https://api.github.com/users/ShocOne/subscriptions",
+          "organizations_url": "https://api.github.com/users/ShocOne/orgs",
+          "repos_url": "https://api.github.com/users/ShocOne/repos",
+          "events_url": "https://api.github.com/users/ShocOne/events{/privacy}",
+          "received_events_url": "https://api.github.com/users/ShocOne/received_events",
+          "type": "User",
+          "user_view_type": "public",
+          "site_admin": false
+        },
+        "open_issues": 3,
+        "closed_issues": 11,
+        "state": "open",
+        "created_at": "2026-10-22T11:42:37Z",
+        "updated_at": "2026-10-22T18:47:22Z",
+        "due_on": null,
+        "closed_at": null
+      }
+    },
+    {
+      "number": 19,
+      "id": 5978630626,
+      "html_url": "https://github.com/deploymenttheory/go-ios-vm/issues/19",
+      "title": "Measure and enforce resource budgets for the pinned images",
+      "state": "closed",
+      "state_reason": "completed",
+      "updated_at": "2026-10-22T18:47:22Z",
+      "body": "## Outcome\n\nSet practical, visible resource limits from the two verified images before declaring the inspection workflow qualified.\n\n## Work\n\n- Measure peak/estimated cache, staging disk, evidence, decompression memory, and concurrency demand for both pinned inspections; document the host and numerical defaults.\n- Expose estimates before large acquisition/staging and enforce the corresponding limits, including interruption paths for native decoding where feasible. A limit or cancellation must leave truthful coverage and clean disposable resources.\n- Do not increase a limit silently or delete retained evidence to continue.\n\n## Acceptance\n\n- [ ] The documented budgets are derived from the pinned images and reflected in CLI configuration/status output.\n- [ ] Fixture or integration tests exercise budget exhaustion, staging cleanup, and cancellation without reporting success.\n- [ ] `go test ./...` and `go vet ./...` pass; any native cancellation limit that cannot be enforced is explicitly recorded as a release blocker.\n\n## Coordination\n\n- Priority: P1\n- Depends on: #10, #11, #12\n- One agent owns one issue and proposes one focused PR. Link the PR and record commands, fixtures, and observed results in the issue. Do not put firmware blobs or credentials in Git.\n\n## Project context\n\nStart with [implementation status](https://github.com/deploymenttheory/go-ios-vm/blob/main/docs/implementation-status.md), [inspection architecture](https://github.com/deploymenttheory/go-ios-vm/blob/main/docs/inspection-architecture.md), and the [evidence model](https://github.com/deploymenttheory/go-ios-vm/blob/main/docs/evidence-model.md).\n",
+      "labels": [
+        {
+          "id": 12791196197,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-moqJQ",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/enhancement",
+          "name": "enhancement",
+          "color": "a2eeef",
+          "default": true,
+          "description": "New feature or request",
+          "archived_at": null,
+          "archived_by": null
+        }
+      ],
+      "milestone": {
+        "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/milestones/1",
+        "html_url": "https://github.com/deploymenttheory/go-ios-vm/milestone/1",
+        "labels_url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/milestones/1/labels",
+        "id": 18810487,
+        "node_id": "MI_kwDOVTNSXs4BHwZ3",
+        "number": 1,
+        "title": "Real-image inspection gate",
+        "description": "Qualify the first static inspection release against exact iPhone12,1 iOS 14.0 and 15.0 restore images. The VM runner and machine-profile implementation are later work. First-tooling acceptance also requires the local read-only inspection UI and its integrated QA-01 gate.",
+        "creator": {
+          "login": "ShocOne",
+          "id": 62835948,
+          "node_id": "MDQ6VXNlcjYyODM1OTQ4",
+          "avatar_url": "https://avatars.githubusercontent.com/u/62835948?v=4",
+          "gravatar_id": "",
+          "url": "https://api.github.com/users/ShocOne",
+          "html_url": "https://github.com/ShocOne",
+          "followers_url": "https://api.github.com/users/ShocOne/followers",
+          "following_url": "https://api.github.com/users/ShocOne/following{/other_user}",
+          "gists_url": "https://api.github.com/users/ShocOne/gists{/gist_id}",
+          "starred_url": "https://api.github.com/users/ShocOne/starred{/owner}{/repo}",
+          "subscriptions_url": "https://api.github.com/users/ShocOne/subscriptions",
+          "organizations_url": "https://api.github.com/users/ShocOne/orgs",
+          "repos_url": "https://api.github.com/users/ShocOne/repos",
+          "events_url": "https://api.github.com/users/ShocOne/events{/privacy}",
+          "received_events_url": "https://api.github.com/users/ShocOne/received_events",
+          "type": "User",
+          "user_view_type": "public",
+          "site_admin": false
+        },
+        "open_issues": 3,
+        "closed_issues": 11,
+        "state": "open",
+        "created_at": "2026-10-22T11:42:37Z",
+        "updated_at": "2026-10-22T18:47:22Z",
+        "due_on": null,
+        "closed_at": null
+      }
+    },
+    {
+      "number": 18,
+      "id": 5978630301,
+      "html_url": "https://github.com/deploymenttheory/go-ios-vm/issues/18",
+      "title": "Emit versioned structured diagnostics for CLI errors",
+      "state": "closed",
+      "state_reason": "completed",
+      "updated_at": "2026-10-22T15:01:49Z",
+      "body": "## Outcome\n\nMake invalid invocation and fatal command failures machine-readable while keeping terminal output useful.\n\n## Work\n\n- In `--format json`, emit one versioned diagnostic envelope on stdout for invocation and fatal errors; keep progress on stderr and redact database credentials.\n- Classify missing input, invalid identity/selection, unsupported/corrupt format, storage failure, and cancellation without hiding partial inspection results.\n- Replace the current indented JSON text presentation with concise readable terminal summaries for the command families.\n\n## Acceptance\n\n- [ ] CLI tests cover successful, partial, invalid, fatal, and cancelled paths with exit codes 0, 2, 1, and 130 respectively.\n- [ ] JSON stdout remains parseable as one envelope and progress never contaminates it.\n- [ ] `go test ./...` and `go vet ./...` pass.\n\n## Coordination\n\n- Priority: P1\n- Depends on: None; can start now.\n- One agent owns one issue and proposes one focused PR. Link the PR and record commands, fixtures, and observed results in the issue. Do not put firmware blobs or credentials in Git.\n\n## Project context\n\nStart with [implementation status](https://github.com/deploymenttheory/go-ios-vm/blob/main/docs/implementation-status.md), [inspection architecture](https://github.com/deploymenttheory/go-ios-vm/blob/main/docs/inspection-architecture.md), and the [evidence model](https://github.com/deploymenttheory/go-ios-vm/blob/main/docs/evidence-model.md).\n",
+      "labels": [
+        {
+          "id": 12791196197,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-moqJQ",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/enhancement",
+          "name": "enhancement",
+          "color": "a2eeef",
+          "default": true,
+          "description": "New feature or request",
+          "archived_at": null,
+          "archived_by": null
+        }
+      ],
+      "milestone": {
+        "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/milestones/1",
+        "html_url": "https://github.com/deploymenttheory/go-ios-vm/milestone/1",
+        "labels_url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/milestones/1/labels",
+        "id": 18810487,
+        "node_id": "MI_kwDOVTNSXs4BHwZ3",
+        "number": 1,
+        "title": "Real-image inspection gate",
+        "description": "Qualify the first static inspection release against exact iPhone12,1 iOS 14.0 and 15.0 restore images. The VM runner and machine-profile implementation are later work. First-tooling acceptance also requires the local read-only inspection UI and its integrated QA-01 gate.",
+        "creator": {
+          "login": "ShocOne",
+          "id": 62835948,
+          "node_id": "MDQ6VXNlcjYyODM1OTQ4",
+          "avatar_url": "https://avatars.githubusercontent.com/u/62835948?v=4",
+          "gravatar_id": "",
+          "url": "https://api.github.com/users/ShocOne",
+          "html_url": "https://github.com/ShocOne",
+          "followers_url": "https://api.github.com/users/ShocOne/followers",
+          "following_url": "https://api.github.com/users/ShocOne/following{/other_user}",
+          "gists_url": "https://api.github.com/users/ShocOne/gists{/gist_id}",
+          "starred_url": "https://api.github.com/users/ShocOne/starred{/owner}{/repo}",
+          "subscriptions_url": "https://api.github.com/users/ShocOne/subscriptions",
+          "organizations_url": "https://api.github.com/users/ShocOne/orgs",
+          "repos_url": "https://api.github.com/users/ShocOne/repos",
+          "events_url": "https://api.github.com/users/ShocOne/events{/privacy}",
+          "received_events_url": "https://api.github.com/users/ShocOne/received_events",
+          "type": "User",
+          "user_view_type": "public",
+          "site_admin": false
+        },
+        "open_issues": 3,
+        "closed_issues": 11,
+        "state": "open",
+        "created_at": "2026-10-22T11:42:37Z",
+        "updated_at": "2026-10-22T18:47:22Z",
+        "due_on": null,
+        "closed_at": null
+      }
+    },
+    {
+      "number": 17,
+      "id": 5978629937,
+      "html_url": "https://github.com/deploymenttheory/go-ios-vm/issues/17",
+      "title": "Reconcile crashed runs and make finalization idempotent",
+      "state": "closed",
+      "state_reason": "completed",
+      "updated_at": "2026-10-22T18:27:43Z",
+      "body": "## Outcome\n\nPrevent process crashes and ambiguous commit responses from leaving misleading `running` or duplicate terminal records.\n\n## Work\n\n- Add a recoverable stale-run state transition or reconciliation operation that preserves completed batches and their exact input identity.\n- Make finalization safe to retry after the client loses the commit response; enforce terminal-state and coverage rules in PostgreSQL under concurrent attempts.\n- Keep cancellation/failure distinct from incomplete coverage and from successful completion.\n\n## Acceptance\n\n- [ ] A simulated crash leaves no falsely complete run and can be discovered and resumed or terminally reconciled.\n- [ ] Retrying an already committed finalization returns the committed result without duplicate evidence or contradictory state.\n- [ ] Race/database integration tests and `go vet ./...` pass.\n\n## Coordination\n\n- Priority: P1\n- Depends on: #16\n- One agent owns one issue and proposes one focused PR. Link the PR and record commands, fixtures, and observed results in the issue. Do not put firmware blobs or credentials in Git.\n\n## Project context\n\nStart with [implementation status](https://github.com/deploymenttheory/go-ios-vm/blob/main/docs/implementation-status.md), [inspection architecture](https://github.com/deploymenttheory/go-ios-vm/blob/main/docs/inspection-architecture.md), and the [evidence model](https://github.com/deploymenttheory/go-ios-vm/blob/main/docs/evidence-model.md).\n",
+      "labels": [
+        {
+          "id": 12791196197,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-moqJQ",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/enhancement",
+          "name": "enhancement",
+          "color": "a2eeef",
+          "default": true,
+          "description": "New feature or request",
+          "archived_at": null,
+          "archived_by": null
+        }
+      ],
+      "milestone": {
+        "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/milestones/1",
+        "html_url": "https://github.com/deploymenttheory/go-ios-vm/milestone/1",
+        "labels_url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/milestones/1/labels",
+        "id": 18810487,
+        "node_id": "MI_kwDOVTNSXs4BHwZ3",
+        "number": 1,
+        "title": "Real-image inspection gate",
+        "description": "Qualify the first static inspection release against exact iPhone12,1 iOS 14.0 and 15.0 restore images. The VM runner and machine-profile implementation are later work. First-tooling acceptance also requires the local read-only inspection UI and its integrated QA-01 gate.",
+        "creator": {
+          "login": "ShocOne",
+          "id": 62835948,
+          "node_id": "MDQ6VXNlcjYyODM1OTQ4",
+          "avatar_url": "https://avatars.githubusercontent.com/u/62835948?v=4",
+          "gravatar_id": "",
+          "url": "https://api.github.com/users/ShocOne",
+          "html_url": "https://github.com/ShocOne",
+          "followers_url": "https://api.github.com/users/ShocOne/followers",
+          "following_url": "https://api.github.com/users/ShocOne/following{/other_user}",
+          "gists_url": "https://api.github.com/users/ShocOne/gists{/gist_id}",
+          "starred_url": "https://api.github.com/users/ShocOne/starred{/owner}{/repo}",
+          "subscriptions_url": "https://api.github.com/users/ShocOne/subscriptions",
+          "organizations_url": "https://api.github.com/users/ShocOne/orgs",
+          "repos_url": "https://api.github.com/users/ShocOne/repos",
+          "events_url": "https://api.github.com/users/ShocOne/events{/privacy}",
+          "received_events_url": "https://api.github.com/users/ShocOne/received_events",
+          "type": "User",
+          "user_view_type": "public",
+          "site_admin": false
+        },
+        "open_issues": 3,
+        "closed_issues": 11,
+        "state": "open",
+        "created_at": "2026-10-22T11:42:37Z",
+        "updated_at": "2026-10-22T18:47:22Z",
+        "due_on": null,
+        "closed_at": null
+      }
+    },
+    {
+      "number": 16,
+      "id": 5978629655,
+      "html_url": "https://github.com/deploymenttheory/go-ios-vm/issues/16",
+      "title": "Publish bounded inspection batches and support explicit resume",
+      "state": "closed",
+      "state_reason": "completed",
+      "updated_at": "2026-10-22T15:43:09Z",
+      "body": "## Outcome\n\nPersist completed inspection progress without one transaction covering the whole parse.\n\n## Work\n\n- Split the workflow/store contract into idempotently keyed observation batches and a separate final coverage ledger. Store effective input identity and completed component checkpoints.\n- Expose explicit resume of a run against a verified matching archive; never resume against changed bytes or label unfinished coverage complete.\n- Keep incomplete evidence manifests unavailable and deduplicate identical retained bytes across retries.\n\n## Acceptance\n\n- [ ] An interrupted run retains completed batches and a non-complete state; resuming publishes only missing work.\n- [ ] A changed or unavailable input returns an explicit result; no long database transaction spans image decoding.\n- [ ] Database failure and retry integration tests, `go test ./...`, and `go vet ./...` pass.\n\n## Coordination\n\n- Priority: P1\n- Depends on: #14\n- One agent owns one issue and proposes one focused PR. Link the PR and record commands, fixtures, and observed results in the issue. Do not put firmware blobs or credentials in Git.\n\n## Project context\n\nStart with [implementation status](https://github.com/deploymenttheory/go-ios-vm/blob/main/docs/implementation-status.md), [inspection architecture](https://github.com/deploymenttheory/go-ios-vm/blob/main/docs/inspection-architecture.md), and the [evidence model](https://github.com/deploymenttheory/go-ios-vm/blob/main/docs/evidence-model.md).\n",
+      "labels": [
+        {
+          "id": 12791196197,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-moqJQ",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/enhancement",
+          "name": "enhancement",
+          "color": "a2eeef",
+          "default": true,
+          "description": "New feature or request",
+          "archived_at": null,
+          "archived_by": null
+        }
+      ],
+      "milestone": {
+        "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/milestones/1",
+        "html_url": "https://github.com/deploymenttheory/go-ios-vm/milestone/1",
+        "labels_url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/milestones/1/labels",
+        "id": 18810487,
+        "node_id": "MI_kwDOVTNSXs4BHwZ3",
+        "number": 1,
+        "title": "Real-image inspection gate",
+        "description": "Qualify the first static inspection release against exact iPhone12,1 iOS 14.0 and 15.0 restore images. The VM runner and machine-profile implementation are later work. First-tooling acceptance also requires the local read-only inspection UI and its integrated QA-01 gate.",
+        "creator": {
+          "login": "ShocOne",
+          "id": 62835948,
+          "node_id": "MDQ6VXNlcjYyODM1OTQ4",
+          "avatar_url": "https://avatars.githubusercontent.com/u/62835948?v=4",
+          "gravatar_id": "",
+          "url": "https://api.github.com/users/ShocOne",
+          "html_url": "https://github.com/ShocOne",
+          "followers_url": "https://api.github.com/users/ShocOne/followers",
+          "following_url": "https://api.github.com/users/ShocOne/following{/other_user}",
+          "gists_url": "https://api.github.com/users/ShocOne/gists{/gist_id}",
+          "starred_url": "https://api.github.com/users/ShocOne/starred{/owner}{/repo}",
+          "subscriptions_url": "https://api.github.com/users/ShocOne/subscriptions",
+          "organizations_url": "https://api.github.com/users/ShocOne/orgs",
+          "repos_url": "https://api.github.com/users/ShocOne/repos",
+          "events_url": "https://api.github.com/users/ShocOne/events{/privacy}",
+          "received_events_url": "https://api.github.com/users/ShocOne/received_events",
+          "type": "User",
+          "user_view_type": "public",
+          "site_admin": false
+        },
+        "open_issues": 3,
+        "closed_issues": 11,
+        "state": "open",
+        "created_at": "2026-10-22T11:42:37Z",
+        "updated_at": "2026-10-22T18:47:22Z",
+        "due_on": null,
+        "closed_at": null
+      }
+    },
+    {
+      "number": 15,
+      "id": 5978629379,
+      "html_url": "https://github.com/deploymenttheory/go-ios-vm/issues/15",
+      "title": "Assess exact finding revisions and invalidate stale assessments",
+      "state": "closed",
+      "state_reason": "completed",
+      "updated_at": "2026-10-22T18:29:41Z",
+      "body": "## Outcome\n\nMake review states apply to a particular revision and its evidence basis, with an audit trail.\n\n## Work\n\n- Provide acceptance, rejection, and dispute operations with reviewer reason for an exact revision and basis. Show assessment history in finding queries.\n- When supporting evidence or interpretation changes, mark dependent assessments for re-evaluation; never transfer acceptance silently to a replacement revision.\n- Use database constraints and integration tests for ownership and concurrent review behavior.\n\n## Acceptance\n\n- [ ] Reviewing one revision does not accept a successor or a contradictory reading.\n- [ ] Changed support exposes a needs-review state while prior assessments remain inspectable.\n- [ ] PostgreSQL integration, backup/restore, `go test ./...`, and `go vet ./...` pass.\n\n## Coordination\n\n- Priority: P1\n- Depends on: #14\n- One agent owns one issue and proposes one focused PR. Link the PR and record commands, fixtures, and observed results in the issue. Do not put firmware blobs or credentials in Git.\n\n## Project context\n\nStart with [implementation status](https://github.com/deploymenttheory/go-ios-vm/blob/main/docs/implementation-status.md), [inspection architecture](https://github.com/deploymenttheory/go-ios-vm/blob/main/docs/inspection-architecture.md), and the [evidence model](https://github.com/deploymenttheory/go-ios-vm/blob/main/docs/evidence-model.md).\n",
+      "labels": [
+        {
+          "id": 12791196197,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-moqJQ",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/enhancement",
+          "name": "enhancement",
+          "color": "a2eeef",
+          "default": true,
+          "description": "New feature or request",
+          "archived_at": null,
+          "archived_by": null
+        }
+      ],
+      "milestone": {
+        "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/milestones/1",
+        "html_url": "https://github.com/deploymenttheory/go-ios-vm/milestone/1",
+        "labels_url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/milestones/1/labels",
+        "id": 18810487,
+        "node_id": "MI_kwDOVTNSXs4BHwZ3",
+        "number": 1,
+        "title": "Real-image inspection gate",
+        "description": "Qualify the first static inspection release against exact iPhone12,1 iOS 14.0 and 15.0 restore images. The VM runner and machine-profile implementation are later work. First-tooling acceptance also requires the local read-only inspection UI and its integrated QA-01 gate.",
+        "creator": {
+          "login": "ShocOne",
+          "id": 62835948,
+          "node_id": "MDQ6VXNlcjYyODM1OTQ4",
+          "avatar_url": "https://avatars.githubusercontent.com/u/62835948?v=4",
+          "gravatar_id": "",
+          "url": "https://api.github.com/users/ShocOne",
+          "html_url": "https://github.com/ShocOne",
+          "followers_url": "https://api.github.com/users/ShocOne/followers",
+          "following_url": "https://api.github.com/users/ShocOne/following{/other_user}",
+          "gists_url": "https://api.github.com/users/ShocOne/gists{/gist_id}",
+          "starred_url": "https://api.github.com/users/ShocOne/starred{/owner}{/repo}",
+          "subscriptions_url": "https://api.github.com/users/ShocOne/subscriptions",
+          "organizations_url": "https://api.github.com/users/ShocOne/orgs",
+          "repos_url": "https://api.github.com/users/ShocOne/repos",
+          "events_url": "https://api.github.com/users/ShocOne/events{/privacy}",
+          "received_events_url": "https://api.github.com/users/ShocOne/received_events",
+          "type": "User",
+          "user_view_type": "public",
+          "site_admin": false
+        },
+        "open_issues": 3,
+        "closed_issues": 11,
+        "state": "open",
+        "created_at": "2026-10-22T11:42:37Z",
+        "updated_at": "2026-10-22T18:47:22Z",
+        "due_on": null,
+        "closed_at": null
+      }
+    },
+    {
+      "number": 14,
+      "id": 5978627518,
+      "html_url": "https://github.com/deploymenttheory/go-ios-vm/issues/14",
+      "title": "Add stable findings and linked revisions with explicit basis",
+      "state": "closed",
+      "state_reason": "completed",
+      "updated_at": "2026-10-22T15:11:27Z",
+      "body": "## Outcome\n\nAllow a user to correct or interpret an observed finding while preserving the earlier reading and its evidence.\n\n## Work\n\n- Add a stable target/subject/property finding identity and linked revision records through a versioned PostgreSQL migration. Keep the domain model independent of SQL.\n- Provide a CLI workflow for observed, inferred, and unknown revisions with rationale and explicit supporting or contradicting observation/revision references; show the chain in `finding list/show`.\n- Preserve conflicting parser readings instead of overwriting or auto-adjudicating them.\n\n## Acceptance\n\n- [ ] A correction creates a new linked revision; the original observation and retained bytes remain readable.\n- [ ] Inference and unknown revisions have explicit basis/rationale and cannot masquerade as direct observations.\n- [ ] Database integration and backup/restore tests cover revision links; `go test ./...` and `go vet ./...` pass.\n\n## Coordination\n\n- Priority: P1\n- Depends on: None; can start now.\n- One agent owns one issue and proposes one focused PR. Link the PR and record commands, fixtures, and observed results in the issue. Do not put firmware blobs or credentials in Git.\n\n## Project context\n\nStart with [implementation status](https://github.com/deploymenttheory/go-ios-vm/blob/main/docs/implementation-status.md), [inspection architecture](https://github.com/deploymenttheory/go-ios-vm/blob/main/docs/inspection-architecture.md), and the [evidence model](https://github.com/deploymenttheory/go-ios-vm/blob/main/docs/evidence-model.md).\n",
+      "labels": [
+        {
+          "id": 12791196197,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-moqJQ",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/enhancement",
+          "name": "enhancement",
+          "color": "a2eeef",
+          "default": true,
+          "description": "New feature or request",
+          "archived_at": null,
+          "archived_by": null
+        }
+      ],
+      "milestone": {
+        "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/milestones/1",
+        "html_url": "https://github.com/deploymenttheory/go-ios-vm/milestone/1",
+        "labels_url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/milestones/1/labels",
+        "id": 18810487,
+        "node_id": "MI_kwDOVTNSXs4BHwZ3",
+        "number": 1,
+        "title": "Real-image inspection gate",
+        "description": "Qualify the first static inspection release against exact iPhone12,1 iOS 14.0 and 15.0 restore images. The VM runner and machine-profile implementation are later work. First-tooling acceptance also requires the local read-only inspection UI and its integrated QA-01 gate.",
+        "creator": {
+          "login": "ShocOne",
+          "id": 62835948,
+          "node_id": "MDQ6VXNlcjYyODM1OTQ4",
+          "avatar_url": "https://avatars.githubusercontent.com/u/62835948?v=4",
+          "gravatar_id": "",
+          "url": "https://api.github.com/users/ShocOne",
+          "html_url": "https://github.com/ShocOne",
+          "followers_url": "https://api.github.com/users/ShocOne/followers",
+          "following_url": "https://api.github.com/users/ShocOne/following{/other_user}",
+          "gists_url": "https://api.github.com/users/ShocOne/gists{/gist_id}",
+          "starred_url": "https://api.github.com/users/ShocOne/starred{/owner}{/repo}",
+          "subscriptions_url": "https://api.github.com/users/ShocOne/subscriptions",
+          "organizations_url": "https://api.github.com/users/ShocOne/orgs",
+          "repos_url": "https://api.github.com/users/ShocOne/repos",
+          "events_url": "https://api.github.com/users/ShocOne/events{/privacy}",
+          "received_events_url": "https://api.github.com/users/ShocOne/received_events",
+          "type": "User",
+          "user_view_type": "public",
+          "site_admin": false
+        },
+        "open_issues": 3,
+        "closed_issues": 11,
+        "state": "open",
+        "created_at": "2026-10-22T11:42:37Z",
+        "updated_at": "2026-10-22T18:47:22Z",
+        "due_on": null,
+        "closed_at": null
+      }
+    },
+    {
+      "number": 13,
+      "id": 5978627153,
+      "html_url": "https://github.com/deploymenttheory/go-ios-vm/issues/13",
+      "title": "Inspect APFS filesystem content with recoverable evidence",
+      "state": "closed",
+      "state_reason": "completed",
+      "updated_at": "2026-10-22T15:50:27Z",
+      "body": "## Outcome\n\nReplace the unconditional `filesystem-content: unexamined` result with bounded file inspection for the selected OS filesystem.\n\n## Work\n\n- Use `go-apfs-v3` for supported filesystem reads; add only workflow and source-location integration here. If a required disk/filesystem codec is missing, open the specific `go-apfs-v3` issue first, as ADR 0002 requires.\n- Expose target-scoped file paths, relevant metadata, and bounded content needed for firmware/driver inspection, with honest decoded-view coordinates and retained supporting bytes.\n- Differentiate missing files after a complete search from unsupported, encrypted, corrupt, or unexamined content.\n\n## Acceptance\n\n- [ ] A synthetic APFS fixture yields retrievable content and source references after the source cache is removed.\n- [ ] Unsupported file formats or content limits retain partial coverage and an actionable reason; absence, zero bytes, and failure remain distinct.\n- [ ] Tests and `go vet ./...` pass, and real-image behavior is checked against issues #10/#11 when their pins exist.\n\n## Coordination\n\n- Priority: P1\n- Depends on: #12\n- One agent owns one issue and proposes one focused PR. Link the PR and record commands, fixtures, and observed results in the issue. Do not put firmware blobs or credentials in Git.\n\n## Project context\n\nStart with [implementation status](https://github.com/deploymenttheory/go-ios-vm/blob/main/docs/implementation-status.md), [inspection architecture](https://github.com/deploymenttheory/go-ios-vm/blob/main/docs/inspection-architecture.md), and the [evidence model](https://github.com/deploymenttheory/go-ios-vm/blob/main/docs/evidence-model.md).\n",
+      "labels": [
+        {
+          "id": 12791196197,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-moqJQ",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/enhancement",
+          "name": "enhancement",
+          "color": "a2eeef",
+          "default": true,
+          "description": "New feature or request",
+          "archived_at": null,
+          "archived_by": null
+        }
+      ],
+      "milestone": {
+        "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/milestones/1",
+        "html_url": "https://github.com/deploymenttheory/go-ios-vm/milestone/1",
+        "labels_url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/milestones/1/labels",
+        "id": 18810487,
+        "node_id": "MI_kwDOVTNSXs4BHwZ3",
+        "number": 1,
+        "title": "Real-image inspection gate",
+        "description": "Qualify the first static inspection release against exact iPhone12,1 iOS 14.0 and 15.0 restore images. The VM runner and machine-profile implementation are later work. First-tooling acceptance also requires the local read-only inspection UI and its integrated QA-01 gate.",
+        "creator": {
+          "login": "ShocOne",
+          "id": 62835948,
+          "node_id": "MDQ6VXNlcjYyODM1OTQ4",
+          "avatar_url": "https://avatars.githubusercontent.com/u/62835948?v=4",
+          "gravatar_id": "",
+          "url": "https://api.github.com/users/ShocOne",
+          "html_url": "https://github.com/ShocOne",
+          "followers_url": "https://api.github.com/users/ShocOne/followers",
+          "following_url": "https://api.github.com/users/ShocOne/following{/other_user}",
+          "gists_url": "https://api.github.com/users/ShocOne/gists{/gist_id}",
+          "starred_url": "https://api.github.com/users/ShocOne/starred{/owner}{/repo}",
+          "subscriptions_url": "https://api.github.com/users/ShocOne/subscriptions",
+          "organizations_url": "https://api.github.com/users/ShocOne/orgs",
+          "repos_url": "https://api.github.com/users/ShocOne/repos",
+          "events_url": "https://api.github.com/users/ShocOne/events{/privacy}",
+          "received_events_url": "https://api.github.com/users/ShocOne/received_events",
+          "type": "User",
+          "user_view_type": "public",
+          "site_admin": false
+        },
+        "open_issues": 3,
+        "closed_issues": 11,
+        "state": "open",
+        "created_at": "2026-10-22T11:42:37Z",
+        "updated_at": "2026-10-22T18:47:22Z",
+        "due_on": null,
+        "closed_at": null
+      }
+    },
+    {
+      "number": 12,
+      "id": 5978626888,
+      "html_url": "https://github.com/deploymenttheory/go-ios-vm/issues/12",
+      "title": "Stage ZIP-compressed OS disk members within explicit limits",
+      "state": "closed",
+      "state_reason": "completed",
+      "updated_at": "2026-10-22T14:43:35Z",
+      "body": "## Outcome\n\nLet disk inspection borrow an OS image from a compressed IPSW ZIP member without unbounded memory or disk growth.\n\n## Work\n\n- Add a bounded, disposable staging reader for compressed OS members in `internal/inspection`; account for declared and measured expanded size and available disk space before and during staging.\n- Preserve the transform chain from archive member to decoded disk view. Keep retained evidence tied to the encoded source bytes that can actually be recovered; do not invent physical APFS extents.\n- Clean staging on success, failure, and cancellation; keep externally supplied originals and active cache leases intact.\n\n## Acceptance\n\n- [ ] Stored and compressed ZIP members expose the same disk metadata where supported.\n- [ ] Oversized, truncated, corrupt, and cancelled staging produce explicit partial coverage and leave no reusable incomplete image.\n- [ ] Small fixture tests plus `go test ./...` and `go vet ./...` pass.\n\n## Coordination\n\n- Priority: P1\n- Depends on: None; can start now.\n- One agent owns one issue and proposes one focused PR. Link the PR and record commands, fixtures, and observed results in the issue. Do not put firmware blobs or credentials in Git.\n\n## Project context\n\nStart with [implementation status](https://github.com/deploymenttheory/go-ios-vm/blob/main/docs/implementation-status.md), [inspection architecture](https://github.com/deploymenttheory/go-ios-vm/blob/main/docs/inspection-architecture.md), and the [evidence model](https://github.com/deploymenttheory/go-ios-vm/blob/main/docs/evidence-model.md).\n",
+      "labels": [
+        {
+          "id": 12791196197,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-moqJQ",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/enhancement",
+          "name": "enhancement",
+          "color": "a2eeef",
+          "default": true,
+          "description": "New feature or request",
+          "archived_at": null,
+          "archived_by": null
+        }
+      ],
+      "milestone": {
+        "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/milestones/1",
+        "html_url": "https://github.com/deploymenttheory/go-ios-vm/milestone/1",
+        "labels_url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/milestones/1/labels",
+        "id": 18810487,
+        "node_id": "MI_kwDOVTNSXs4BHwZ3",
+        "number": 1,
+        "title": "Real-image inspection gate",
+        "description": "Qualify the first static inspection release against exact iPhone12,1 iOS 14.0 and 15.0 restore images. The VM runner and machine-profile implementation are later work. First-tooling acceptance also requires the local read-only inspection UI and its integrated QA-01 gate.",
+        "creator": {
+          "login": "ShocOne",
+          "id": 62835948,
+          "node_id": "MDQ6VXNlcjYyODM1OTQ4",
+          "avatar_url": "https://avatars.githubusercontent.com/u/62835948?v=4",
+          "gravatar_id": "",
+          "url": "https://api.github.com/users/ShocOne",
+          "html_url": "https://github.com/ShocOne",
+          "followers_url": "https://api.github.com/users/ShocOne/followers",
+          "following_url": "https://api.github.com/users/ShocOne/following{/other_user}",
+          "gists_url": "https://api.github.com/users/ShocOne/gists{/gist_id}",
+          "starred_url": "https://api.github.com/users/ShocOne/starred{/owner}{/repo}",
+          "subscriptions_url": "https://api.github.com/users/ShocOne/subscriptions",
+          "organizations_url": "https://api.github.com/users/ShocOne/orgs",
+          "repos_url": "https://api.github.com/users/ShocOne/repos",
+          "events_url": "https://api.github.com/users/ShocOne/events{/privacy}",
+          "received_events_url": "https://api.github.com/users/ShocOne/received_events",
+          "type": "User",
+          "user_view_type": "public",
+          "site_admin": false
+        },
+        "open_issues": 3,
+        "closed_issues": 11,
+        "state": "open",
+        "created_at": "2026-10-22T11:42:37Z",
+        "updated_at": "2026-10-22T18:47:22Z",
+        "due_on": null,
+        "closed_at": null
+      }
+    },
+    {
+      "number": 11,
+      "id": 5978626635,
+      "html_url": "https://github.com/deploymenttheory/go-ios-vm/issues/11",
+      "title": "Qualify the exact iOS 15 image on matching iPhone12,1 hardware",
+      "state": "closed",
+      "state_reason": "completed",
+      "updated_at": "2026-10-22T15:54:10Z",
+      "body": "## Outcome\n\nEstablish the matching iOS 15.0 fixture and capability matrix needed for a same-hardware comparison.\n\n## Work\n\n- Apply the iOS 14 qualification procedure to the exact iOS 15.0 restore IPSW and record the digest, size, BuildManifest identity, selected identity, and Apple source route in `docs/qualification/iphone12-1-ios15.md`.\n- Run inspection and retained-evidence recovery on macOS and Linux; identify format and source-coordinate gaps with focused follow-up issues.\n- Coordinate acquisition with the iOS 14 issue: download and inspect one large image at a time under the existing cache and free-disk limits.\n\n## Acceptance\n\n- [ ] The two notes establish matching product/board identity and exact, separately verified builds without conflating observations across releases.\n- [ ] Every unsupported or failed component has explicit coverage and a linked follow-up when it blocks the first-tooling gate.\n- [ ] No firmware or decoded proprietary payload is committed.\n\n## Coordination\n\n- Priority: P0\n- Depends on: #9\n- One agent owns one issue and proposes one focused PR. Link the PR and record commands, fixtures, and observed results in the issue. Do not put firmware blobs or credentials in Git.\n\n## Project context\n\nStart with [implementation status](https://github.com/deploymenttheory/go-ios-vm/blob/main/docs/implementation-status.md), [inspection architecture](https://github.com/deploymenttheory/go-ios-vm/blob/main/docs/inspection-architecture.md), and the [evidence model](https://github.com/deploymenttheory/go-ios-vm/blob/main/docs/evidence-model.md).\n",
+      "labels": [
+        {
+          "id": 12791196176,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-moqEA",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/documentation",
+          "name": "documentation",
+          "color": "0075ca",
+          "default": true,
+          "description": "Improvements or additions to documentation",
+          "archived_at": null,
+          "archived_by": null
+        }
+      ],
+      "milestone": {
+        "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/milestones/1",
+        "html_url": "https://github.com/deploymenttheory/go-ios-vm/milestone/1",
+        "labels_url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/milestones/1/labels",
+        "id": 18810487,
+        "node_id": "MI_kwDOVTNSXs4BHwZ3",
+        "number": 1,
+        "title": "Real-image inspection gate",
+        "description": "Qualify the first static inspection release against exact iPhone12,1 iOS 14.0 and 15.0 restore images. The VM runner and machine-profile implementation are later work. First-tooling acceptance also requires the local read-only inspection UI and its integrated QA-01 gate.",
+        "creator": {
+          "login": "ShocOne",
+          "id": 62835948,
+          "node_id": "MDQ6VXNlcjYyODM1OTQ4",
+          "avatar_url": "https://avatars.githubusercontent.com/u/62835948?v=4",
+          "gravatar_id": "",
+          "url": "https://api.github.com/users/ShocOne",
+          "html_url": "https://github.com/ShocOne",
+          "followers_url": "https://api.github.com/users/ShocOne/followers",
+          "following_url": "https://api.github.com/users/ShocOne/following{/other_user}",
+          "gists_url": "https://api.github.com/users/ShocOne/gists{/gist_id}",
+          "starred_url": "https://api.github.com/users/ShocOne/starred{/owner}{/repo}",
+          "subscriptions_url": "https://api.github.com/users/ShocOne/subscriptions",
+          "organizations_url": "https://api.github.com/users/ShocOne/orgs",
+          "repos_url": "https://api.github.com/users/ShocOne/repos",
+          "events_url": "https://api.github.com/users/ShocOne/events{/privacy}",
+          "received_events_url": "https://api.github.com/users/ShocOne/received_events",
+          "type": "User",
+          "user_view_type": "public",
+          "site_admin": false
+        },
+        "open_issues": 3,
+        "closed_issues": 11,
+        "state": "open",
+        "created_at": "2026-10-22T11:42:37Z",
+        "updated_at": "2026-10-22T18:47:22Z",
+        "due_on": null,
+        "closed_at": null
+      }
+    },
+    {
+      "number": 10,
+      "id": 5978626367,
+      "html_url": "https://github.com/deploymenttheory/go-ios-vm/issues/10",
+      "title": "Qualify the exact iOS 14 image on iPhone12,1",
+      "state": "closed",
+      "state_reason": "completed",
+      "updated_at": "2026-10-22T13:59:58Z",
+      "body": "## Outcome\n\nEstablish one reproducible, verified iOS 14.0 firmware fixture and an honest capability matrix for the current inspector.\n\n## Work\n\n- Acquire only the exact restore IPSW resolved in the predecessor issue. Record Apple source route, archive SHA-256 and size, BuildManifest product/build/board/variant, and selected identity index in `docs/qualification/iphone12-1-ios14.md`.\n- Run `target list`, `inspect`, `finding list/show`, and evidence-byte recovery on macOS and Linux. Record command versions, run IDs, component coverage, source-coordinate checks, resource use, and all unsupported formats.\n- For each observed format gap, attach the smallest safe reproducer or precise non-secret format evidence and open a separate focused implementation issue. No IPSW or extracted proprietary payload is committed.\n\n## Acceptance\n\n- [ ] The documented digest and manifest identity can be verified from the original archive, and findings remain distinguishable from unsupported or unexamined content.\n- [ ] At least representative manifest, device-tree, kernel, and disk findings have recoverable retained source bytes wherever their adapters report support.\n- [ ] Any blocker is linked to a concrete follow-up issue; the qualification note never claims VM or full-format support.\n\n## Coordination\n\n- Priority: P0\n- Depends on: #9\n- One agent owns one issue and proposes one focused PR. Link the PR and record commands, fixtures, and observed results in the issue. Do not put firmware blobs or credentials in Git.\n\n## Project context\n\nStart with [implementation status](https://github.com/deploymenttheory/go-ios-vm/blob/main/docs/implementation-status.md), [inspection architecture](https://github.com/deploymenttheory/go-ios-vm/blob/main/docs/inspection-architecture.md), and the [evidence model](https://github.com/deploymenttheory/go-ios-vm/blob/main/docs/evidence-model.md).\n",
+      "labels": [
+        {
+          "id": 12791196176,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-moqEA",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/documentation",
+          "name": "documentation",
+          "color": "0075ca",
+          "default": true,
+          "description": "Improvements or additions to documentation",
+          "archived_at": null,
+          "archived_by": null
+        }
+      ],
+      "milestone": {
+        "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/milestones/1",
+        "html_url": "https://github.com/deploymenttheory/go-ios-vm/milestone/1",
+        "labels_url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/milestones/1/labels",
+        "id": 18810487,
+        "node_id": "MI_kwDOVTNSXs4BHwZ3",
+        "number": 1,
+        "title": "Real-image inspection gate",
+        "description": "Qualify the first static inspection release against exact iPhone12,1 iOS 14.0 and 15.0 restore images. The VM runner and machine-profile implementation are later work. First-tooling acceptance also requires the local read-only inspection UI and its integrated QA-01 gate.",
+        "creator": {
+          "login": "ShocOne",
+          "id": 62835948,
+          "node_id": "MDQ6VXNlcjYyODM1OTQ4",
+          "avatar_url": "https://avatars.githubusercontent.com/u/62835948?v=4",
+          "gravatar_id": "",
+          "url": "https://api.github.com/users/ShocOne",
+          "html_url": "https://github.com/ShocOne",
+          "followers_url": "https://api.github.com/users/ShocOne/followers",
+          "following_url": "https://api.github.com/users/ShocOne/following{/other_user}",
+          "gists_url": "https://api.github.com/users/ShocOne/gists{/gist_id}",
+          "starred_url": "https://api.github.com/users/ShocOne/starred{/owner}{/repo}",
+          "subscriptions_url": "https://api.github.com/users/ShocOne/subscriptions",
+          "organizations_url": "https://api.github.com/users/ShocOne/orgs",
+          "repos_url": "https://api.github.com/users/ShocOne/repos",
+          "events_url": "https://api.github.com/users/ShocOne/events{/privacy}",
+          "received_events_url": "https://api.github.com/users/ShocOne/received_events",
+          "type": "User",
+          "user_view_type": "public",
+          "site_admin": false
+        },
+        "open_issues": 3,
+        "closed_issues": 11,
+        "state": "open",
+        "created_at": "2026-10-22T11:42:37Z",
+        "updated_at": "2026-10-22T18:47:22Z",
+        "due_on": null,
+        "closed_at": null
+      }
+    },
+    {
+      "number": 9,
+      "id": 5978620264,
+      "html_url": "https://github.com/deploymenttheory/go-ios-vm/issues/9",
+      "title": "Resolve exact historical iPhone12,1 iOS 14.0 and 15.0 restore IPSWs",
+      "state": "closed",
+      "state_reason": "completed",
+      "updated_at": "2026-10-22T12:09:45Z",
+      "body": "## Outcome\n\nMake exact historical restore resolution usable for the agreed iPhone12,1 image pair. Current GDMF and iTunes catalog queries did not resolve either release; their no-match result is not proof that the Apple CDN image is unavailable.\n\n## Work\n\n- Investigate a reproducible route from requested product/version/build to each historical restore URL. Preserve the source and original response or record used for resolution; any selected download URL and redirects must pass the Apple HTTPS host check.\n- Integrate the route with `firmware discover` and `firmware fetch` without treating an OTA as a restore IPSW or silently choosing a different release. Keep discovery, URL resolution, download, and BuildManifest verification distinct.\n- Add bounded fixture tests for exact selection, ambiguous/no-match results, invalid hosts, and manifest mismatch.\n\n## Acceptance\n\n- [ ] For each requested version, publish the exact candidate build and source route, then verify product, board, variant, and build from BuildManifest before claiming a pinned image.\n- [ ] If a historical route cannot be resolved, show the sources checked and leave the corresponding image issue blocked. Do not substitute another version or build.\n- [ ] `go test ./...` and `go vet ./...` pass.\n\n## Coordination\n\n- Priority: P0\n- Depends on: None; can start now.\n- One agent owns one issue and proposes one focused PR. Link the PR and record commands, fixtures, and observed results in the issue. Do not put firmware blobs or credentials in Git.\n\n## Project context\n\nStart with [implementation status](https://github.com/deploymenttheory/go-ios-vm/blob/main/docs/implementation-status.md), [inspection architecture](https://github.com/deploymenttheory/go-ios-vm/blob/main/docs/inspection-architecture.md), and the [evidence model](https://github.com/deploymenttheory/go-ios-vm/blob/main/docs/evidence-model.md).\n",
+      "labels": [
+        {
+          "id": 12791196197,
+          "node_id": "LA_kwDOVTNSXs8AAAAC-moqJQ",
+          "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/labels/enhancement",
+          "name": "enhancement",
+          "color": "a2eeef",
+          "default": true,
+          "description": "New feature or request",
+          "archived_at": null,
+          "archived_by": null
+        }
+      ],
+      "milestone": {
+        "url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/milestones/1",
+        "html_url": "https://github.com/deploymenttheory/go-ios-vm/milestone/1",
+        "labels_url": "https://api.github.com/repos/deploymenttheory/go-ios-vm/milestones/1/labels",
+        "id": 18810487,
+        "node_id": "MI_kwDOVTNSXs4BHwZ3",
+        "number": 1,
+        "title": "Real-image inspection gate",
+        "description": "Qualify the first static inspection release against exact iPhone12,1 iOS 14.0 and 15.0 restore images. The VM runner and machine-profile implementation are later work. First-tooling acceptance also requires the local read-only inspection UI and its integrated QA-01 gate.",
+        "creator": {
+          "login": "ShocOne",
+          "id": 62835948,
+          "node_id": "MDQ6VXNlcjYyODM1OTQ4",
+          "avatar_url": "https://avatars.githubusercontent.com/u/62835948?v=4",
+          "gravatar_id": "",
+          "url": "https://api.github.com/users/ShocOne",
+          "html_url": "https://github.com/ShocOne",
+          "followers_url": "https://api.github.com/users/ShocOne/followers",
+          "following_url": "https://api.github.com/users/ShocOne/following{/other_user}",
+          "gists_url": "https://api.github.com/users/ShocOne/gists{/gist_id}",
+          "starred_url": "https://api.github.com/users/ShocOne/starred{/owner}{/repo}",
+          "subscriptions_url": "https://api.github.com/users/ShocOne/subscriptions",
+          "organizations_url": "https://api.github.com/users/ShocOne/orgs",
+          "repos_url": "https://api.github.com/users/ShocOne/repos",
+          "events_url": "https://api.github.com/users/ShocOne/events{/privacy}",
+          "received_events_url": "https://api.github.com/users/ShocOne/received_events",
+          "type": "User",
+          "user_view_type": "public",
+          "site_admin": false
+        },
+        "open_issues": 3,
+        "closed_issues": 11,
+        "state": "open",
+        "created_at": "2026-10-22T11:42:37Z",
+        "updated_at": "2026-10-22T18:47:22Z",
+        "due_on": null,
+        "closed_at": null
+      }
+    }
+  ],
+  "labels": [
+    {
+      "id": 12796357431,
+      "name": "area:live",
+      "color": "006b75",
+      "description": "CLI progress monitoring"
+    },
+    {
+      "id": 12796357927,
+      "name": "area:map",
+      "color": "5319e7",
+      "description": "Firmware relationship exploration"
+    },
+    {
+      "id": 12796358534,
+      "name": "area:qa",
+      "color": "fbca04",
+      "description": "Integrated qualification"
+    },
+    {
+      "id": 12796356600,
+      "name": "area:ui",
+      "color": "0e8a16",
+      "description": "Local UI and result browsing"
+    },
+    {
+      "id": 12793373385,
+      "name": "autorelease: pending",
+      "color": "ededed",
+      "description": null
+    },
+    {
+      "id": 12791196165,
+      "name": "bug",
+      "color": "d73a4a",
+      "description": "Something isn't working"
+    },
+    {
+      "id": 12796358871,
+      "name": "component:backend",
+      "color": "c5def5",
+      "description": "Go server, query or persistence work"
+    },
+    {
+      "id": 12796359492,
+      "name": "component:frontend",
+      "color": "bfdadc",
+      "description": "Browser interaction and presentation"
+    },
+    {
+      "id": 12796360117,
+      "name": "component:verification",
+      "color": "f9d0c4",
+      "description": "Cross-component acceptance evidence"
+    },
+    {
+      "id": 12791205403,
+      "name": "dependencies",
+      "color": "0366d6",
+      "description": "Pull requests that update a dependency file"
+    },
+    {
+      "id": 12791196176,
+      "name": "documentation",
+      "color": "0075ca",
+      "description": "Improvements or additions to documentation"
+    },
+    {
+      "id": 12791196184,
+      "name": "duplicate",
+      "color": "cfd3d7",
+      "description": "This issue or pull request already exists"
+    },
+    {
+      "id": 12791196197,
+      "name": "enhancement",
+      "color": "a2eeef",
+      "description": "New feature or request"
+    },
+    {
+      "id": 12791205437,
+      "name": "github_actions",
+      "color": "000000",
+      "description": "Pull requests that update GitHub Actions code"
+    },
+    {
+      "id": 12791196208,
+      "name": "good first issue",
+      "color": "7057ff",
+      "description": "Good for newcomers"
+    },
+    {
+      "id": 12791196219,
+      "name": "help wanted",
+      "color": "008672",
+      "description": "Extra attention is needed"
+    },
+    {
+      "id": 12791196232,
+      "name": "invalid",
+      "color": "e4e669",
+      "description": "This doesn't seem right"
+    },
+    {
+      "id": 12796355660,
+      "name": "priority:P0",
+      "color": "b60205",
+      "description": "Integrity or first-tooling acceptance gate"
+    },
+    {
+      "id": 12796356113,
+      "name": "priority:P1",
+      "color": "d93f0b",
+      "description": "Required capability within this phase"
+    },
+    {
+      "id": 12791196245,
+      "name": "question",
+      "color": "d876e3",
+      "description": "Further information is requested"
+    },
+    {
+      "id": 12796353778,
+      "name": "type:backlog",
+      "color": "ededed",
+      "description": "Agreed backlog baseline"
+    },
+    {
+      "id": 12796354397,
+      "name": "type:epic",
+      "color": "5319e7",
+      "description": "Coherent behavior with integrated acceptance"
+    },
+    {
+      "id": 12796354814,
+      "name": "type:task",
+      "color": "0075ca",
+      "description": "Bounded implementation or verification work"
+    },
+    {
+      "id": 12791196257,
+      "name": "wontfix",
+      "color": "ffffff",
+      "description": "This will not be worked on"
+    }
+  ],
+  "milestones": [
+    {
+      "number": 1,
+      "title": "Real-image inspection gate",
+      "state": "open",
+      "description": "Qualify the first static inspection release against exact iPhone12,1 iOS 14.0 and 15.0 restore images. The VM runner and machine-profile implementation are later work. First-tooling acceptance also requires the local read-only inspection UI and its integrated QA-01 gate.",
+      "due_on": null,
+      "updated_at": "2026-10-22T18:47:22Z"
+    },
+    {
+      "number": 2,
+      "title": "Local inspection UI",
+      "state": "open",
+      "description": "A local read-only Go-served browser shows committed acquisition/inspection progress, bounded PostgreSQL search and retained evidence, and a source-backed firmware relationship graph. Exit: QA-01 validates the exact iPhone12,1 iOS 14/15 pair and partial-coverage cases.",
+      "due_on": null,
+      "updated_at": "2026-10-23T01:59:08Z"
+    }
+  ],
+  "relationships": [
+    {
+      "issue": 52,
+      "relationship": "sub_issues",
+      "read_ok": true,
+      "related": []
+    },
+    {
+      "issue": 52,
+      "relationship": "dependencies/blocked_by",
+      "read_ok": true,
+      "related": []
+    },
+    {
+      "issue": 48,
+      "relationship": "sub_issues",
+      "read_ok": true,
+      "related": []
+    },
+    {
+      "issue": 48,
+      "relationship": "dependencies/blocked_by",
+      "read_ok": true,
+      "related": [
+        {
+          "number": 42,
+          "id": 5982423767,
+          "url": "https://github.com/deploymenttheory/go-ios-vm/issues/42",
+          "state": "closed"
+        },
+        {
+          "number": 45,
+          "id": 5982429758,
+          "url": "https://github.com/deploymenttheory/go-ios-vm/issues/45",
+          "state": "closed"
+        },
+        {
+          "number": 47,
+          "id": 5982432588,
+          "url": "https://github.com/deploymenttheory/go-ios-vm/issues/47",
+          "state": "open"
+        },
+        {
+          "number": 11,
+          "id": 5978626635,
+          "url": "https://github.com/deploymenttheory/go-ios-vm/issues/11",
+          "state": "closed"
+        }
+      ]
+    },
+    {
+      "issue": 47,
+      "relationship": "sub_issues",
+      "read_ok": true,
+      "related": []
+    },
+    {
+      "issue": 47,
+      "relationship": "dependencies/blocked_by",
+      "read_ok": true,
+      "related": [
+        {
+          "number": 46,
+          "id": 5982431172,
+          "url": "https://github.com/deploymenttheory/go-ios-vm/issues/46",
+          "state": "open"
+        },
+        {
+          "number": 42,
+          "id": 5982423767,
+          "url": "https://github.com/deploymenttheory/go-ios-vm/issues/42",
+          "state": "closed"
+        }
+      ]
+    },
+    {
+      "issue": 46,
+      "relationship": "sub_issues",
+      "read_ok": true,
+      "related": []
+    },
+    {
+      "issue": 46,
+      "relationship": "dependencies/blocked_by",
+      "read_ok": true,
+      "related": [
+        {
+          "number": 41,
+          "id": 5982422207,
+          "url": "https://github.com/deploymenttheory/go-ios-vm/issues/41",
+          "state": "closed"
+        },
+        {
+          "number": 13,
+          "id": 5978627153,
+          "url": "https://github.com/deploymenttheory/go-ios-vm/issues/13",
+          "state": "closed"
+        }
+      ]
+    },
+    {
+      "issue": 45,
+      "relationship": "sub_issues",
+      "read_ok": true,
+      "related": []
+    },
+    {
+      "issue": 45,
+      "relationship": "dependencies/blocked_by",
+      "read_ok": true,
+      "related": [
+        {
+          "number": 44,
+          "id": 5982428450,
+          "url": "https://github.com/deploymenttheory/go-ios-vm/issues/44",
+          "state": "closed"
+        },
+        {
+          "number": 39,
+          "id": 5982419179,
+          "url": "https://github.com/deploymenttheory/go-ios-vm/issues/39",
+          "state": "closed"
+        }
+      ]
+    },
+    {
+      "issue": 44,
+      "relationship": "sub_issues",
+      "read_ok": true,
+      "related": []
+    },
+    {
+      "issue": 44,
+      "relationship": "dependencies/blocked_by",
+      "read_ok": true,
+      "related": [
+        {
+          "number": 43,
+          "id": 5982424914,
+          "url": "https://github.com/deploymenttheory/go-ios-vm/issues/43",
+          "state": "closed"
+        },
+        {
+          "number": 39,
+          "id": 5982419179,
+          "url": "https://github.com/deploymenttheory/go-ios-vm/issues/39",
+          "state": "closed"
+        },
+        {
+          "number": 17,
+          "id": 5978629937,
+          "url": "https://github.com/deploymenttheory/go-ios-vm/issues/17",
+          "state": "closed"
+        }
+      ]
+    },
+    {
+      "issue": 43,
+      "relationship": "sub_issues",
+      "read_ok": true,
+      "related": []
+    },
+    {
+      "issue": 43,
+      "relationship": "dependencies/blocked_by",
+      "read_ok": true,
+      "related": [
+        {
+          "number": 16,
+          "id": 5978629655,
+          "url": "https://github.com/deploymenttheory/go-ios-vm/issues/16",
+          "state": "closed"
+        }
+      ]
+    },
+    {
+      "issue": 42,
+      "relationship": "sub_issues",
+      "read_ok": true,
+      "related": []
+    },
+    {
+      "issue": 42,
+      "relationship": "dependencies/blocked_by",
+      "read_ok": true,
+      "related": [
+        {
+          "number": 40,
+          "id": 5982420461,
+          "url": "https://github.com/deploymenttheory/go-ios-vm/issues/40",
+          "state": "closed"
+        },
+        {
+          "number": 41,
+          "id": 5982422207,
+          "url": "https://github.com/deploymenttheory/go-ios-vm/issues/41",
+          "state": "closed"
+        }
+      ]
+    },
+    {
+      "issue": 41,
+      "relationship": "sub_issues",
+      "read_ok": true,
+      "related": []
+    },
+    {
+      "issue": 41,
+      "relationship": "dependencies/blocked_by",
+      "read_ok": true,
+      "related": [
+        {
+          "number": 39,
+          "id": 5982419179,
+          "url": "https://github.com/deploymenttheory/go-ios-vm/issues/39",
+          "state": "closed"
+        },
+        {
+          "number": 15,
+          "id": 5978629379,
+          "url": "https://github.com/deploymenttheory/go-ios-vm/issues/15",
+          "state": "closed"
+        }
+      ]
+    },
+    {
+      "issue": 40,
+      "relationship": "sub_issues",
+      "read_ok": true,
+      "related": []
+    },
+    {
+      "issue": 40,
+      "relationship": "dependencies/blocked_by",
+      "read_ok": true,
+      "related": [
+        {
+          "number": 39,
+          "id": 5982419179,
+          "url": "https://github.com/deploymenttheory/go-ios-vm/issues/39",
+          "state": "closed"
+        },
+        {
+          "number": 16,
+          "id": 5978629655,
+          "url": "https://github.com/deploymenttheory/go-ios-vm/issues/16",
+          "state": "closed"
+        }
+      ]
+    },
+    {
+      "issue": 39,
+      "relationship": "sub_issues",
+      "read_ok": true,
+      "related": []
+    },
+    {
+      "issue": 39,
+      "relationship": "dependencies/blocked_by",
+      "read_ok": true,
+      "related": []
+    },
+    {
+      "issue": 38,
+      "relationship": "sub_issues",
+      "read_ok": true,
+      "related": [
+        {
+          "number": 48,
+          "id": 5982433850,
+          "url": "https://github.com/deploymenttheory/go-ios-vm/issues/48",
+          "state": "open"
+        }
+      ]
+    },
+    {
+      "issue": 38,
+      "relationship": "dependencies/blocked_by",
+      "read_ok": true,
+      "related": []
+    },
+    {
+      "issue": 37,
+      "relationship": "sub_issues",
+      "read_ok": true,
+      "related": [
+        {
+          "number": 46,
+          "id": 5982431172,
+          "url": "https://github.com/deploymenttheory/go-ios-vm/issues/46",
+          "state": "open"
+        },
+        {
+          "number": 47,
+          "id": 5982432588,
+          "url": "https://github.com/deploymenttheory/go-ios-vm/issues/47",
+          "state": "open"
+        }
+      ]
+    },
+    {
+      "issue": 37,
+      "relationship": "dependencies/blocked_by",
+      "read_ok": true,
+      "related": []
+    },
+    {
+      "issue": 36,
+      "relationship": "sub_issues",
+      "read_ok": true,
+      "related": [
+        {
+          "number": 43,
+          "id": 5982424914,
+          "url": "https://github.com/deploymenttheory/go-ios-vm/issues/43",
+          "state": "closed"
+        },
+        {
+          "number": 44,
+          "id": 5982428450,
+          "url": "https://github.com/deploymenttheory/go-ios-vm/issues/44",
+          "state": "closed"
+        },
+        {
+          "number": 45,
+          "id": 5982429758,
+          "url": "https://github.com/deploymenttheory/go-ios-vm/issues/45",
+          "state": "closed"
+        }
+      ]
+    },
+    {
+      "issue": 36,
+      "relationship": "dependencies/blocked_by",
+      "read_ok": true,
+      "related": []
+    },
+    {
+      "issue": 35,
+      "relationship": "sub_issues",
+      "read_ok": true,
+      "related": [
+        {
+          "number": 39,
+          "id": 5982419179,
+          "url": "https://github.com/deploymenttheory/go-ios-vm/issues/39",
+          "state": "closed"
+        },
+        {
+          "number": 40,
+          "id": 5982420461,
+          "url": "https://github.com/deploymenttheory/go-ios-vm/issues/40",
+          "state": "closed"
+        },
+        {
+          "number": 41,
+          "id": 5982422207,
+          "url": "https://github.com/deploymenttheory/go-ios-vm/issues/41",
+          "state": "closed"
+        },
+        {
+          "number": 42,
+          "id": 5982423767,
+          "url": "https://github.com/deploymenttheory/go-ios-vm/issues/42",
+          "state": "closed"
+        }
+      ]
+    },
+    {
+      "issue": 35,
+      "relationship": "dependencies/blocked_by",
+      "read_ok": true,
+      "related": []
+    },
+    {
+      "issue": 34,
+      "relationship": "sub_issues",
+      "read_ok": true,
+      "related": []
+    },
+    {
+      "issue": 34,
+      "relationship": "dependencies/blocked_by",
+      "read_ok": true,
+      "related": []
+    },
+    {
+      "issue": 30,
+      "relationship": "sub_issues",
+      "read_ok": true,
+      "related": []
+    },
+    {
+      "issue": 30,
+      "relationship": "dependencies/blocked_by",
+      "read_ok": true,
+      "related": []
+    },
+    {
+      "issue": 25,
+      "relationship": "sub_issues",
+      "read_ok": true,
+      "related": []
+    },
+    {
+      "issue": 25,
+      "relationship": "dependencies/blocked_by",
+      "read_ok": true,
+      "related": []
+    },
+    {
+      "issue": 23,
+      "relationship": "sub_issues",
+      "read_ok": true,
+      "related": []
+    },
+    {
+      "issue": 23,
+      "relationship": "dependencies/blocked_by",
+      "read_ok": true,
+      "related": []
+    },
+    {
+      "issue": 20,
+      "relationship": "sub_issues",
+      "read_ok": true,
+      "related": []
+    },
+    {
+      "issue": 20,
+      "relationship": "dependencies/blocked_by",
+      "read_ok": true,
+      "related": [
+        {
+          "number": 48,
+          "id": 5982433850,
+          "url": "https://github.com/deploymenttheory/go-ios-vm/issues/48",
+          "state": "open"
+        },
+        {
+          "number": 52,
+          "id": 5983095791,
+          "url": "https://github.com/deploymenttheory/go-ios-vm/issues/52",
+          "state": "open"
+        }
+      ]
+    },
+    {
+      "issue": 19,
+      "relationship": "sub_issues",
+      "read_ok": true,
+      "related": []
+    },
+    {
+      "issue": 19,
+      "relationship": "dependencies/blocked_by",
+      "read_ok": true,
+      "related": []
+    },
+    {
+      "issue": 18,
+      "relationship": "sub_issues",
+      "read_ok": true,
+      "related": []
+    },
+    {
+      "issue": 18,
+      "relationship": "dependencies/blocked_by",
+      "read_ok": true,
+      "related": []
+    },
+    {
+      "issue": 17,
+      "relationship": "sub_issues",
+      "read_ok": true,
+      "related": []
+    },
+    {
+      "issue": 17,
+      "relationship": "dependencies/blocked_by",
+      "read_ok": true,
+      "related": []
+    },
+    {
+      "issue": 16,
+      "relationship": "sub_issues",
+      "read_ok": true,
+      "related": []
+    },
+    {
+      "issue": 16,
+      "relationship": "dependencies/blocked_by",
+      "read_ok": true,
+      "related": []
+    },
+    {
+      "issue": 15,
+      "relationship": "sub_issues",
+      "read_ok": true,
+      "related": []
+    },
+    {
+      "issue": 15,
+      "relationship": "dependencies/blocked_by",
+      "read_ok": true,
+      "related": []
+    },
+    {
+      "issue": 14,
+      "relationship": "sub_issues",
+      "read_ok": true,
+      "related": []
+    },
+    {
+      "issue": 14,
+      "relationship": "dependencies/blocked_by",
+      "read_ok": true,
+      "related": []
+    },
+    {
+      "issue": 13,
+      "relationship": "sub_issues",
+      "read_ok": true,
+      "related": []
+    },
+    {
+      "issue": 13,
+      "relationship": "dependencies/blocked_by",
+      "read_ok": true,
+      "related": []
+    },
+    {
+      "issue": 12,
+      "relationship": "sub_issues",
+      "read_ok": true,
+      "related": []
+    },
+    {
+      "issue": 12,
+      "relationship": "dependencies/blocked_by",
+      "read_ok": true,
+      "related": []
+    },
+    {
+      "issue": 11,
+      "relationship": "sub_issues",
+      "read_ok": true,
+      "related": []
+    },
+    {
+      "issue": 11,
+      "relationship": "dependencies/blocked_by",
+      "read_ok": true,
+      "related": []
+    },
+    {
+      "issue": 10,
+      "relationship": "sub_issues",
+      "read_ok": true,
+      "related": []
+    },
+    {
+      "issue": 10,
+      "relationship": "dependencies/blocked_by",
+      "read_ok": true,
+      "related": []
+    },
+    {
+      "issue": 9,
+      "relationship": "sub_issues",
+      "read_ok": true,
+      "related": []
+    },
+    {
+      "issue": 9,
+      "relationship": "dependencies/blocked_by",
+      "read_ok": true,
+      "related": []
+    }
+  ],
+  "interpretation": "Existing inspection/UI work remains unchanged. No ios-runner-v1 identity exists. Historical merged/closed work is not present in current main and is supporting context only."
+}
