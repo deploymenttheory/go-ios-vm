@@ -112,3 +112,15 @@ func (q *Queue) OnQueue() bool { return dispatchGetSpecific(q.key) == q.key }
 
 // Handle returns the dispatch_queue_t for APIs that bind an object to a queue.
 func (q *Queue) Handle() uintptr { return q.q }
+
+// Autoreleased runs fn inside an autorelease pool on the calling thread, for
+// native calls made outside a Queue work item.
+func Autoreleased(fn func()) error {
+	if err := loadDispatch(); err != nil {
+		return err
+	}
+	pool := autoreleasePoolPush()
+	defer autoreleasePoolPop(pool)
+	fn()
+	return nil
+}
